@@ -1,7 +1,10 @@
 #include <string>
-#include "cpu.h"
 #include <iostream>
 #include <cstdint>
+#include "cpu.h"
+#include "ppu.h"
+#include "mmu.h"
+#include "wmu.h"
 #include "SDL2/include/SDL_syswm.h"
 #include "SDL2/include/SDL.h"
 #undef main
@@ -9,7 +12,6 @@ using namespace::std;
 //	[q00.c64]
 
 SDL_Event event;					//	Eventhandler for all SDL events
-string filename = "bootrom.bin";
 bool unpaused = true;
 
 int lastcyc = 0;
@@ -18,19 +20,19 @@ int ppus = 0;
 int main()
 {
 
-	//	load cartridge
+	//	load firmware
+	loadFirmware("fw.bin");
 
 	resetCPU();
 
-	while (1) {
+	initPPU("n/a");
 
+	while (1) {
 		if (unpaused) {
 			lastcyc = stepCPU();
-			ppus = lastcyc * 3;
-			while (ppus--) {
-			}
+			stepPPU();
 		}
-
+		handleWindowEvents(event);
 	}
 
 	return 1;

@@ -16,6 +16,28 @@ void reset() {
 
 }
 
+void loadFirmware(string filename) {
+
+	//	load fw
+	unsigned char cartridge[0x4000];
+	FILE* file = fopen(filename.c_str(), "rb");
+	int pos = 0;
+	while (fread(&cartridge[pos], 1, 1, file)) {
+		pos++;
+	}
+	fclose(file);
+
+	//	map BASIC interpreter (first 8kb) to 0xa000 - 0xbfff
+	for (int i = 0; i < 0x2000; i++) {
+		memory[0xa000 + i] = cartridge[i];
+	}
+
+	//	map KERNAL
+	for (int i = 0; i < 0x2000; i++) {
+		memory[0xe000 + i] = cartridge[0x2000 + i];
+	}
+}
+
 uint8_t readFromMem(uint16_t adr) {
 	return memory[adr];
 }

@@ -225,14 +225,6 @@ int stepCPU() {
 		return NMI();
 	}
 
-	//	Check for IRQ
-	if (status.interruptDisable == 0) {
-		if (irq()) {
-			return IRQorBRK();
-		}//	Check for NMI
-	}
-
-
 	//if (PC == 0x841d)
 		//printf("HALT!\n");
 	//printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x PPU:%3d,%3d CYC:%d LastStack:%x\n", PC, readFromMem(PC), readFromMem(PC+1), readFromMem(PC+2), registers.A, registers.X, registers.Y, status.status, SP_, getPPUCycles(), getPPUScanlines(), c, SP_);
