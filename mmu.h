@@ -18,3 +18,4 @@ uint16_t getAbsoluteYIndex(uint16_t adr, uint8_t Y);
 void writeToMem(uint16_t adr, uint8_t val);
 bool pageBoundaryCrossed();
 void loadFirmware(string filename);
+void loadCHRROM(string filename);

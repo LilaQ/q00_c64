@@ -16,3 +16,6 @@ Debug/C64Emulator.tlog/CL.command.1.tlog
 Debug/C64Emulator.tlog/C64Emulator.lastbuildstate
 Debug/C64Emulator.log
 Debug/C64Emulator.Build.CppClean.log
+Debug/mmu.obj.enc
+Debug/ppu.obj.enc
+nestest.nes

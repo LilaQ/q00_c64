@@ -5,7 +5,7 @@
 #include "mmu.h"
 #include "main.h"
 
-unsigned char memory[0x10000];
+unsigned char memory[0x10000] = { 0xff };
 bool pbc = false;
 
 void powerUp() {
@@ -38,12 +38,35 @@ void loadFirmware(string filename) {
 	}
 }
 
+void loadCHRROM(string filename) {
+	
+	//	load file
+	unsigned char cartridge[0x4000];
+	FILE* file = fopen(filename.c_str(), "rb");
+	int pos = 0;
+	while (fread(&cartridge[pos], 1, 1, file)) {
+		pos++;
+	}
+	fclose(file);
+
+	//	map first character ROM
+	for (int i = 0; i < 0x800; i++) {
+		memory[0x1000 + i] = cartridge[i];
+	}
+	//	map second character ROM
+	for (int i = 0; i < 0x800; i++) {
+		memory[0x1800 + i] = cartridge[i];
+	}
+}
+
 uint8_t readFromMem(uint16_t adr) {
 	return memory[adr];
 }
 
 void writeToMem(uint16_t adr, uint8_t val) {
-	memory[adr] = val;
+	//	write-protect ROM adresses
+	if (adr < 0xa000 || (adr >= 0xc000 && adr < 0xe000))
+		memory[adr] = val;
 }
 
 bool pageBoundaryCrossed() {
@@ -87,5 +110,6 @@ uint16_t getIndirectXIndex(uint16_t adr, uint8_t X) {
 uint16_t getIndirectYIndex(uint16_t adr, uint8_t Y) {
 	a = ((memory[(memory[adr] + 1) % 0x100] << 8) | (memory[memory[adr]]));
 	pbc = (a & 0xff00) != ((a + Y) & 0xff00);
+	printf("%x\n", (a + Y) % 0x10000);
 	return (a + Y) % 0x10000;
 }

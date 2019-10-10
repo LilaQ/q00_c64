@@ -20,8 +20,11 @@ int ppus = 0;
 int main()
 {
 
-	//	load firmware
+	//	load firmware (BASIC and KERNAL)
 	loadFirmware("fw.bin");
+
+	//	load char ROM
+	loadCHRROM("char.bin");
 
 	resetCPU();
 
@@ -30,7 +33,7 @@ int main()
 	while (1) {
 		if (unpaused) {
 			lastcyc = stepCPU();
-			stepPPU();
+			stepPPU(lastcyc);
 		}
 		handleWindowEvents(event);
 	}
