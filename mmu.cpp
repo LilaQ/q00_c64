@@ -110,6 +110,5 @@ uint16_t getIndirectXIndex(uint16_t adr, uint8_t X) {
 uint16_t getIndirectYIndex(uint16_t adr, uint8_t Y) {
 	a = ((memory[(memory[adr] + 1) % 0x100] << 8) | (memory[memory[adr]]));
 	pbc = (a & 0xff00) != ((a + Y) & 0xff00);
-	printf("%x\n", (a + Y) % 0x10000);
 	return (a + Y) % 0x10000;
 }
