@@ -5,6 +5,7 @@
 #include "ppu.h"
 #include "mmu.h"
 #include "wmu.h"
+#include "cia.h"
 #include "SDL2/include/SDL_syswm.h"
 #include "SDL2/include/SDL.h"
 #undef main
@@ -34,6 +35,7 @@ int main()
 		if (unpaused) {
 			lastcyc = stepCPU();
 			stepPPU(lastcyc);
+			tickAllTimers(lastcyc);
 		}
 		handleWindowEvents(event);
 	}

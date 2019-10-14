@@ -4,6 +4,7 @@
 #include "cpu.h"
 #include "mmu.h"
 #include "main.h"
+#include "cia.h"
 
 unsigned char memory[0x10000] = { 0xff };
 bool pbc = false;
@@ -60,13 +61,67 @@ void loadCHRROM(string filename) {
 }
 
 uint8_t readFromMem(uint16_t adr) {
-	return memory[adr];
+	switch (adr)
+	{
+		case 0xdc00:			//	read Keyboard / Joystick
+			readDataPortA();
+			break;
+		case 0xdc01:			//	read Keyboard / Joystick
+			readDataPortB();
+			break;
+
+
+		case 0xdc04:			//	read CIA1 TimerA Low
+			readCIA1timerALo();
+			break;
+		case 0xdc05:			//	read CIA1 TimerA High
+			readCIA1timerAHi();
+			break;
+		case 0xdc06:			//	read CIA1 TimerB Low
+			readCIA1timerBLo();
+			break;
+		case 0xdc07:			//	read CIA1 TimerB High
+			readCIA1timerBHi();
+			break;
+
+		case 0xdc0d:			//	read CIA1 IRQ Control and Status
+			readCIA1IRQStatus();
+			break;
+		default:
+			return memory[adr];
+			break;
+	}
 }
 
 void writeToMem(uint16_t adr, uint8_t val) {
 	//	write-protect ROM adresses
-	if (adr < 0xa000 || (adr >= 0xc000 && adr < 0xe000))
-		memory[adr] = val;
+	switch (adr)
+	{
+		case 0xdc04:
+			setCIA1timerAlatchLo(val);
+			break;
+		case 0xdc05:
+			setCIA1timerAlatchHi(val);
+			break;
+		case 0xdc06:
+			setCIA1timerBlatchLo(val);
+			break;
+		case 0xdc07:
+			setCIA1timerBlatchHi(val);
+			break;
+
+		case 0xdc0d:
+			setCIA1IRQcontrol(val);
+			break;
+		case 0xdc0e:
+			setCIA1TimerAControl(val);
+			break;
+
+		default:
+			if (adr < 0xa000 || (adr >= 0xc000 && adr < 0xe000))
+				memory[adr] = val;
+			break;
+	}
 }
 
 bool pageBoundaryCrossed() {

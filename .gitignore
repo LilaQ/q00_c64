@@ -19,3 +19,4 @@ Debug/C64Emulator.Build.CppClean.log
 Debug/mmu.obj.enc
 Debug/ppu.obj.enc
 nestest.nes
+Debug/cia.obj

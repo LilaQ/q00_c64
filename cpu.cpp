@@ -202,8 +202,14 @@ int NMI() {
 	return 7;
 }
 
+bool irq = false;
+
+void setIRQ(bool v) {
+	irq = v;
+}
+
 int IRQorBRK() {
-	printf("IRQ\n");
+	//printf("IRQ\n");
 	writeToMem(SP_ + 0x100, PC >> 8);
 	SP_--;
 	writeToMem(SP_ + 0x100, PC & 0xff);
@@ -226,13 +232,18 @@ int stepCPU() {
 		return NMI();
 	}
 
+	if (irq && !status.interruptDisable) {
+		irq = false;
+		return IRQorBRK();
+	}
+
 	if (PC == 0xfd88) {
 		printf("break\n");
 	}
 
 	//printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d LastStack:%x\n", PC, readFromMem(PC), readFromMem(PC+1), readFromMem(PC+2), registers.A, registers.X, registers.Y, status.status, SP_, c, SP_);
 	switch (readFromMem(PC)) {
-	case 0x00: { status.setBrk(1); printf("BRK caused :"); return IRQorBRK(); break; }
+	case 0x00: { status.setBrk(1); return IRQorBRK(); break; }
 	case 0x01: { PC++; return ORA(getIndirectXIndex(PC++, registers.X), 6); break; }
 	case 0x03: { PC++; return SLO(getIndirectXIndex(PC++, registers.X), 8); break; } // SLO inx 2,8
 	case 0x04: { PC += 2; return 3; break; }

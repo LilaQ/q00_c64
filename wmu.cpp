@@ -12,8 +12,8 @@
 #include "ppu.h"
 #include "cpu.h"
 #include "mmu.h"
+#include "cia.h"
 #include "main.h"
-#include "commctrl.h"
 #undef main
 
 using namespace::std;
@@ -235,5 +235,20 @@ void handleWindowEvents(SDL_Event event) {
 	if (keys[SDL_SCANCODE_SPACE]) {
 		togglePause();
 		keys[SDL_SCANCODE_SPACE] = 0;
+	}
+
+	//	handle keyboard to KERNAL
+	if (keys[SDL_SCANCODE_A]) {
+		setDataPortByKeyboardInput('a');
+	}
+	if (keys[SDL_SCANCODE_B]) {
+		setDataPortByKeyboardInput('b');
+	}
+	if (keys[SDL_SCANCODE_C]) {
+		setDataPortByKeyboardInput('c');
+	}
+
+	if (keys[SDL_SCANCODE_W]) {
+		setDataPortByKeyboardInput('w');
 	}
 }
