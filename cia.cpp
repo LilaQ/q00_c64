@@ -1,33 +1,57 @@
 #include <stdint.h>
+#include "SDL2/include/SDL.h"
 #include "cpu.h"
 
 uint8_t data_port_A;
 uint8_t data_port_B;
+bool port_A_RW = false;
+bool port_B_RW = false;
+uint8_t* KEYS;
 
-const unsigned char KEYS[8][8] = {
-	{/*DEL*/},	//	PA0
-	{51, 119, 97, 52, 122, 115, 101},	//	PA1
-	{/*DEL*/},	//	PA2
-	{/*DEL*/},	//	PA3
-	{/*DEL*/},	//	PA4
-	{/*DEL*/},	//	PA5
-	{/*DEL*/},	//	PA6
-	{/*DEL*/},	//	PA7
+const SDL_Scancode KEYMAP[8][8] = {
+	{SDL_SCANCODE_DELETE, SDL_SCANCODE_RETURN, SDL_SCANCODE_RIGHT, SDL_SCANCODE_F7, SDL_SCANCODE_F1, SDL_SCANCODE_F3, SDL_SCANCODE_F5, SDL_SCANCODE_DOWN},						//	PA0
+	{SDL_SCANCODE_3, SDL_SCANCODE_W, SDL_SCANCODE_A, SDL_SCANCODE_4, SDL_SCANCODE_Z, SDL_SCANCODE_S, SDL_SCANCODE_E, SDL_SCANCODE_LSHIFT},										//	PA1
+	{SDL_SCANCODE_5, SDL_SCANCODE_R, SDL_SCANCODE_D, SDL_SCANCODE_6, SDL_SCANCODE_C, SDL_SCANCODE_F, SDL_SCANCODE_T, SDL_SCANCODE_X},											//	PA2
+	{SDL_SCANCODE_7, SDL_SCANCODE_Y, SDL_SCANCODE_G, SDL_SCANCODE_8, SDL_SCANCODE_B, SDL_SCANCODE_H, SDL_SCANCODE_U, SDL_SCANCODE_V},											//	PA3
+	{SDL_SCANCODE_9, SDL_SCANCODE_I, SDL_SCANCODE_J, SDL_SCANCODE_0, SDL_SCANCODE_M, SDL_SCANCODE_K, SDL_SCANCODE_O, SDL_SCANCODE_N},											//	PA4
+	{SDL_SCANCODE_KP_PLUS, SDL_SCANCODE_P, SDL_SCANCODE_L, SDL_SCANCODE_MINUS, SDL_SCANCODE_STOP, SDL_SCANCODE_KP_COLON, SDL_SCANCODE_KP_AT, SDL_SCANCODE_COMMA},				//	PA5
+	{SDL_SCANCODE_KP_HASH, SDL_SCANCODE_KP_MULTIPLY, SDL_SCANCODE_SEMICOLON, SDL_SCANCODE_HOME, SDL_SCANCODE_RSHIFT, SDL_SCANCODE_EQUALS, SDL_SCANCODE_UP, SDL_SCANCODE_SLASH},	//	PA6
+	{SDL_SCANCODE_1, SDL_SCANCODE_LEFT, SDL_SCANCODE_COMPUTER, SDL_SCANCODE_2, SDL_SCANCODE_SPACE, SDL_SCANCODE_TAB, SDL_SCANCODE_Q, SDL_SCANCODE_END}							//	PA7
 };
 
-void setDataPortByKeyboardInput(unsigned char key) {
-	//uint8_t pa, pb;
-	for (int i = 0; i < 8; i++) {
-		for (int j = 0; j < 8; j++) {
-			if (KEYS[i][j] == key) {
-				data_port_A = 1 << i;
-				data_port_B = 1 << j;
+void setKeyboardInput(uint8_t* _KEYS) {
+	KEYS = _KEYS;
+}
+
+int pos = 0;
+void writeDataPortA(uint8_t val) {
+	data_port_B = 0xff;
+	for(int j = 0; j < 8; j++) {
+		if (!(val & 1)) {
+			for (int i = 0; i < 8; i++) {
+				if (KEYS[KEYMAP[j][i]]) {
+					data_port_B &= ~(1 << i);
+				}
 			}
 		}
+		val >>= 1;
 	}
 }
 
+void writeDataPortB(uint8_t val) {
+	printf("Checking keyboard matrix for Port B = %x\n", val);
+}
+
+void setPortARW(uint8_t val) {
+	port_A_RW = (val > 0);
+}
+
+void setPortBRW(uint8_t val) {
+	port_B_RW = (val > 0);
+}
+
 uint8_t readDataPortA() {
+	printf("read Port A\n");
 	return data_port_A;
 }
 
@@ -78,8 +102,8 @@ struct TIMER {
 	bool timer_stop_timer_after_underflow = false;
 	bool timer_counts_cnt_slopes = false;	//	false = count system cycles instead
 	bool timer_rtc_50hz = false;			//	false = 60hz;
-	uint16_t timer_latch;
-	int16_t timer_value;
+	uint16_t timer_latch = 0;
+	int16_t timer_value = 0;
 
 	void set(uint8_t val, CIA1_IRQ_STATUS &status) {
 		timer_running = ((val & 0x01) == 0x01);
@@ -99,7 +123,6 @@ struct TIMER {
 				//	0,9852486 MHz PAL
 				timer_value--;
 				if (timer_value <= 0) {
-					printf("tick\n");
 					if (timer_stop_timer_after_underflow)
 						timer_running = false;
 					else

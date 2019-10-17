@@ -238,17 +238,5 @@ void handleWindowEvents(SDL_Event event) {
 	}
 
 	//	handle keyboard to KERNAL
-	if (keys[SDL_SCANCODE_A]) {
-		setDataPortByKeyboardInput('a');
-	}
-	if (keys[SDL_SCANCODE_B]) {
-		setDataPortByKeyboardInput('b');
-	}
-	if (keys[SDL_SCANCODE_C]) {
-		setDataPortByKeyboardInput('c');
-	}
-
-	if (keys[SDL_SCANCODE_W]) {
-		setDataPortByKeyboardInput('w');
-	}
+	setKeyboardInput(keys);
 }

@@ -2,7 +2,11 @@
 #include <stdint.h>
 uint8_t readDataPortA();
 uint8_t readDataPortB();
-void setDataPortByKeyboardInput(unsigned char key);
+void writeDataPortA(uint8_t val);
+void writeDataPortB(uint8_t val);
+void setPortARW(uint8_t val);
+void setPortBRW(uint8_t val);
+void setKeyboardInput(uint8_t *KEYS);
 
 uint8_t readCIA1timerALo();
 uint8_t readCIA1timerAHi();

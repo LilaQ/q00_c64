@@ -64,28 +64,28 @@ uint8_t readFromMem(uint16_t adr) {
 	switch (adr)
 	{
 		case 0xdc00:			//	read Keyboard / Joystick
-			readDataPortA();
+			return readDataPortA();
 			break;
 		case 0xdc01:			//	read Keyboard / Joystick
-			readDataPortB();
+			return readDataPortB();
 			break;
 
 
 		case 0xdc04:			//	read CIA1 TimerA Low
-			readCIA1timerALo();
+			return readCIA1timerALo();
 			break;
 		case 0xdc05:			//	read CIA1 TimerA High
-			readCIA1timerAHi();
+			return readCIA1timerAHi();
 			break;
 		case 0xdc06:			//	read CIA1 TimerB Low
-			readCIA1timerBLo();
+			return readCIA1timerBLo();
 			break;
 		case 0xdc07:			//	read CIA1 TimerB High
-			readCIA1timerBHi();
+			return readCIA1timerBHi();
 			break;
 
 		case 0xdc0d:			//	read CIA1 IRQ Control and Status
-			readCIA1IRQStatus();
+			return readCIA1IRQStatus();
 			break;
 		default:
 			return memory[adr];
@@ -97,6 +97,19 @@ void writeToMem(uint16_t adr, uint8_t val) {
 	//	write-protect ROM adresses
 	switch (adr)
 	{
+		case 0xdc00:			//	write Keyboard / Joystick
+			writeDataPortA(val);
+			break;
+		case 0xdc01:			//	write Keyboard / Joystick
+			writeDataPortB(val);
+			break;
+		case 0xdc02:			//	Port A RW
+			setPortARW(val);
+			break;
+		case 0xdc03:			//	Port B RW
+			setPortBRW(val);
+			break;
+
 		case 0xdc04:
 			setCIA1timerAlatchLo(val);
 			break;
