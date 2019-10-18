@@ -14,7 +14,7 @@ const SDL_Scancode KEYMAP[8][8] = {
 	{SDL_SCANCODE_5, SDL_SCANCODE_R, SDL_SCANCODE_D, SDL_SCANCODE_6, SDL_SCANCODE_C, SDL_SCANCODE_F, SDL_SCANCODE_T, SDL_SCANCODE_X},											//	PA2
 	{SDL_SCANCODE_7, SDL_SCANCODE_Y, SDL_SCANCODE_G, SDL_SCANCODE_8, SDL_SCANCODE_B, SDL_SCANCODE_H, SDL_SCANCODE_U, SDL_SCANCODE_V},											//	PA3
 	{SDL_SCANCODE_9, SDL_SCANCODE_I, SDL_SCANCODE_J, SDL_SCANCODE_0, SDL_SCANCODE_M, SDL_SCANCODE_K, SDL_SCANCODE_O, SDL_SCANCODE_N},											//	PA4
-	{SDL_SCANCODE_KP_PLUS, SDL_SCANCODE_P, SDL_SCANCODE_L, SDL_SCANCODE_MINUS, SDL_SCANCODE_STOP, SDL_SCANCODE_KP_COLON, SDL_SCANCODE_KP_AT, SDL_SCANCODE_COMMA},				//	PA5
+	{SDL_SCANCODE_KP_PLUS, SDL_SCANCODE_P, SDL_SCANCODE_L, SDL_SCANCODE_MINUS, SDL_SCANCODE_PERIOD, SDL_SCANCODE_KP_DIVIDE, SDL_SCANCODE_KP_AT, SDL_SCANCODE_COMMA},				//	PA5
 	{SDL_SCANCODE_KP_HASH, SDL_SCANCODE_KP_MULTIPLY, SDL_SCANCODE_SEMICOLON, SDL_SCANCODE_HOME, SDL_SCANCODE_RSHIFT, SDL_SCANCODE_EQUALS, SDL_SCANCODE_UP, SDL_SCANCODE_SLASH},	//	PA6
 	{SDL_SCANCODE_1, SDL_SCANCODE_LEFT, SDL_SCANCODE_COMPUTER, SDL_SCANCODE_2, SDL_SCANCODE_SPACE, SDL_SCANCODE_TAB, SDL_SCANCODE_Q, SDL_SCANCODE_END}							//	PA7
 };
@@ -23,7 +23,6 @@ void setKeyboardInput(uint8_t* _KEYS) {
 	KEYS = _KEYS;
 }
 
-int pos = 0;
 void writeDataPortA(uint8_t val) {
 	data_port_B = 0xff;
 	for(int j = 0; j < 8; j++) {
@@ -39,7 +38,6 @@ void writeDataPortA(uint8_t val) {
 }
 
 void writeDataPortB(uint8_t val) {
-	printf("Checking keyboard matrix for Port B = %x\n", val);
 }
 
 void setPortARW(uint8_t val) {
@@ -51,7 +49,6 @@ void setPortBRW(uint8_t val) {
 }
 
 uint8_t readDataPortA() {
-	printf("read Port A\n");
 	return data_port_A;
 }
 
@@ -65,6 +62,12 @@ struct CIA1_IRQ_STATUS {
 	bool IRQ_on_clock_eq_alarm = false;
 	bool IRQ_on_complete_byte = false;
 	bool IRQ_on_flag_pin = false;
+	uint8_t b0 = 0;			//	underflow timer A
+	uint8_t b1 = 0 << 1;	//	underflow timer B
+	uint8_t b2 = 0 << 2;	//	clock equals alarm
+	uint8_t b3 = 0 << 3;	//	complete byte transferred
+	uint8_t b4 = 0 << 4;	//	FLAG pin neg edge occured (casette tape, serial port)
+	uint8_t b7 = 0 << 7;	//	IRQ occured; atleast one bit in MASK and DATA is the same
 
 	void set(uint8_t val) {
 		//	check if bits need clearing, or setting#
@@ -82,12 +85,11 @@ struct CIA1_IRQ_STATUS {
 	}
 
 	uint8_t get() {
-		uint8_t b0 = 0;			//	underflow timer A
-		uint8_t b1 = 0 << 1;	//	underflow timer B
-		uint8_t b2 = 0 << 2;	//	clock equals alarm
-		uint8_t b3 = 0 << 3;	//	complete byte transferred
-		uint8_t b4 = 0 << 4;	//	FLAG pin neg edge occured (casette tape, serial port)
-		uint8_t b7 = 0 << 7;	//	IRQ occured; atleast one bit in MASK and DATA is the same
+		b1 = b1 << 1;
+		b2 = b2 << 2;
+		b3 = b3 << 3;
+		b4 = b4 << 4;
+		b7 = b7 << 7;
 		return b7 | b4 | b3 | b2 | b1 | b0;
 	}
 
@@ -212,7 +214,16 @@ void setCIA1TimerBControl(uint8_t val) {
 }
 
 void tickAllTimers(uint8_t cycles) {
-	if (timerA.tick(cycles) && cia1_irq_status.IRQ_on_timerA_underflow)
-		setIRQ(true);
-	//timerB.tick(cycles);
+	if (timerA.tick(cycles)) {
+		cia1_irq_status.b1 = 1;
+		if (cia1_irq_status.IRQ_on_timerA_underflow) {
+			setIRQ(true);
+		}
+	}
+	if (timerA.tick(cycles)) {
+		cia1_irq_status.b2 = 1;
+		if (cia1_irq_status.IRQ_on_timerB_underflow) {
+			setNMI(true);
+		}
+	}
 }

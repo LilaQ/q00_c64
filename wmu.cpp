@@ -39,7 +39,6 @@ void initWindow(SDL_Window* win, string filename) {
 	HMENU hConfig = CreateMenu();
 	HMENU hSound = CreateMenu();
 	HMENU hPalettes = CreateMenu();
-	HMENU hDebugger = CreateMenu();
 	HMENU hSavestates = CreateMenu();
 	HMENU hVol = CreateMenu();
 	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hFile, "[ main ]");
@@ -47,24 +46,15 @@ void initWindow(SDL_Window* win, string filename) {
 	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hVol, "[ vol ]");
 	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hSavestates, "[ savestates ]");
 	AppendMenu(hMenuBar, MF_STRING, 11, "[ ||> un/pause ]");
-	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hDebugger, "[ debug ]");
 	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hHelp, "[ help ]");
 	AppendMenu(hFile, MF_STRING, 9, "» load rom");
 	AppendMenu(hFile, MF_STRING, 7, "» reset");
 	AppendMenu(hFile, MF_STRING, 1, "» exit");
 	AppendMenu(hHelp, MF_STRING, 3, "» about");
-	AppendMenu(hDebugger, MF_STRING, 4, "» CHR table");
-	AppendMenu(hDebugger, MF_STRING, 5, "» Nametables");
-	AppendMenu(hDebugger, MF_STRING, 10, "» OAM tables");
 	AppendMenu(hSavestates, MF_STRING, 12, "» save state");
 	AppendMenu(hSavestates, MF_STRING, 13, "» load state");
 	AppendMenu(hConfig, MF_POPUP, (UINT_PTR)hSound, "[ sound ]");
 	AppendMenu(hSound, MF_STRING, 14, "» disable/enable");
-	AppendMenu(hSound, MF_STRING, 15, "» disable/enable SC1");
-	AppendMenu(hSound, MF_STRING, 16, "» disable/enable SC2");
-	AppendMenu(hSound, MF_STRING, 17, "» disable/enable SC3");
-	AppendMenu(hSound, MF_STRING, 18, "» disable/enable SC4");
-	AppendMenu(hSound, MF_STRING, 23, "» toggle 8-bit remix mode");
 	AppendMenu(hVol, MF_STRING, 24, "» 10%");
 	AppendMenu(hVol, MF_STRING, 25, "» 20%");
 	AppendMenu(hVol, MF_STRING, 26, "» 30%");
@@ -96,16 +86,9 @@ void handleWindowEvents(SDL_Event event) {
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 3) {
 				//showAbout();
 			}
-			//	Sprite Map
-			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 6) {
-			}
 			//	Reset
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 7) {
 				resetCPU();
-			}
-			//	Memory Map
-			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 8) {
-				//showMemoryMap();
 			}
 			//	Load ROM
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 9) {
@@ -125,9 +108,6 @@ void handleWindowEvents(SDL_Event event) {
 				if (GetOpenFileNameA(&ofn)) {
 					loadROM(f);
 				}*/
-			}
-			//	OAM
-			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 10) {
 			}
 			//	pause / unpause
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 11) {
@@ -185,26 +165,6 @@ void handleWindowEvents(SDL_Event event) {
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 14) {
 				//toggleAudio();
 			}
-			//	disable / enable SC1
-			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 15) {
-				//toggleSC1();
-			}
-			//	disable / enable SC2
-			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 16) {
-				//toggleSC2();
-			}
-			//	disable / enable SC3
-			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 17) {
-				//toggleSC3();
-			}
-			//	disable / enable SC4
-			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 18) {
-				//toggleSC4();
-			}
-			//	toggle 8bit remix mode
-			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 23) {
-				//toggleRemix();
-			}
 			//	set volume
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 24 ||
 				LOWORD(event.syswm.msg->msg.win.wParam) == 25 ||
@@ -232,9 +192,9 @@ void handleWindowEvents(SDL_Event event) {
 
 	uint8_t* keys = (uint8_t*)SDL_GetKeyboardState(NULL);
 	//	pause/unpause
-	if (keys[SDL_SCANCODE_SPACE]) {
+	if (keys[SDL_SCANCODE_PAGEDOWN]) {
 		togglePause();
-		keys[SDL_SCANCODE_SPACE] = 0;
+		keys[SDL_SCANCODE_PAGEDOWN] = 0;
 	}
 
 	//	handle keyboard to KERNAL

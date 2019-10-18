@@ -56,7 +56,7 @@ void loadCHRROM(string filename) {
 	}
 	//	map second character ROM
 	for (int i = 0; i < 0x800; i++) {
-		memory[0x1800 + i] = cartridge[i];
+		memory[0x1800 + i] = cartridge[i + 0x800];
 	}
 }
 
