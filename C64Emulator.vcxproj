@@ -165,6 +165,7 @@
   <ItemGroup>
     <ClInclude Include="cia.h" />
     <ClInclude Include="cpu.h" />
+    <ClInclude Include="D64Parser.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="mmu.h" />
     <ClInclude Include="ppu.h" />

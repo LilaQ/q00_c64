@@ -55,3 +55,16 @@ Release/mmu.obj
 Release/ppu.obj
 Release/vc142.pdb
 Release/wmu.obj
+.vs/C64Emulator/v16/ipch/AutoPCH/8177b3f9aaf0458a/D64PARSER.ipch
+Debug/char.bin
+Debug/fw.bin
+Debug/great giana s..prg
+Debug/ik.d64
+Debug/internat. karate.prg
+Debug/output.log
+Debug/SDL2.dll
+Debug/SDL2.lib
+Debug/SDL2main.lib
+Release/C64Emulator.tlog/link.delete.1.tlog
+.vs/C64Emulator/v16/ipch/AutoPCH/221e38f64c6c172e/CPU.ipch
+.vs/C64Emulator/v16/ipch/AutoPCH/c1f0a449dc4bca53/CIA.ipch

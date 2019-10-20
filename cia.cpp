@@ -120,16 +120,18 @@ struct TIMER {
 	}
 
 	bool tick(uint8_t cycles) {
-		if (timer_running) {
-			if (!timer_counts_cnt_slopes) {
-				//	0,9852486 MHz PAL
-				timer_value--;
-				if (timer_value <= 0) {
-					if (timer_stop_timer_after_underflow)
-						timer_running = false;
-					else
-						timer_value = timer_latch;
-					return true;
+		while (cycles--) {
+			if (timer_running) {
+				if (!timer_counts_cnt_slopes) {
+					//	0,9852486 MHz PAL
+					timer_value--;
+					if (timer_value <= 0) {
+						if (timer_stop_timer_after_underflow)
+							timer_running = false;
+						else
+							timer_value = timer_latch;
+						return true;
+					}
 				}
 			}
 		}

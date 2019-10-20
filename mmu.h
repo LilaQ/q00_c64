@@ -4,6 +4,8 @@
 using namespace::std;
 void powerUp();
 void reset();
+void loadD64(string f);
+void loadPRG(string f);
 unsigned char readFromMem(uint16_t adr);
 uint16_t getImmediate(uint16_t adr);
 uint16_t getZeropage(uint16_t adr);

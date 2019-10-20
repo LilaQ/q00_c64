@@ -1,12 +1,18 @@
 #define _CRT_SECURE_NO_DEPRECATE
 #include <stdint.h>
 #include <stdio.h>
+#include <vector>
+#include "D64Parser.h"
 #include "cpu.h"
 #include "mmu.h"
 #include "main.h"
 #include "cia.h"
 
 unsigned char memory[0x10000] = { 0xff };
+unsigned char kernal[0x02000];		//	TODO 
+unsigned char basic[0x02000];		//	TODO --- Only chr1 and chr2 are switched to external arrays yet
+unsigned char chr1[0x800];
+unsigned char chr2[0x800];
 bool pbc = false;
 
 void powerUp() {
@@ -15,6 +21,30 @@ void powerUp() {
 
 void reset() {
 
+}
+
+void loadD64(string f) {
+	D64Parser parser;
+	parser.init(f);
+	parser.printAll();
+	std::vector<uint8_t> r = parser.getData(0);
+	for (int i = 2; i < r.size(); i++) {
+		memory[0x7ff + i] = r.at(i);
+	}
+	printf("done\n");
+}
+
+void loadPRG(string f) {
+	std::vector<uint8_t> d(0xc200);
+	FILE* file = fopen(f.c_str(), "rb");
+	int pos = 0;
+	while (fread(&d[pos], 1, 1, file)) {
+		pos++;
+	}
+	fclose(file);
+	for (int i = 2; i < d.size(); i++) {
+		memory[0x7ff + i] = d.at(i);
+	}
 }
 
 void loadFirmware(string filename) {
@@ -30,12 +60,12 @@ void loadFirmware(string filename) {
 
 	//	map BASIC interpreter (first 8kb) to 0xa000 - 0xbfff
 	for (int i = 0; i < 0x2000; i++) {
-		memory[0xa000 + i] = cartridge[i];
+		basic[i] = cartridge[i];
 	}
 
 	//	map KERNAL
 	for (int i = 0; i < 0x2000; i++) {
-		memory[0xe000 + i] = cartridge[0x2000 + i];
+		kernal[i] = cartridge[0x2000 + i];
 	}
 }
 
@@ -52,11 +82,11 @@ void loadCHRROM(string filename) {
 
 	//	map first character ROM
 	for (int i = 0; i < 0x800; i++) {
-		memory[0x1000 + i] = cartridge[i];
+		chr1[i] = cartridge[i];
 	}
 	//	map second character ROM
 	for (int i = 0; i < 0x800; i++) {
-		memory[0x1800 + i] = cartridge[i + 0x800];
+		chr2[i] = cartridge[i + 0x800];
 	}
 }
 
@@ -88,6 +118,18 @@ uint8_t readFromMem(uint16_t adr) {
 			return readCIA1IRQStatus();
 			break;
 		default:
+			if (adr >= 0x1000 && adr < 0x1800) {		//	CHR1 
+				return chr1[adr % 0x1000];
+			}
+			if (adr >= 0x1800 && adr < 0x2000) {		//	CHR2 
+				return chr2[adr % 0x1800];
+			}
+			if (adr >= 0xa000 && adr < 0xc000) {		//	BASIC
+				return basic[adr % 0xa000];
+			}
+			if (adr >= 0xe000 && adr < 0x10000) {		//	KERNAL
+				return kernal[adr % 0xe000];
+			}
 			return memory[adr];
 			break;
 	}
@@ -131,9 +173,19 @@ void writeToMem(uint16_t adr, uint8_t val) {
 			break;
 
 		default:
-			if (adr < 0xa000 || (adr >= 0xc000 && adr < 0xe000))
-				memory[adr] = val;
+			if (adr >= 0x1000 && adr < 0x1800) {		//	CHR1 
+				chr1[adr % 0x1000] = val;
+				break;
+			}
+			if (adr >= 0x1800 && adr < 0x2000) {		//	CHR2 
+				chr2[adr % 0x1800] = val;
+				break;
+			}
+			memory[adr] = val;
 			break;
+	}
+	if (adr == 0xa565) {
+		printf("Someone's writing! %x\n", val);
 	}
 }
 
@@ -147,36 +199,36 @@ uint16_t getImmediate(uint16_t adr) {
 	return adr;
 }
 uint16_t getAbsolute(uint16_t adr) {
-	return (memory[adr + 1] << 8) | memory[adr];
+	return (readFromMem(adr + 1) << 8) | readFromMem(adr);
 }
 uint16_t getAbsoluteXIndex(uint16_t adr, uint8_t X) {
-	a = ((memory[adr + 1] << 8) | memory[adr]);
+	a = ((readFromMem(adr + 1) << 8) | readFromMem(adr));
 	pbc = (a & 0xff00) != ((a + X) & 0xff00);
 	return (a + X) % 0x10000;
 }
 uint16_t getAbsoluteYIndex(uint16_t adr, uint8_t Y) {
-	a = ((memory[adr + 1] << 8) | memory[adr]);
+	a = ((readFromMem(adr + 1) << 8) | readFromMem(adr));
 	pbc = (a & 0xff00) != ((a + Y) & 0xff00);
 	return (a + Y) % 0x10000;
 }
 uint16_t getZeropage(uint16_t adr) {
-	return memory[adr];
+	return readFromMem(adr);
 }
 uint16_t getZeropageXIndex(uint16_t adr, uint8_t X) {
-	return (memory[adr] + X) % 0x100;
+	return (readFromMem(adr) + X) % 0x100;
 }
 uint16_t getZeropageYIndex(uint16_t adr, uint8_t Y) {
-	return (memory[adr] + Y) % 0x100;
+	return (readFromMem(adr) + Y) % 0x100;
 }
 uint16_t getIndirect(uint16_t adr) {
-	return (memory[memory[adr + 1] << 8 | ((memory[adr] + 1) % 0x100)]) << 8 | memory[memory[adr + 1] << 8 | memory[adr]];
+	return (readFromMem(readFromMem(adr + 1) << 8 | ((readFromMem(adr) + 1) % 0x100))) << 8 | readFromMem(readFromMem(adr + 1) << 8 | readFromMem(adr));
 }
 uint16_t getIndirectXIndex(uint16_t adr, uint8_t X) {
-	a = (memory[(memory[adr] + X + 1) % 0x100] << 8) | memory[(memory[adr] + X) % 0x100];
+	a = (readFromMem((readFromMem(adr) + X + 1) % 0x100) << 8) | readFromMem((readFromMem(adr) + X) % 0x100);
 	return a % 0x10000;
 }
 uint16_t getIndirectYIndex(uint16_t adr, uint8_t Y) {
-	a = ((memory[(memory[adr] + 1) % 0x100] << 8) | (memory[memory[adr]]));
+	a = ((readFromMem((readFromMem(adr) + 1) % 0x100) << 8) | (readFromMem(readFromMem(adr))));
 	pbc = (a & 0xff00) != ((a + Y) & 0xff00);
 	return (a + Y) % 0x10000;
 }

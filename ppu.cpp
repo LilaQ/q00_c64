@@ -59,7 +59,7 @@ void renderLine(uint16_t row) {
 		for (int j = 0; j < 284; j++) {
 			//	border
 			uint16_t border_color = readFromMem(0xd020);
-			if (i <= 40 || i >= 360 || j <= 40 || j >= 240) {
+			if (i <= 40 || i >= 360 || j <= 39 || j >= 240) {
 				VRAM[(j * 402 * 3) + (i * 3)] = COLORS[border_color][0];
 				VRAM[(j * 402 * 3) + (i * 3) + 1] = COLORS[border_color][1];
 				VRAM[(j * 402 * 3) + (i * 3) + 2] = COLORS[border_color][2];

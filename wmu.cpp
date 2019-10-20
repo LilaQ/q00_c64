@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_DEPRECATE
 #include "SDL2/include/SDL.h"
 #include <string>
+#include <iostream>
 #include <string.h>
 #include <thread>
 #ifdef _WIN32
@@ -92,22 +93,29 @@ void handleWindowEvents(SDL_Event event) {
 			}
 			//	Load ROM
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 9) {
-				/*char f[100];
+				char f[100];
+				char ext[12];
 				OPENFILENAME ofn;
 
 				ZeroMemory(&f, sizeof(f));
 				ZeroMemory(&ofn, sizeof(ofn));
 				ofn.lStructSize = sizeof(ofn);
 				ofn.hwndOwner = NULL;  // If you have a window to center over, put its HANDLE here
-				ofn.lpstrFilter = "NES Roms\0*.nes\0";
+				ofn.lpstrFilter = "C64 Disks\0*.d64;*.prg\0C64 Programs\0*.prg\0";
 				ofn.lpstrFile = f;
 				ofn.nMaxFile = MAX_PATH;
 				ofn.lpstrTitle = "[ rom selection ]";
 				ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
 
 				if (GetOpenFileNameA(&ofn)) {
-					loadROM(f);
-				}*/
+					string s(f);
+					for (auto& c : s) c = toupper(c);
+					std::cout << s;
+					if (s.substr(s.size() - 3) == "D64")
+						loadD64(f);
+					if (s.substr(s.size() - 3) == "PRG")
+						loadPRG(f);
+				}
 			}
 			//	pause / unpause
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 11) {

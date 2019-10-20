@@ -38,12 +38,22 @@ uint8_t EOR(uint16_t adr, uint8_t cycles) {
 	return cycles;
 }
 uint8_t ADD(uint8_t val, uint8_t cycles) {
-	uint16_t sum = registers.A + val + status.carry;
-	status.setOverflow((~(registers.A ^ val) & (registers.A ^ sum) & 0x80) > 0);
-	status.setCarry(sum > 0xff);
-	registers.A = sum & 0xff;
-	status.setZero(registers.A == 0);
-	status.setNegative(registers.A >> 7);
+	if (status.decimal == 0) {
+		uint16_t sum = registers.A + val + status.carry;
+		status.setOverflow((~(registers.A ^ val) & (registers.A ^ sum) & 0x80) > 0);
+		status.setCarry(sum > 0xff);
+		registers.A = sum & 0xff;
+		status.setZero(registers.A == 0);
+		status.setNegative(registers.A >> 7);
+	}
+	else {
+		printf("BCD Arithmetik happening\n");
+		uint16_t v1 = (registers.A / 16) * 10 + (registers.A % 16);
+		uint16_t v2 = (val / 16) * 10 + (val % 16);
+		uint16_t sum = ((v1 + v2 + status.carry) / 10 * 16) + (v1 + v2 + status.carry) % 10;
+		status.setCarry((v1 + v2) > 99);
+		registers.A = sum & 0xff;
+	}
 	return cycles;
 }
 uint8_t ADC(uint16_t adr, uint8_t cycles) {
@@ -208,8 +218,9 @@ void setIRQ(bool v) {
 	irq = v;
 }
 
+uint8_t fff = 0;
 int IRQorBRK() {
-	//printf("IRQ\n");
+	printf("IRQ %d\n", fff++);
 	writeToMem(SP_ + 0x100, PC >> 8);
 	SP_--;
 	writeToMem(SP_ + 0x100, PC & 0xff);

@@ -53,5 +53,8 @@
     <ClInclude Include="cia.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="D64Parser.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
