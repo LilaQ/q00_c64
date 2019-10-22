@@ -68,3 +68,8 @@ Debug/SDL2main.lib
 Release/C64Emulator.tlog/link.delete.1.tlog
 .vs/C64Emulator/v16/ipch/AutoPCH/221e38f64c6c172e/CPU.ipch
 .vs/C64Emulator/v16/ipch/AutoPCH/c1f0a449dc4bca53/CIA.ipch
+.vs/C64Emulator/v16/ipch/AutoPCH/3e0e259c96fa14f7/WMU.ipch
+.vs/C64Emulator/v16/ipch/AutoPCH/43faea0e6ebd3d3d/MMU.ipch
+.vs/C64Emulator/v16/ipch/AutoPCH/e714a452e6b91b95/___DEL__DISK1541.ipch
+.vs/C64Emulator/v16/ipch/AutoPCH/f819c94c301fd7/DISK1541.ipch
+___DEL__Disk1541.h

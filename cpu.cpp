@@ -220,7 +220,7 @@ void setIRQ(bool v) {
 
 uint8_t fff = 0;
 int IRQorBRK() {
-	printf("IRQ %d\n", fff++);
+	//printf("IRQ %d\n", fff++);
 	writeToMem(SP_ + 0x100, PC >> 8);
 	SP_--;
 	writeToMem(SP_ + 0x100, PC & 0xff);
@@ -230,6 +230,10 @@ int IRQorBRK() {
 	PC = (readFromMem(0xffff) << 8) | readFromMem(0xfffe);
 	status.setInterruptDisable(1);
 	return 7;
+}
+
+Registers getCPURegs() {
+	return registers;
 }
 
 int c = 0;

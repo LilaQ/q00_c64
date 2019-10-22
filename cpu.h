@@ -73,3 +73,4 @@ struct Status
 
 int stepCPU();
 void resetCPU();
+Registers getCPURegs();

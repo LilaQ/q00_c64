@@ -27,9 +27,10 @@ void loadD64(string f) {
 	D64Parser parser;
 	parser.init(f);
 	parser.printAll();
-	std::vector<uint8_t> r = parser.getData(0);
-	for (int i = 2; i < r.size(); i++) {
-		memory[0x7ff + i] = r.at(i);
+	//std::vector<uint8_t> r = parser.getData(0);
+	std::vector<uint8_t> r = parser.dirList();
+	for (int i = 0; i < r.size(); i++) {
+		memory[0x801 + i] = r.at(i);
 	}
 	printf("done\n");
 }
@@ -91,6 +92,10 @@ void loadCHRROM(string filename) {
 }
 
 uint8_t readFromMem(uint16_t adr) {
+	if (adr == 0xffd5) {
+		printf("LOAD at read %d %d\n", getCPURegs().X, getCPURegs().Y);
+		writeToMem(0xffd5, 0x00);
+	}
 	switch (adr)
 	{
 		case 0xdc00:			//	read Keyboard / Joystick
@@ -136,6 +141,8 @@ uint8_t readFromMem(uint16_t adr) {
 }
 
 void writeToMem(uint16_t adr, uint8_t val) {
+	if (adr == 0xffd5)
+		printf("LOAD at write %d %d\n", getCPURegs().X, getCPURegs().Y);
 	//	write-protect ROM adresses
 	switch (adr)
 	{
