@@ -27,7 +27,6 @@ void loadD64(string f) {
 	D64Parser parser;
 	parser.init(f);
 	parser.printAll();
-	//std::vector<uint8_t> r = parser.getData(0);
 	std::vector<uint8_t> r = parser.dirList();
 	for (int i = 0; i < r.size(); i++) {
 		memory[0x801 + i] = r.at(i);
@@ -96,6 +95,10 @@ uint8_t readFromMem(uint16_t adr) {
 		printf("LOAD at read %d %d\n", getCPURegs().X, getCPURegs().Y);
 		writeToMem(0xffd5, 0x00);
 	}
+	if (adr == 0xffbd) {
+		printf("SETNAM %d %d\n", getCPURegs().X, getCPURegs().Y);
+		writeToMem(0xffd5, 0x00);
+	}
 	switch (adr)
 	{
 		case 0xdc00:			//	read Keyboard / Joystick
@@ -141,8 +144,18 @@ uint8_t readFromMem(uint16_t adr) {
 }
 
 void writeToMem(uint16_t adr, uint8_t val) {
-	if (adr == 0xffd5)
+	if (adr == 0xffd5) {
 		printf("LOAD at write %d %d\n", getCPURegs().X, getCPURegs().Y);
+		printf("File to be loaded: ");
+		for (int i = 0; i < 16; i++) {
+			cout << memory[((getCPURegs().Y << 8) | getCPURegs().X) + i];
+		}
+		printf("\n");
+	}
+	if (adr == 0xffbd) {
+		printf("SETNAM at write %d %d\n", getCPURegs().X, getCPURegs().Y);
+		writeToMem(0xffd5, 0x00);
+	}
 	//	write-protect ROM adresses
 	switch (adr)
 	{
