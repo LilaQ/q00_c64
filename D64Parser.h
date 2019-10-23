@@ -182,6 +182,36 @@ struct D64Parser {
 		return ret;
 	}
 
+	bool filenameExists(string f) {
+		for (int i = 0; i < entries.size(); i++) {
+			if (entries.at(i).pet_name == f)
+				return true;
+		}
+		return false;
+	}
+
+	std::vector<uint8_t> getDataByFilename(string f) {
+		Entry selected;
+		for (int i = 0; i < entries.size(); i++) {
+			if (entries.at(i).pet_name == f)
+				selected = entries.at(i);
+		}
+		int c = 0;
+		std::vector<uint8_t> ret(selected.sector_size * 0x100);
+		uint32_t next_track = selected.start_track;
+		uint32_t next_sector = selected.start_sector;
+		while (c < selected.sector_size) {
+			uint32_t a_adr = STARTS[next_track] + next_sector * 256;
+			for (int i = 0; i < 254; i++) {
+				ret[c * 254 + i] = data[a_adr + i + 2];
+			}
+			next_track = data[a_adr];
+			next_sector = data[a_adr + 1];
+			c++;
+		}
+		return ret;
+	}
+
 	void printAll() {
 		cout << "\t\t" << diskname << "\n";
 		for (int i = 0; i < entries.size(); i ++) {

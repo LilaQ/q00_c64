@@ -1,6 +1,8 @@
 #pragma once
 #include <stdint.h>
 #include <stdio.h>
+void setCarry();		//	Only for hooking C64 LOAD routines for filechecking
+void clearCarry();		//	Only for hooking C64 LOAD routines for filechecking
 void setIRQ(bool v);
 void setNMI(bool v);
 int NMI();

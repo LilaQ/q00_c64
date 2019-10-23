@@ -15,6 +15,10 @@ unsigned char chr1[0x800];
 unsigned char chr2[0x800];
 bool pbc = false;
 
+// disk hotloading
+string LOAD_FILE;
+D64Parser parser;
+
 void powerUp() {
 	//	TODO
 }
@@ -24,7 +28,6 @@ void reset() {
 }
 
 void loadD64(string f) {
-	D64Parser parser;
 	parser.init(f);
 	parser.printAll();
 	std::vector<uint8_t> r = parser.dirList();
@@ -91,13 +94,24 @@ void loadCHRROM(string filename) {
 }
 
 uint8_t readFromMem(uint16_t adr) {
-	if (adr == 0xffd5) {
-		printf("LOAD at read %d %d\n", getCPURegs().X, getCPURegs().Y);
-		writeToMem(0xffd5, 0x00);
-	}
 	if (adr == 0xffbd) {
 		printf("SETNAM %d %d\n", getCPURegs().X, getCPURegs().Y);
 		writeToMem(0xffd5, 0x00);
+		LOAD_FILE = "";
+		for (int i = 0; i < 16; i++) {
+			LOAD_FILE += memory[((getCPURegs().Y << 8) | getCPURegs().X) + i];
+		}
+	}
+	if (adr == 0xf52e || adr == 0xf4de) {
+		if (parser.filenameExists(LOAD_FILE)) {
+			clearCarry();		//	File exists
+			printf("File exists %s\n", LOAD_FILE);
+		}
+		else {
+			setCarry();			//	File does not exist
+			printf("File does not exist %s\n", LOAD_FILE);
+		}
+		
 	}
 	switch (adr)
 	{
@@ -144,18 +158,6 @@ uint8_t readFromMem(uint16_t adr) {
 }
 
 void writeToMem(uint16_t adr, uint8_t val) {
-	if (adr == 0xffd5) {
-		printf("LOAD at write %d %d\n", getCPURegs().X, getCPURegs().Y);
-		printf("File to be loaded: ");
-		for (int i = 0; i < 16; i++) {
-			cout << memory[((getCPURegs().Y << 8) | getCPURegs().X) + i];
-		}
-		printf("\n");
-	}
-	if (adr == 0xffbd) {
-		printf("SETNAM at write %d %d\n", getCPURegs().X, getCPURegs().Y);
-		writeToMem(0xffd5, 0x00);
-	}
 	//	write-protect ROM adresses
 	switch (adr)
 	{

@@ -9,6 +9,14 @@ uint8_t SP_ = 0xfd;
 Registers registers;
 Status status;
 
+void setCarry() {				//	Only for hooking C64 LOAD routines for filechecking
+	status.carry = 1;
+}
+
+void clearCarry() {				//	Only for hooking C64 LOAD routines for filechecking
+	status.carry = 0;
+}
+
 uint8_t LDX(unsigned char& tar, uint16_t adr, uint8_t cycles) {
 	tar = readFromMem(adr);
 	status.setZero(tar == 0);
