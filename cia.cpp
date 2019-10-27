@@ -138,10 +138,12 @@ struct TIMER {
 					//	0,9852486 MHz PAL
 					timer_value--;
 					if (timer_value <= 0) {
-						if (timer_stop_timer_after_underflow)
+						if (timer_stop_timer_after_underflow) {
 							timer_running = false;
-						else
+						}
+						else {
 							timer_value = timer_latch;
+						}
 						return true;
 					}
 				}
@@ -234,7 +236,7 @@ void tickAllTimers(uint8_t cycles) {
 			setIRQ(true);
 		}
 	}
-	if (timerA.tick(cycles)) {
+	if (timerB.tick(cycles)) {
 		cia1_irq_status.b2 = 1;
 		if (cia1_irq_status.IRQ_on_timerB_underflow) {
 			setNMI(true);

@@ -7,6 +7,10 @@ void setIRQ(bool v);
 void setNMI(bool v);
 int NMI();
 
+
+//	DELETE
+void setGO();
+
 struct Registers
 {
 	unsigned char A;

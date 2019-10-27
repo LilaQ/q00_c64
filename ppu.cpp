@@ -31,32 +31,34 @@ const unsigned char COLORS[16][3] = {
 	{0xb2, 0xb2, 0xb2}
 };
 
-void initPPU(string filename) {
-
-	//	init and create window and renderer
-	SDL_Init(SDL_INIT_VIDEO);
-	//SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-	SDL_CreateWindowAndRenderer(402, 284, 0, &window, &renderer);
-	SDL_SetWindowSize(window, 804, 568);
-	//SDL_RenderSetLogicalSize(renderer, 512, 480);
-	SDL_SetWindowResizable(window, SDL_TRUE);
-
-	//	for fast rendering, create a texture
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 402, 284);
-	initWindow(window, filename);
-}
-
 void drawFrame() {
 	SDL_UpdateTexture(texture, NULL, VRAM, 402 * sizeof(unsigned char) * 3);
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
 }
 
-void renderLine(uint16_t row) {
+void initPPU(string filename) {
+
+	//	init and create window and renderer
+	SDL_Init(SDL_INIT_VIDEO);
+	//SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+	SDL_CreateWindowAndRenderer(402, 284, 0, &window, &renderer);
+	SDL_SetWindowSize(window, 804, 588);
+	//SDL_RenderSetLogicalSize(renderer, 512, 480);
+	SDL_SetWindowResizable(window, SDL_TRUE);
+
+	//	for fast rendering, create a texture
+	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 402, 284);
+	initWindow(window, filename);
+
+	drawFrame();
+}
+
+void renderLine(uint16_t j) {
 	uint16_t chrrom = 1024 * (readFromMem(0xd018) & 0b1110);
 	uint16_t colorram = 0xd800;
 	for (int i = 0; i < 402; i++) {
-		for (int j = 0; j < 284; j++) {
+		//for (int j = 0; j < 284; j++) {
 			//	border
 			uint16_t border_color = readFromMem(0xd020);
 			if (i <= 39 || i >= 360 || j <= 39 || j >= 240) {
@@ -69,7 +71,7 @@ void renderLine(uint16_t row) {
 				uint16_t offset = ((j - 40) / 8) * 40 + (i - 40) / 8;
 				uint8_t char_id = readFromMem(0x400 + offset);
 
-				uint8_t row = readFromMem(chrrom + (char_id * 8) + ((j-40) % 8));
+				uint8_t row = readChar(chrrom + (char_id * 8) + ((j-40) % 8));
 				uint8_t color = readFromMem(colorram + offset);
 
 				uint8_t bg_color = readFromMem(0xd021);
@@ -77,22 +79,22 @@ void renderLine(uint16_t row) {
 				VRAM[(j * 402 * 3) + (i * 3) + 1] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
 				VRAM[(j * 402 * 3) + (i * 3) + 2] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
 			}
-		}
+		//}
 	}
 }
 
 int cpu_cycles = 0;
-
+int render_row = 0;
 void stepPPU(uint8_t cpu_cyc) {
 	cpu_cycles += cpu_cyc;
 	if (cpu_cycles >= 63) {
 		cpu_cycles %= 63;
-		uint8_t row = readFromMem(0xd012);
-		row++;
-		writeToMem(0xd012, row);
-		if (!row) {
-			renderLine(row);
+		renderLine(render_row);
+		render_row++;
+		writeToMem(0xd012, render_row & 0xff);
+		if (render_row >= 284) {
 			drawFrame();
+			render_row = 0;
 		}
 	}
 }

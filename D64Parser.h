@@ -74,7 +74,7 @@ struct D64Parser {
 		FILE_TYPE[0x82] = "PRG";
 		FILE_TYPE[0x83] = "USR";
 		FILE_TYPE[0x84] = "REL";
-
+		entries.clear();
 		filename = f;
 		FILE* file = fopen(filename.c_str(), "rb");
 		int pos = 0;
@@ -110,6 +110,7 @@ struct D64Parser {
 			entry.adress_end = entry.adress_start + entry.sector_size * 256;
 			entries.push_back(entry);
 		}
+		diskname = "";
 		for (uint8_t i = 0x90; i < 0xa0; i++) {
 			diskname += data[STARTS[18] + i];
 		}
@@ -129,7 +130,7 @@ struct D64Parser {
 			r.push_back(diskname.at(i));
 		}
 		r.push_back(0x22);												//	"
-		for (int j = 0; j < 24 - diskname.size() - 2; j++) {
+		for (int i = 0; i < 24 - diskname.size() - 2; i++) {
 			r.push_back(0x20);											//	FILLING SPACES
 		}
 		r.push_back(0x00);
@@ -184,6 +185,7 @@ struct D64Parser {
 
 	bool filenameExists(string f) {
 		for (int i = 0; i < entries.size(); i++) {
+			cout << entries.at(i).pet_name << " - " << f << "\n";
 			if (entries.at(i).pet_name == f)
 				return true;
 		}

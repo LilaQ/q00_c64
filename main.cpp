@@ -22,7 +22,7 @@ int main()
 {
 
 	//	load firmware (BASIC and KERNAL)
-	loadFirmware("fw.bin");
+	loadFirmware("fw.bin.ptc");
 
 	//	load char ROM
 	loadCHRROM("char.bin");

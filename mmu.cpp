@@ -34,19 +34,29 @@ void loadD64(string f) {
 	for (int i = 0; i < r.size(); i++) {
 		memory[0x801 + i] = r.at(i);
 	}
-	printf("done\n");
 }
 
 void loadPRG(string f) {
-	std::vector<uint8_t> d(0xc200);
+	uint8_t buf[1];
+	std::vector<uint8_t> d;
 	FILE* file = fopen(f.c_str(), "rb");
-	int pos = 0;
-	while (fread(&d[pos], 1, 1, file)) {
-		pos++;
+	while (fread(&buf[0], sizeof(uint8_t), 1, file)) {
+		d.push_back(buf[0]);
 	}
 	fclose(file);
-	for (int i = 2; i < d.size(); i++) {
+	printf("d size %x - %d\n", d.size(), d.size());
+	for (uint16_t i = 2; i < d.size(); i++) {
 		memory[0x7ff + i] = d.at(i);
+	}
+	setGO();
+}
+
+void loadPRGFromDisk(string f) {
+	if (parser.filenameExists(f)) {
+		std::vector<uint8_t> res = parser.getDataByFilename(f);
+		for (int i = 2; i < res.size(); i++) {
+			memory[0x7ff + i] = res.at(i);
+		}
 	}
 }
 
@@ -94,25 +104,34 @@ void loadCHRROM(string filename) {
 }
 
 uint8_t readFromMem(uint16_t adr) {
+	//	SETNAM hook
 	if (adr == 0xffbd) {
-		printf("SETNAM %d %d\n", getCPURegs().X, getCPURegs().Y);
-		writeToMem(0xffd5, 0x00);
 		LOAD_FILE = "";
+		printf("SETTING NAME y: %x x: %x\n", getCPURegs().Y, getCPURegs().X);
 		for (int i = 0; i < 16; i++) {
 			LOAD_FILE += memory[((getCPURegs().Y << 8) | getCPURegs().X) + i];
 		}
 	}
+	//	LOAD ,8,1 HOOK
 	if (adr == 0xf52e || adr == 0xf4de) {
 		if (parser.filenameExists(LOAD_FILE)) {
 			clearCarry();		//	File exists
-			printf("File exists %s\n", LOAD_FILE);
+			cout << "File exists " << LOAD_FILE << "\n";
+			loadPRGFromDisk(LOAD_FILE);
 		}
 		else {
 			setCarry();			//	File does not exist
-			printf("File does not exist %s\n", LOAD_FILE);
+			cout << "File does not exist " << LOAD_FILE << "\n";
 		}
 		
 	}
+	//	Evaluate PLA (0x0001, decides which memory areas are visible at which adresses)
+	uint8_t b0 = memory[0x0001] & 0b001;
+	uint8_t b1 = memory[0x0001] & 0b010;
+	uint8_t b2 = memory[0x0001] & 0b100;
+	//	TODO Continue this
+
+
 	switch (adr)
 	{
 		case 0xdc00:			//	read Keyboard / Joystick
@@ -140,12 +159,6 @@ uint8_t readFromMem(uint16_t adr) {
 			return readCIA1IRQStatus();
 			break;
 		default:
-			if (adr >= 0x1000 && adr < 0x1800) {		//	CHR1 
-				return chr1[adr % 0x1000];
-			}
-			if (adr >= 0x1800 && adr < 0x2000) {		//	CHR2 
-				return chr2[adr % 0x1800];
-			}
 			if (adr >= 0xa000 && adr < 0xc000) {		//	BASIC
 				return basic[adr % 0xa000];
 			}
@@ -155,6 +168,14 @@ uint8_t readFromMem(uint16_t adr) {
 			return memory[adr];
 			break;
 	}
+}
+
+uint8_t readChar(uint16_t adr) {
+	if (adr >= 0x1000 && adr < 0x1800)
+		return chr1[adr % 0x1000];
+	else if (adr >= 0x1800 && adr < 0x2000)
+		return chr2[adr % 0x1800];
+	return 0x00;
 }
 
 void writeToMem(uint16_t adr, uint8_t val) {
@@ -195,19 +216,8 @@ void writeToMem(uint16_t adr, uint8_t val) {
 			break;
 
 		default:
-			if (adr >= 0x1000 && adr < 0x1800) {		//	CHR1 
-				chr1[adr % 0x1000] = val;
-				break;
-			}
-			if (adr >= 0x1800 && adr < 0x2000) {		//	CHR2 
-				chr2[adr % 0x1800] = val;
-				break;
-			}
 			memory[adr] = val;
 			break;
-	}
-	if (adr == 0xa565) {
-		printf("Someone's writing! %x\n", val);
 	}
 }
 

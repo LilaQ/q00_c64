@@ -226,7 +226,6 @@ void setIRQ(bool v) {
 	irq = v;
 }
 
-uint8_t fff = 0;
 int IRQorBRK() {
 	//printf("IRQ %d\n", fff++);
 	writeToMem(SP_ + 0x100, PC >> 8);
@@ -247,6 +246,11 @@ Registers getCPURegs() {
 int c = 0;
 int r = 0; //	don't delete, return val holder
 uint16_t ff = 1;
+bool mach = false;
+void setGO() {
+	//mach = true;
+}
+
 int stepCPU() {
 	c += getLastCyc();
 
@@ -255,18 +259,15 @@ int stepCPU() {
 		return NMI();
 	}
 
-	if (irq && !status.interruptDisable) {
+	if (irq && status.interruptDisable == 0) {
 		irq = false;
 		return IRQorBRK();
 	}
 
-	if (PC == 0xfd88) {
-		printf("break\n");
-	}
-
-	//printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d LastStack:%x\n", PC, readFromMem(PC), readFromMem(PC+1), readFromMem(PC+2), registers.A, registers.X, registers.Y, status.status, SP_, c, SP_);
+	if(mach)
+		printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d LastStack:%x\n", PC, readFromMem(PC), readFromMem(PC+1), readFromMem(PC+2), registers.A, registers.X, registers.Y, status.status, SP_, c, SP_);
 	switch (readFromMem(PC)) {
-	case 0x00: { status.setBrk(1); return IRQorBRK(); break; }
+	case 0x00: { status.setBrk(1); irq = true; printf("BREAK "); return 7; break; }
 	case 0x01: { PC++; return ORA(getIndirectXIndex(PC++, registers.X), 6); break; }
 	case 0x03: { PC++; return SLO(getIndirectXIndex(PC++, registers.X), 8); break; } // SLO inx 2,8
 	case 0x04: { PC += 2; return 3; break; }

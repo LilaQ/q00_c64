@@ -36,7 +36,7 @@ void initWindow(SDL_Window* win, string filename) {
 	HMENU hMenuBar = CreateMenu();
 	HMENU hFile = CreateMenu();
 	HMENU hEdit = CreateMenu();
-	HMENU hHelp = CreateMenu();
+	HMENU hMem = CreateMenu();
 	HMENU hConfig = CreateMenu();
 	HMENU hSound = CreateMenu();
 	HMENU hPalettes = CreateMenu();
@@ -47,11 +47,10 @@ void initWindow(SDL_Window* win, string filename) {
 	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hVol, "[ vol ]");
 	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hSavestates, "[ savestates ]");
 	AppendMenu(hMenuBar, MF_STRING, 11, "[ ||> un/pause ]");
-	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hHelp, "[ help ]");
+	AppendMenu(hMenuBar, MF_STRING, 2, "[ memory ]");
 	AppendMenu(hFile, MF_STRING, 9, "» load rom");
 	AppendMenu(hFile, MF_STRING, 7, "» reset");
 	AppendMenu(hFile, MF_STRING, 1, "» exit");
-	AppendMenu(hHelp, MF_STRING, 3, "» about");
 	AppendMenu(hSavestates, MF_STRING, 12, "» save state");
 	AppendMenu(hSavestates, MF_STRING, 13, "» load state");
 	AppendMenu(hConfig, MF_POPUP, (UINT_PTR)hSound, "[ sound ]");
@@ -72,6 +71,60 @@ void initWindow(SDL_Window* win, string filename) {
 	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 }
 
+void showMemoryMap() {
+
+	SDL_Renderer* renderer;
+	SDL_Window* window;
+
+	//	init and create window and renderer
+	SDL_Init(SDL_INIT_VIDEO);
+	SDL_CreateWindowAndRenderer(550, 470, 0, &window, &renderer);
+	SDL_SetWindowSize(window, 550, 470);
+	SDL_SysWMinfo wmInfo;
+	SDL_VERSION(&wmInfo.version);
+	SDL_GetWindowWMInfo(window, &wmInfo);
+	SDL_SetWindowTitle(window, "[ q00.c64 ][ mem map ]");
+
+	HWND hwnd = wmInfo.info.win.window;
+	HINSTANCE hInst = wmInfo.info.win.hinstance;
+	HWND hScroll = CreateWindow("EDIT", NULL, WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_AUTOVSCROLL | ES_LEFT | WS_BORDER | ES_MULTILINE | ES_READONLY | ES_MULTILINE | ES_READONLY, 10, 80, 530, 380, hwnd, NULL, hInst, NULL);
+
+	//	MEMDUMP Control
+	string s = "Offset      00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f\r\n\r\n";
+	for (int i = 0; i < 0x10000; i += 0x10) {
+		char title[70];
+		snprintf(title, sizeof title, "0x%04x      %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x \r\n", i,
+			readFromMem(i),
+			readFromMem(i + 1),
+			readFromMem(i + 2),
+			readFromMem(i + 3),
+			readFromMem(i + 4),
+			readFromMem(i + 5),
+			readFromMem(i + 6),
+			readFromMem(i + 7),
+			readFromMem(i + 8),
+			readFromMem(i + 9),
+			readFromMem(i + 10),
+			readFromMem(i + 11),
+			readFromMem(i + 12),
+			readFromMem(i + 13),
+			readFromMem(i + 14),
+			readFromMem(i + 15)
+		);
+		s.append((string)title);
+	}
+
+	const TCHAR* text = s.c_str();
+	HDC wdc = GetWindowDC(hScroll);
+	HFONT font = (HFONT)GetStockObject(ANSI_FIXED_FONT);
+	LOGFONT lf;
+	GetObject(font, sizeof(LOGFONT), &lf);
+	lf.lfWeight = FW_LIGHT;
+	HFONT boldFont = CreateFontIndirect(&lf);
+	SendMessage(hScroll, WM_SETFONT, (WPARAM)boldFont, 60);
+	SendMessage(hScroll, WM_SETTEXT, 60, reinterpret_cast<LPARAM>(text));
+}
+
 void handleWindowEvents(SDL_Event event) {
 	//	poll events from menu
 	SDL_PollEvent(&event);
@@ -83,9 +136,9 @@ void handleWindowEvents(SDL_Event event) {
 			if (LOWORD(event.syswm.msg->msg.win.wParam) == 1) {
 				exit(0);
 			}
-			//	About
-			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 3) {
-				//showAbout();
+			//	Mem
+			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 2) {
+				showMemoryMap();
 			}
 			//	Reset
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 7) {
@@ -94,7 +147,6 @@ void handleWindowEvents(SDL_Event event) {
 			//	Load ROM
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 9) {
 				char f[100];
-				char ext[12];
 				OPENFILENAME ofn;
 
 				ZeroMemory(&f, sizeof(f));
@@ -208,3 +260,5 @@ void handleWindowEvents(SDL_Event event) {
 	//	handle keyboard to KERNAL
 	setKeyboardInput(keys);
 }
+
+
