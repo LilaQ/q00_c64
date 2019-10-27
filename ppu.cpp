@@ -57,26 +57,28 @@ void initPPU(string filename) {
 void renderLine(uint16_t j) {
 	uint16_t chrrom = 1024 * (readFromMem(0xd018) & 0b1110);
 	uint8_t offset_x = readFromMem(0xd016) & 0b111;
+	uint8_t border_mode_offset = (readFromMem(0xd016) & 0b1000) ? 0 : 16;	//	38 cols if off, 40 cols if on
 	uint16_t colorram = 0xd800;
 	for (int i = 0; i < 402; i++) {
+
+		//	inside
+		uint16_t offset = ((j - 40) / 8) * 40 + (i - 40) / 8;
+		uint8_t char_id = readFromMem(0x400 + offset);
+
+		uint8_t row = readChar(chrrom + (char_id * 8) + ((j-40) % 8));
+		uint8_t color = readFromMem(colorram + offset);
+
+		uint8_t bg_color = readFromMem(0xd021);
+		VRAM[(j * 402 * 3) + ((i + offset_x) * 3)] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
+		VRAM[(j * 402 * 3) + ((i + offset_x) * 3) + 1] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
+		VRAM[(j * 402 * 3) + ((i + offset_x) * 3) + 2] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
+
+		//	border
 		uint16_t border_color = readFromMem(0xd020);
-		if (i <= 39 || i >= 360 || j <= 39 || j >= 240) {
+		if (i <= (39 + border_mode_offset) || i >= (360 - border_mode_offset) || j <= 39 || j >= 240) {
 			VRAM[(j * 402 * 3) + (i * 3)] = COLORS[border_color][0];
 			VRAM[(j * 402 * 3) + (i * 3) + 1] = COLORS[border_color][1];
 			VRAM[(j * 402 * 3) + (i * 3) + 2] = COLORS[border_color][2];
-		}
-		//	frame
-		else {
-			uint16_t offset = ((j - 40) / 8) * 40 + (i - 40) / 8;
-			uint8_t char_id = readFromMem(0x400 + offset);
-
-			uint8_t row = readChar(chrrom + (char_id * 8) + ((j-40) % 8));
-			uint8_t color = readFromMem(colorram + offset);
-
-			uint8_t bg_color = readFromMem(0xd021);
-			VRAM[(j * 402 * 3) + ((i + offset_x) * 3)] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
-			VRAM[(j * 402 * 3) + ((i + offset_x) * 3) + 1] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
-			VRAM[(j * 402 * 3) + ((i + offset_x) * 3) + 2] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
 		}
 	}
 }
