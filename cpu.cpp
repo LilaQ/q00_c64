@@ -248,7 +248,7 @@ int r = 0; //	don't delete, return val holder
 uint16_t ff = 1;
 bool mach = false;
 void setGO() {
-	//mach = true;
+	mach = true;
 }
 
 int stepCPU() {
@@ -264,7 +264,7 @@ int stepCPU() {
 		return IRQorBRK();
 	}
 
-	if(mach)
+	if(mach && PC >= 0x1000 && PC <= 0x1200)
 		printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d LastStack:%x\n", PC, readFromMem(PC), readFromMem(PC+1), readFromMem(PC+2), registers.A, registers.X, registers.Y, status.status, SP_, c, SP_);
 	switch (readFromMem(PC)) {
 	case 0x00: { status.setBrk(1); irq = true; printf("BREAK "); return 7; break; }

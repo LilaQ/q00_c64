@@ -4,6 +4,7 @@
 #include <vector>
 #include "D64Parser.h"
 #include "cpu.h"
+#include "ppu.h"
 #include "mmu.h"
 #include "main.h"
 #include "cia.h"
@@ -48,7 +49,6 @@ void loadPRG(string f) {
 	for (uint16_t i = 2; i < d.size(); i++) {
 		memory[0x7ff + i] = d.at(i);
 	}
-	setGO();
 }
 
 void loadPRGFromDisk(string f) {
@@ -134,6 +134,16 @@ uint8_t readFromMem(uint16_t adr) {
 
 	switch (adr)
 	{
+		case 0xd012:			//	Current Scanline
+			return getCurrentScanline();
+			break;
+		case 0xd019:			//	IRQ flags, (active IRQs)
+			return getIRQStatus();
+			break;
+		case 0xd01a:			//	IRQ Mask (what is allowed to cause IRQs)
+			return getIRQMask();
+			break;
+		
 		case 0xdc00:			//	read Keyboard / Joystick
 			return readDataPortA();
 			break;
@@ -182,6 +192,20 @@ void writeToMem(uint16_t adr, uint8_t val) {
 	//	write-protect ROM adresses
 	switch (adr)
 	{
+		case 0xd011:			//	Set Rasterzeilen IRQ
+			setRasterIRQhi(val);
+			memory[adr] = val;
+			break;
+		case 0xd012:			//	Set Rasterzeilen IRQ
+			setRasterIRQlow(val);
+			break;
+		case 0xd019:			//	Clear IRQ flags, that are no longer needed
+			clearIRQStatus(val);
+			break;
+		case 0xd01a:			//	IRQ Mask (what is allowed to cause IRQs)
+			setIRQMask(val);
+			break;
+
 		case 0xdc00:			//	write Keyboard / Joystick
 			writeDataPortA(val);
 			break;
