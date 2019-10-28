@@ -96,12 +96,15 @@ void stepPPU(uint8_t cpu_cyc) {
 		cpu_cycles %= 63;
 		//	Rendering
 		render_row++;
-		renderLine(render_row);
 		//	VBlank, wrap
 		if (render_row >= 284) {
+			render_row = 0;
+			renderLine(render_row);
 			drawFrame();
 			setIRQ(true);
-			render_row = 0;
+		}
+		else {
+			renderLine(render_row);
 		}
 		//	Rasterzeileninterrupt
 		if (irq_mask.irq_can_be_cause_by_rasterline) {	//	enabled?

@@ -89,3 +89,5 @@ Debug/vc.nativecodeanalysis.all.xml
 Debug/wmu.nativecodeanalysis.sarif
 Debug/wmu.nativecodeanalysis.xml
 Debug/ppu.new.obj.enc
+Release/C64Emulator.Build.CppClean.log
+Release/C64Emulator.vcxproj.FileListAbsolute.txt

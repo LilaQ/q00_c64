@@ -53,7 +53,7 @@ struct Entry {
 
 struct D64Parser {
 
-	string FILE_TYPE[0x100];
+	std::vector<string> FILE_TYPE;
 	unsigned char data[0xf0000];
 	string filename;
 	string diskname;
@@ -69,11 +69,11 @@ struct D64Parser {
 
 	void init(string f) {
 
-		FILE_TYPE[0x80] = "DEL";
-		FILE_TYPE[0x81] = "SEQ";
-		FILE_TYPE[0x82] = "PRG";
-		FILE_TYPE[0x83] = "USR";
-		FILE_TYPE[0x84] = "REL";
+		FILE_TYPE.push_back("DEL");
+		FILE_TYPE.push_back("SEQ");
+		FILE_TYPE.push_back("PRG");
+		FILE_TYPE.push_back("USR");
+		FILE_TYPE.push_back("REL");
 		entries.clear();
 		filename = f;
 		FILE* file = fopen(filename.c_str(), "rb");
@@ -89,7 +89,7 @@ struct D64Parser {
 			Entry entry;
 			entry.next_track = data[base_dir + i];
 			entry.next_sector = data[base_dir + i + 1];
-			entry.file_type = FILE_TYPE[data[base_dir + i + 2]];
+			entry.file_type = (data[base_dir + i + 2]) ? FILE_TYPE.at(data[base_dir + i + 2] - 0x80) : "";
 			entry.start_track = data[base_dir + i + 3];
 			entry.start_sector = data[base_dir + i + 4];
 			entry.pet_name;

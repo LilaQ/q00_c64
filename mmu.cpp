@@ -144,11 +144,11 @@ uint8_t readFromMem(uint16_t adr) {
 			return getIRQMask();
 			break;
 		
-		case 0xdc00:			//	read Keyboard / Joystick
-			return readDataPortA();
+		case 0xdc00:			//	read CIA1 Keyboard / Joystick
+			return readCIA1DataPortA();
 			break;
-		case 0xdc01:			//	read Keyboard / Joystick
-			return readDataPortB();
+		case 0xdc01:			//	read CIA1 sKeyboard / Joystick
+			return readCIA1DataPortB();
 			break;
 
 
@@ -206,17 +206,17 @@ void writeToMem(uint16_t adr, uint8_t val) {
 			setIRQMask(val);
 			break;
 
-		case 0xdc00:			//	write Keyboard / Joystick
-			writeDataPortA(val);
+		case 0xdc00:			//	write CIA1 Keyboard / Joystick
+			writeCIA1DataPortA(val);
 			break;
-		case 0xdc01:			//	write Keyboard / Joystick
-			writeDataPortB(val);
+		case 0xdc01:			//	write CIA1 Keyboard / Joystick
+			writeCIA1DataPortB(val);
 			break;
-		case 0xdc02:			//	Port A RW
-			setPortARW(val);
+		case 0xdc02:			//	CIA1 Port A RW
+			setCIA1PortARW(val);
 			break;
-		case 0xdc03:			//	Port B RW
-			setPortBRW(val);
+		case 0xdc03:			//	CIA1 Port B RW
+			setCIA1PortBRW(val);
 			break;
 
 		case 0xdc04:
