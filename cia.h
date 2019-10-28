@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include "SDL2/include/SDL.h"
 
+//	CIA 1
 uint8_t readCIA1DataPortA();
 uint8_t readCIA1DataPortB();
 void writeCIA1DataPortA(uint8_t val);
@@ -20,6 +21,20 @@ uint8_t readCIA1IRQStatus();
 void setCIA1TimerAControl(uint8_t val);
 void setCIA1TimerBControl(uint8_t val);
 void setCIA1IRQcontrol(uint8_t val);
+
+//	CIA 2
+uint8_t readCIA2timerALo();
+uint8_t readCIA2timerAHi();
+uint8_t readCIA2timerBLo();
+uint8_t readCIA2timerBHi();
+void setCIA2timerAlatchHi(uint8_t val);
+void setCIA2timerAlatchLo(uint8_t val);
+void setCIA2timerBlatchHi(uint8_t val);
+void setCIA2timerBlatchLo(uint8_t val);
+uint8_t readCIA2NMIStatus();
+void setCIA2TimerAControl(uint8_t val);
+void setCIA2TimerBControl(uint8_t val);
+void setCIA2NMIcontrol(uint8_t val);
 
 void setKeyboardInput(uint8_t* KEYS);
 void tickAllTimers(uint8_t cycles);
@@ -77,6 +92,48 @@ struct CIA1_IRQ_STATUS {
 	}
 };
 
+struct CIA2_NMI_STATUS {
+	bool NMI_on_timerA_underflow = false;
+	bool NMI_on_timerB_underflow = false;
+	bool NMI_on_clock_eq_alarm = false;
+	bool NMI_on_complete_byte = false;
+	bool NMI_on_flag_pin = false;
+	uint8_t b0 = 0;			//	underflow timer A
+	uint8_t b1 = 0 << 1;	//	underflow timer B
+	uint8_t b2 = 0 << 2;	//	clock equals alarm
+	uint8_t b3 = 0 << 3;	//	complete byte transferred
+	uint8_t b4 = 0 << 4;	//	FLAG pin neg edge occured (casette tape, serial port)
+	uint8_t b7 = 0 << 7;	//	IRQ occured; atleast one bit in MASK and DATA is the same
+
+	void set(uint8_t val) {
+		//	check if bits need clearing, or setting#
+		bool set_or_clear = (val & 0x80) == 0x80;
+		if ((val & 0x01) == 0x01)
+			NMI_on_timerA_underflow = set_or_clear;
+		if ((val & 0x02) == 0x02)
+			NMI_on_timerB_underflow = set_or_clear;
+		if ((val & 0x04) == 0x04)
+			NMI_on_clock_eq_alarm = set_or_clear;
+		if ((val & 0x08) == 0x08)
+			NMI_on_complete_byte = set_or_clear;
+		if ((val & 0x10) == 0x10)
+			NMI_on_flag_pin = set_or_clear;
+	}
+
+	uint8_t get() {
+		b1 = b1 << 1;
+		b2 = b2 << 2;
+		b3 = b3 << 3;
+		b4 = b4 << 4;
+		b7 = b7 << 7;
+		return b7 | b4 | b3 | b2 | b1 | b0;
+	}
+
+	void flagUnderflowTimerB() {
+
+	}
+};
+
 struct TIMER {
 	bool timer_running = false;
 	bool timer_underflow_port_b_bit_6_invert = false;
@@ -87,6 +144,18 @@ struct TIMER {
 	int16_t timer_value = 0;
 
 	void set(uint8_t val, CIA1_IRQ_STATUS& status) {
+		timer_running = ((val & 0x01) == 0x01);
+		if ((val & 0x02) == 0x02)
+			status.flagUnderflowTimerB();
+		timer_underflow_port_b_bit_6_invert = ((val & 0x04) == 0x04);
+		timer_stop_timer_after_underflow = ((val & 0x08) == 0x08);
+		if ((val & 0x10) == 0x10)
+			timer_value = timer_latch;
+		timer_counts_cnt_slopes = ((val & 0x20) == 0x20);
+		timer_rtc_50hz = ((val & 0x80) == 0x80);
+	}
+
+	void set(uint8_t val, CIA2_NMI_STATUS& status) {
 		timer_running = ((val & 0x01) == 0x01);
 		if ((val & 0x02) == 0x02)
 			status.flagUnderflowTimerB();

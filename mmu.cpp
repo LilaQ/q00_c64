@@ -151,7 +151,7 @@ uint8_t readFromMem(uint16_t adr) {
 			return readCIA1DataPortB();
 			break;
 
-
+		//	CIA 1
 		case 0xdc04:			//	read CIA1 TimerA Low
 			return readCIA1timerALo();
 			break;
@@ -165,9 +165,27 @@ uint8_t readFromMem(uint16_t adr) {
 			return readCIA1timerBHi();
 			break;
 
+		//	CIA 2
+		case 0xdd04:			//	read CIA1 TimerA Low
+			return readCIA2timerALo();
+			break;
+		case 0xdd05:			//	read CIA1 TimerA High
+			return readCIA2timerAHi();
+			break;
+		case 0xdd06:			//	read CIA1 TimerB Low
+			return readCIA2timerBLo();
+			break;
+		case 0xdd07:			//	read CIA1 TimerB High
+			return readCIA2timerBHi();
+			break;
+
 		case 0xdc0d:			//	read CIA1 IRQ Control and Status
 			return readCIA1IRQStatus();
 			break;
+		case 0xdd0d:			//	read CIA2 NMI Control and Status
+			return readCIA2NMIStatus();
+			break;
+
 		default:
 			if (adr >= 0xa000 && adr < 0xc000) {		//	BASIC
 				return basic[adr % 0xa000];
@@ -206,6 +224,7 @@ void writeToMem(uint16_t adr, uint8_t val) {
 			setIRQMask(val);
 			break;
 
+		//	CIA 1
 		case 0xdc00:			//	write CIA1 Keyboard / Joystick
 			writeCIA1DataPortA(val);
 			break;
@@ -219,6 +238,7 @@ void writeToMem(uint16_t adr, uint8_t val) {
 			setCIA1PortBRW(val);
 			break;
 
+		//	CIA 1
 		case 0xdc04:
 			setCIA1timerAlatchLo(val);
 			break;
@@ -232,11 +252,40 @@ void writeToMem(uint16_t adr, uint8_t val) {
 			setCIA1timerBlatchHi(val);
 			break;
 
+		//	CIA 2
+		case 0xdd04:
+			setCIA2timerAlatchLo(val);
+			break;
+		case 0xdd05:
+			setCIA2timerAlatchHi(val);
+			break;
+		case 0xdd06:
+			setCIA2timerBlatchLo(val);
+			break;
+		case 0xdd07:
+			setCIA2timerBlatchHi(val);
+			break;
+
+		//	CIA 1
 		case 0xdc0d:
 			setCIA1IRQcontrol(val);
 			break;
 		case 0xdc0e:
 			setCIA1TimerAControl(val);
+			break;
+		/*case 0xdc0f:
+			setCIA1TimerBControl(val);
+			break;*/
+
+		//	CIA 2
+		case 0xdd0d:
+			setCIA2NMIcontrol(val);
+			break;
+		case 0xdd0e:
+			setCIA2TimerAControl(val);
+			break;
+		case 0xdd0f:
+			setCIA2TimerBControl(val);
 			break;
 
 		default:

@@ -4,37 +4,42 @@
 #include "cpu.h"
 
 CIA1_IRQ_STATUS cia1_irq_status;
+CIA2_NMI_STATUS cia2_nmi_status;
 TIMER cia1_timerA;
 TIMER cia1_timerB;
-uint8_t data_port_A;
-uint8_t data_port_B;
-bool port_A_RW = false;
-bool port_B_RW = false;
+TIMER cia2_timerA;
+TIMER cia2_timerB;
+uint8_t cia1_data_port_A;
+uint8_t cia1_data_port_B;
+bool cia1_port_A_RW = false;
+bool cia1_port_B_RW = false;
 uint8_t* KEYS;
 
 void setKeyboardInput(uint8_t* _KEYS) {
 	KEYS = _KEYS;
 }
 
+//	CIA 1
+
 void writeCIA1DataPortA(uint8_t val) {
-	data_port_B = 0xff;
+	cia1_data_port_B = 0xff;
 	for (int j = 0; j < 8; j++) {
 		if (!(val & 1)) {
 			for (int i = 0; i < 8; i++) {
 				if (KEYS[SDL_SCANCODE_LEFT]) {
 					if(j == 0)
-						data_port_B &= ~(1 << 2);
+						cia1_data_port_B &= ~(1 << 2);
 					if(j == 1)
-						data_port_B &= ~(1 << 7);
+						cia1_data_port_B &= ~(1 << 7);
 				}
 				if (KEYS[SDL_SCANCODE_UP]) {
 					if (j == 0)
-						data_port_B &= ~(1 << 7);
+						cia1_data_port_B &= ~(1 << 7);
 					if (j == 1)
-						data_port_B &= ~(1 << 7);
+						cia1_data_port_B &= ~(1 << 7);
 				}
 				if (KEYS[KEYMAP[j][i]]) {
-					data_port_B &= ~(1 << i);
+					cia1_data_port_B &= ~(1 << i);
 				}
 			}
 		}
@@ -46,19 +51,19 @@ void writeCIA1DataPortB(uint8_t val) {
 }
 
 void setCIA1PortARW(uint8_t val) {
-	port_A_RW = (val > 0);
+	cia1_port_A_RW = (val > 0);
 }
 
 void setCIA1PortBRW(uint8_t val) {
-	port_B_RW = (val > 0);
+	cia1_port_B_RW = (val > 0);
 }
 
 uint8_t readCIA1DataPortA() {
-	return data_port_A;
+	return cia1_data_port_A;
 }
 
 uint8_t readCIA1DataPortB() {
-	return data_port_B;
+	return cia1_data_port_B;
 }
 
 void setCIA1timerAlatchHi(uint8_t val) {
@@ -133,17 +138,86 @@ void setCIA1TimerBControl(uint8_t val) {
 	printf("Setting CIA1 Timer B Control: %02x\n", val);
 }
 
+//	CIA 2
+void setCIA2timerAlatchHi(uint8_t val) {
+	cia2_timerA.timer_latch = (cia2_timerA.timer_latch & 0x00ff) | (val << 8);
+	printf("Timer A Latch High: 0x%02x\n", val);
+}
+
+void setCIA2timerAlatchLo(uint8_t val) {
+	cia2_timerA.timer_latch = (cia2_timerA.timer_latch & 0xff00) | val;
+	printf("Timer A Latch Low: 0x%02x\n", val);
+}
+
+void setCIA2timerBlatchHi(uint8_t val) {
+	cia2_timerB.timer_latch = (cia2_timerB.timer_latch & 0x00ff) | (val << 8);
+}
+
+void setCIA2timerBlatchLo(uint8_t val) {
+	cia2_timerB.timer_latch = (cia2_timerB.timer_latch & 0xff00) | val;
+}
+
+uint8_t readCIA2timerALo() {
+	return cia2_timerA.timer_value & 0xff;
+}
+
+uint8_t readCIA2timerAHi() {
+	return cia2_timerA.timer_value >> 8;
+}
+
+uint8_t readCIA2timerBLo() {
+	return cia2_timerB.timer_value & 0xff;
+}
+
+uint8_t readCIA2timerBHi() {
+	return cia2_timerB.timer_value >> 8;
+}
+
+uint8_t readCIA2NMIStatus() {
+	return cia2_nmi_status.get();
+}
+
+void setCIA2NMIcontrol(uint8_t val) {
+	cia2_nmi_status.set(val);
+	printf("Setting CIA2 IRQ Control: %02x\n", val);
+}
+
+void setCIA2TimerAControl(uint8_t val) {
+	cia2_timerA.set(val, cia2_nmi_status);
+	printf("Setting CIA2 Timer A Control: %02x\n", val);
+}
+
+void setCIA2TimerBControl(uint8_t val) {
+	printf("Setting CIA2 Timer B Control: %02x\n", val);
+}
+
+//	MAIN
+
 void tickAllTimers(uint8_t cycles) {
+	//	CIA 1 Timers
 	if (cia1_timerA.tick(cycles)) {
 		cia1_irq_status.b1 = 1;
 		if (cia1_irq_status.IRQ_on_timerA_underflow) {
 			setIRQ(true);
 		}
 	}
-	if (cia1_timerB.tick(cycles)) {
+	/*if (cia1_timerB.tick(cycles)) {
 		cia1_irq_status.b2 = 1;
 		if (cia1_irq_status.IRQ_on_timerB_underflow) {
+			setIRQ(true);
+		}
+	}*/
+	//	CIA 2 Timers
+	/*if (cia2_timerA.tick(cycles)) {
+		cia2_nmi_status.b1 = 1;
+		if (cia2_nmi_status.NMI_on_timerA_underflow) {
 			setNMI(true);
 		}
 	}
+	if (cia2_timerB.tick(cycles)) {
+		cia2_nmi_status.b2 = 1;
+		if (cia2_nmi_status.NMI_on_timerB_underflow) {
+			setNMI(true);
+		}
+	}*/
 }
