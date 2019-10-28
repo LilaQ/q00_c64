@@ -51,17 +51,17 @@ const SDL_Scancode KEYMAP[8][8] = {
 };
 
 struct CIA1_IRQ_STATUS {
+	//	writes
 	bool IRQ_on_timerA_underflow = false;
 	bool IRQ_on_timerB_underflow = false;
 	bool IRQ_on_clock_eq_alarm = false;
 	bool IRQ_on_complete_byte = false;
 	bool IRQ_on_flag_pin = false;
-	uint8_t b0 = 0;			//	underflow timer A
-	uint8_t b1 = 0 << 1;	//	underflow timer B
-	uint8_t b2 = 0 << 2;	//	clock equals alarm
-	uint8_t b3 = 0 << 3;	//	complete byte transferred
-	uint8_t b4 = 0 << 4;	//	FLAG pin neg edge occured (casette tape, serial port)
-	uint8_t b7 = 0 << 7;	//	IRQ occured; atleast one bit in MASK and DATA is the same
+	//	reads
+	bool IRQ_occured_by_underflow_timerA = false;
+	bool IRQ_occured_by_underflow_timerB = false;
+	bool IRQ_occured_by_alarm_equals_clock = false;
+	bool IRQ_occured_general_flag = false;
 
 	void set(uint8_t val) {
 		//	check if bits need clearing, or setting#
@@ -78,13 +78,14 @@ struct CIA1_IRQ_STATUS {
 			IRQ_on_flag_pin = set_or_clear;
 	}
 
+	//	reading clears every bit
 	uint8_t get() {
-		b1 = b1 << 1;
-		b2 = b2 << 2;
-		b3 = b3 << 3;
-		b4 = b4 << 4;
-		b7 = b7 << 7;
-		return b7 | b4 | b3 | b2 | b1 | b0;
+		uint8_t res =	(IRQ_occured_general_flag << 7) |
+						(IRQ_occured_by_alarm_equals_clock << 2) |
+						(IRQ_occured_by_underflow_timerB << 1) |
+						(IRQ_occured_by_underflow_timerA);
+		set(0x00);
+		return res;
 	}
 
 	void flagUnderflowTimerB() {
@@ -93,17 +94,17 @@ struct CIA1_IRQ_STATUS {
 };
 
 struct CIA2_NMI_STATUS {
+	//	writes
 	bool NMI_on_timerA_underflow = false;
 	bool NMI_on_timerB_underflow = false;
 	bool NMI_on_clock_eq_alarm = false;
 	bool NMI_on_complete_byte = false;
 	bool NMI_on_flag_pin = false;
-	uint8_t b0 = 0;			//	underflow timer A
-	uint8_t b1 = 0 << 1;	//	underflow timer B
-	uint8_t b2 = 0 << 2;	//	clock equals alarm
-	uint8_t b3 = 0 << 3;	//	complete byte transferred
-	uint8_t b4 = 0 << 4;	//	FLAG pin neg edge occured (casette tape, serial port)
-	uint8_t b7 = 0 << 7;	//	IRQ occured; atleast one bit in MASK and DATA is the same
+	//	reads
+	bool NMI_occured_by_underflow_timerA = false;
+	bool NMI_occured_by_underflow_timerB = false;
+	bool NMI_occured_by_alarm_equals_clock = false;
+	bool NMI_occured_general_flag = false;
 
 	void set(uint8_t val) {
 		//	check if bits need clearing, or setting#
@@ -120,13 +121,14 @@ struct CIA2_NMI_STATUS {
 			NMI_on_flag_pin = set_or_clear;
 	}
 
+	//	when read, all bits are cleared
 	uint8_t get() {
-		b1 = b1 << 1;
-		b2 = b2 << 2;
-		b3 = b3 << 3;
-		b4 = b4 << 4;
-		b7 = b7 << 7;
-		return b7 | b4 | b3 | b2 | b1 | b0;
+		uint8_t res =	(NMI_occured_general_flag << 7) |
+						(NMI_occured_by_alarm_equals_clock << 2) |
+						(NMI_occured_by_underflow_timerB << 1) |
+						(NMI_occured_by_underflow_timerA);
+		set(0x00);
+		return res;
 	}
 
 	void flagUnderflowTimerB() {

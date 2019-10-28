@@ -63,7 +63,7 @@ uint8_t readCIA1DataPortA() {
 }
 
 uint8_t readCIA1DataPortB() {
-	return cia1_data_port_B;
+	return cia1_data_port_B | cia1_data_port_A;
 }
 
 void setCIA1timerAlatchHi(uint8_t val) {
@@ -196,28 +196,33 @@ void setCIA2TimerBControl(uint8_t val) {
 void tickAllTimers(uint8_t cycles) {
 	//	CIA 1 Timers
 	if (cia1_timerA.tick(cycles)) {
-		cia1_irq_status.b1 = 1;
 		if (cia1_irq_status.IRQ_on_timerA_underflow) {
+			cia1_irq_status.IRQ_occured_general_flag = true;
+			cia1_irq_status.IRQ_occured_by_underflow_timerA = true;
 			setIRQ(true);
 		}
 	}
-	/*if (cia1_timerB.tick(cycles)) {
-		cia1_irq_status.b2 = 1;
+	if (cia1_timerB.tick(cycles)) {
 		if (cia1_irq_status.IRQ_on_timerB_underflow) {
+			cia1_irq_status.IRQ_occured_general_flag = true;
+			cia1_irq_status.IRQ_occured_by_underflow_timerB = true;
 			setIRQ(true);
 		}
-	}*/
+	}
 	//	CIA 2 Timers
-	/*if (cia2_timerA.tick(cycles)) {
-		cia2_nmi_status.b1 = 1;
+	if (cia2_timerA.tick(cycles)) {
 		if (cia2_nmi_status.NMI_on_timerA_underflow) {
+			cia2_nmi_status.NMI_occured_general_flag = true;
+			cia2_nmi_status.NMI_occured_by_underflow_timerA = true;
+			//setGO();
 			setNMI(true);
 		}
 	}
 	if (cia2_timerB.tick(cycles)) {
-		cia2_nmi_status.b2 = 1;
 		if (cia2_nmi_status.NMI_on_timerB_underflow) {
+			cia2_nmi_status.NMI_occured_general_flag = true;
+			cia2_nmi_status.NMI_occured_by_underflow_timerB = true;
 			setNMI(true);
 		}
-	}*/
+	}
 }

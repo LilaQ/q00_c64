@@ -47,7 +47,7 @@ void loadPRG(string f) {
 	fclose(file);
 	printf("d size %x - %d\n", d.size(), d.size());
 	for (uint16_t i = 2; i < d.size(); i++) {
-		memory[0x7ff + i] = d.at(i);
+		memory[((d.at(1) << 8) | d.at(0)) - 2 + i] = d.at(i);
 	}
 }
 
@@ -55,7 +55,7 @@ void loadPRGFromDisk(string f) {
 	if (parser.filenameExists(f)) {
 		std::vector<uint8_t> res = parser.getDataByFilename(f);
 		for (int i = 2; i < res.size(); i++) {
-			memory[0x7ff + i] = res.at(i);
+			memory[((res.at(1) << 8) | res.at(0)) - 2 + i] = res.at(i);
 		}
 	}
 }
@@ -179,12 +179,18 @@ uint8_t readFromMem(uint16_t adr) {
 			return readCIA2timerBHi();
 			break;
 
-		case 0xdc0d:			//	read CIA1 IRQ Control and Status
-			return readCIA1IRQStatus();
+		case 0xdc0d: {			//	read CIA1 IRQ Control and Status
+			uint8_t res = readCIA1IRQStatus();
+			//cout << "CIA 1 IRQ Status is read: " << std::hex << res << "\n";
+			return res;
 			break;
-		case 0xdd0d:			//	read CIA2 NMI Control and Status
-			return readCIA2NMIStatus();
+		}
+		case 0xdd0d: {			//	read CIA2 NMI Control and Status
+			uint8_t ret = readCIA2NMIStatus();
+			//cout << "CIA 2 NMI Status is read: " << std::hex << ret << "\n";
+			return ret;
 			break;
+		}
 
 		default:
 			if (adr >= 0xa000 && adr < 0xc000) {		//	BASIC
@@ -273,9 +279,9 @@ void writeToMem(uint16_t adr, uint8_t val) {
 		case 0xdc0e:
 			setCIA1TimerAControl(val);
 			break;
-		/*case 0xdc0f:
+		case 0xdc0f:
 			setCIA1TimerBControl(val);
-			break;*/
+			break;
 
 		//	CIA 2
 		case 0xdd0d:
