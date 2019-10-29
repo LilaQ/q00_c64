@@ -9,8 +9,8 @@ TIMER cia1_timerA;
 TIMER cia1_timerB;
 TIMER cia2_timerA;
 TIMER cia2_timerB;
-uint8_t cia1_data_port_A;
-uint8_t cia1_data_port_B;
+uint8_t cia1_data_port_A = 0xff;
+uint8_t cia1_data_port_B = 0xff;
 bool cia1_port_A_RW = false;
 bool cia1_port_B_RW = false;
 uint8_t* KEYS;
@@ -22,32 +22,11 @@ void setKeyboardInput(uint8_t* _KEYS) {
 //	CIA 1
 
 void writeCIA1DataPortA(uint8_t val) {
-	cia1_data_port_B = 0xff;
-	for (int j = 0; j < 8; j++) {
-		if (!(val & 1)) {
-			for (int i = 0; i < 8; i++) {
-				if (KEYS[SDL_SCANCODE_LEFT]) {
-					if(j == 0)
-						cia1_data_port_B &= ~(1 << 2);
-					if(j == 1)
-						cia1_data_port_B &= ~(1 << 7);
-				}
-				if (KEYS[SDL_SCANCODE_UP]) {
-					if (j == 0)
-						cia1_data_port_B &= ~(1 << 7);
-					if (j == 1)
-						cia1_data_port_B &= ~(1 << 7);
-				}
-				if (KEYS[KEYMAP[j][i]]) {
-					cia1_data_port_B &= ~(1 << i);
-				}
-			}
-		}
-		val >>= 1;
-	}
+	cia1_data_port_A = val;
 }
 
 void writeCIA1DataPortB(uint8_t val) {
+	cia1_data_port_B = val;
 }
 
 void setCIA1PortARW(uint8_t val) {
@@ -63,17 +42,37 @@ uint8_t readCIA1DataPortA() {
 }
 
 uint8_t readCIA1DataPortB() {
-	return cia1_data_port_B | cia1_data_port_A;
+	cia1_data_port_B = 0xff;
+	uint8_t pos = cia1_data_port_A ^ 0xff;
+	uint8_t c = 0;
+	while (pos) {
+		pos >>= 1;
+		c++;
+	}
+	if (c && cia1_data_port_A) {
+		c--;
+		for (uint8_t i = 0; i < 8; i++) {
+			if (KEYS[KEYMAP[c][i]])
+				cia1_data_port_B &= ~(1 << i);
+		}
+	}
+	else if (cia1_data_port_A != 0xff) {
+		for (uint8_t c = 0; c < 8; c++) {
+			for (uint8_t i = 0; i < 8; i++) {
+				if (KEYS[KEYMAP[c][i]])
+					cia1_data_port_B &= ~(1 << i);
+			}
+		}
+	}
+	return cia1_data_port_B;
 }
 
 void setCIA1timerAlatchHi(uint8_t val) {
 	cia1_timerA.timer_latch = (cia1_timerA.timer_latch & 0x00ff) | (val << 8);
-	printf("Timer A Latch High: 0x%02x\n", val);
 }
 
 void setCIA1timerAlatchLo(uint8_t val) {
 	cia1_timerA.timer_latch = (cia1_timerA.timer_latch & 0xff00) | val;
-	printf("Timer A Latch Low: 0x%02x\n", val);
 }
 
 void setCIA1timerBlatchHi(uint8_t val) {

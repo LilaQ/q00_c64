@@ -251,6 +251,10 @@ void setGO() {
 	mach = true;
 }
 
+void printCurrentPC() {
+	printf("Current PC: 0x%04x\n", PC);
+}
+
 int stepCPU() {
 	c += getLastCyc();
 
