@@ -91,3 +91,7 @@ Debug/wmu.nativecodeanalysis.xml
 Debug/ppu.new.obj.enc
 Release/C64Emulator.Build.CppClean.log
 Release/C64Emulator.vcxproj.FileListAbsolute.txt
+Debug/output3_blink_with_write_log.log
+Debug/output3.log
+Debug/output2.log
+Debug/fw.bin.ptc

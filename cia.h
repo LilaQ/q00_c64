@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <stdio.h>
 #include "SDL2/include/SDL.h"
 
 //	CIA 1
@@ -84,7 +85,10 @@ struct CIA1_IRQ_STATUS {
 						(IRQ_occured_by_alarm_equals_clock << 2) |
 						(IRQ_occured_by_underflow_timerB << 1) |
 						(IRQ_occured_by_underflow_timerA);
-		set(0x00);
+		IRQ_occured_general_flag = false;
+		IRQ_occured_by_alarm_equals_clock = false;
+		IRQ_occured_by_underflow_timerA = false;
+		IRQ_occured_by_underflow_timerB = false;
 		return res;
 	}
 
@@ -127,7 +131,10 @@ struct CIA2_NMI_STATUS {
 						(NMI_occured_by_alarm_equals_clock << 2) |
 						(NMI_occured_by_underflow_timerB << 1) |
 						(NMI_occured_by_underflow_timerA);
-		set(0x00);
+		NMI_occured_general_flag = false;
+		NMI_occured_by_alarm_equals_clock = false;
+		NMI_occured_by_underflow_timerA = false;
+		NMI_occured_by_underflow_timerB = false;
 		return res;
 	}
 
@@ -159,6 +166,8 @@ struct TIMER {
 
 	void set(uint8_t val, CIA2_NMI_STATUS& status) {
 		timer_running = ((val & 0x01) == 0x01);
+		if(!timer_running)
+			printf("WARNING! NMI Timer set off!\n");
 		if ((val & 0x02) == 0x02)
 			status.flagUnderflowTimerB();
 		timer_underflow_port_b_bit_6_invert = ((val & 0x04) == 0x04);
