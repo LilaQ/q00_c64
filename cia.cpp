@@ -11,6 +11,8 @@ TIMER cia2_timerA;
 TIMER cia2_timerB;
 uint8_t cia1_data_port_A = 0xff;
 uint8_t cia1_data_port_B = 0xff;
+uint8_t cia2_data_port_A = 0xff;
+uint8_t cia2_data_port_B = 0xff;
 bool cia1_port_A_RW = false;
 bool cia1_port_B_RW = false;
 uint8_t* KEYS;
@@ -138,6 +140,47 @@ void setCIA1TimerBControl(uint8_t val) {
 }
 
 //	CIA 2
+void writeCIA2DataPortA(uint8_t val) {
+	/*
+		Bit 0..1: Auswahl der Position des VIC - Speichers
+		% 00, 0 : Bank 3 : $C000 - $FFFF, 49152 - 65535
+		% 01, 1 : Bank 2 : $8000 - $BFFF, 32768 - 49151
+		% 10, 2 : Bank 1 : $4000 - $7FFF, 16384 - 32767
+		% 11, 3 : Bank 0 : $0000 - $3FFF, 0 - 16383 (Standard)
+	*/
+	cia2_data_port_A = val;
+}
+
+void writeCIA2DataPortB(uint8_t val) {
+	//	TODO
+	/*
+		Bit 0..7: Userport Daten PB 0-7 (Pins C,D,E,F,H,J,K,L), auﬂerdem Userport (Pin 8) Handshake-Leitung PC, die bei jedem Schreiben oder Lesen des Ports aktiv wird.
+		Der KERNAL bietet einige RS232-Routinen an, die die Pins folgendermaﬂen benutzen:
+		Bit 0, 3..7: RS-232: lesen
+		Bit 0: RXD
+		Bit 3: RI
+		Bit 4: DCD
+		Bit 5: Userport Pin J
+		Bit 6: CTS
+		Bit 7: DSR
+		Bit 1..5: RS-232: schreiben
+		Bit 1: RTS
+		Bit 2: DTR
+		Bit 3: RI
+		Bit 4: DCD
+		Bit 5: Userport Pin J
+	*/
+	cia2_data_port_B = val;
+}
+
+uint8_t readCIA2DataPortA() {
+	return cia2_data_port_A;
+}
+
+uint8_t readCIA2DataPortB() {
+	return cia2_data_port_B;
+}
+
 void setCIA2timerAlatchHi(uint8_t val) {
 	cia2_timerA.timer_latch = (cia2_timerA.timer_latch & 0x00ff) | (val << 8);
 	printf("Timer A Latch High: 0x%02x\n", val);

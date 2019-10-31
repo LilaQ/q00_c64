@@ -9,11 +9,20 @@
 #include "main.h"
 #include "cia.h"
 
+enum MEMTYPE {
+	IO,
+	CHARROM,
+	RAM,
+	KERNAL
+};
+
 unsigned char memory[0x10000] = { 0xff };
 unsigned char kernal[0x02000];		//	TODO 
 unsigned char basic[0x02000];		//	TODO --- Only chr1 and chr2 are switched to external arrays yet
 unsigned char chr1[0x800];
 unsigned char chr2[0x800];
+MEMTYPE memtype_d000_dfff = MEMTYPE::IO;
+MEMTYPE memtype_e000_ffff = MEMTYPE::KERNAL;
 bool pbc = false;
 
 // disk hotloading
@@ -204,6 +213,16 @@ uint8_t readFromMem(uint16_t adr) {
 	}
 }
 
+//	reads from the VIC; the VIC can only read from a 16k window at once (dictated by Port B of CIA2)
+uint8_t readFromMemByVIC(uint16_t adr) {
+	uint8_t bank_no = 0b11 - (readCIA2DataPortB() & 0b11);
+	//	CHRROM
+	if (adr >= 0x1000 & adr <= 0x1fff) {
+		return readChar(adr);
+	}
+	return memory[adr + bank_no * 0x4000];
+}
+
 uint8_t readChar(uint16_t adr) {
 	if (adr >= 0x1000 && adr < 0x1800)
 		return chr1[adr % 0x1000];
@@ -212,91 +231,134 @@ uint8_t readChar(uint16_t adr) {
 	return 0x00;
 }
 
+void writeToMemByVIC(uint16_t adr, uint8_t val) {
+	memory[adr] = val;
+}
+
+void refreshMemoryMapping() {
+	//	Zeropage; this can configure the PLA, and thus the memory mapping, and the ROMs that are enabled
+	uint8_t LORAM = memory[0x0001] & 0b1;
+	uint8_t HIRAM = memory[0x0001] & 0b10;
+	uint8_t CHAREN = memory[0x0001] & 0b100;
+	if (CHAREN)
+		memtype_d000_dfff = MEMTYPE::IO;
+	else {
+		if (HIRAM)
+			memtype_d000_dfff = MEMTYPE::CHARROM;
+		else
+			memtype_d000_dfff = MEMTYPE::RAM;
+	}
+	if (HIRAM)
+		memtype_e000_ffff = MEMTYPE::KERNAL;
+	else
+		memtype_e000_ffff = MEMTYPE::RAM;
+}
+
 void writeToMem(uint16_t adr, uint8_t val) {
-	//	write-protect ROM adresses
-	switch (adr)
+
+	//	refresh Mapping
+	refreshMemoryMapping();
+
+	//	I/O, can be disabled by Zeropage $01
+	if (adr >= 0xd000 && adr < 0xe000) 
 	{
-		case 0xd011:			//	Set Rasterzeilen IRQ
-			setRasterIRQhi(val);
+		if (memtype_d000_dfff == MEMTYPE::IO) {
+			switch (adr)
+			{
+			case 0xd011:			//	Set Rasterzeilen IRQ
+				setRasterIRQhi(val);
+				memory[adr] = val;
+				break;
+			case 0xd012:			//	Set Rasterzeilen IRQ
+				setRasterIRQlow(val);
+				break;
+			case 0xd019:			//	Clear IRQ flags, that are no longer needed
+				clearIRQStatus(val);
+				break;
+			case 0xd01a:			//	IRQ Mask (what is allowed to cause IRQs)
+				setIRQMask(val);
+				break;
+
+				//	CIA 1
+			case 0xdc00:			//	write CIA1 Keyboard / Joystick
+				writeCIA1DataPortA(val);
+				break;
+			case 0xdc01:			//	write CIA1 Keyboard / Joystick
+				writeCIA1DataPortB(val);
+				break;
+			case 0xdc02:			//	CIA1 Port A RW
+				setCIA1PortARW(val);
+				break;
+			case 0xdc03:			//	CIA1 Port B RW
+				setCIA1PortBRW(val);
+				break;
+
+				//	CIA 1
+			case 0xdc04:
+				setCIA1timerAlatchLo(val);
+				break;
+			case 0xdc05:
+				setCIA1timerAlatchHi(val);
+				break;
+			case 0xdc06:
+				setCIA1timerBlatchLo(val);
+				break;
+			case 0xdc07:
+				setCIA1timerBlatchHi(val);
+				break;
+
+				//	CIA 2
+			case 0xdd04:
+				setCIA2timerAlatchLo(val);
+				break;
+			case 0xdd05:
+				setCIA2timerAlatchHi(val);
+				break;
+			case 0xdd06:
+				setCIA2timerBlatchLo(val);
+				break;
+			case 0xdd07:
+				setCIA2timerBlatchHi(val);
+				break;
+
+				//	CIA 1
+			case 0xdc0d:
+				setCIA1IRQcontrol(val);
+				break;
+			case 0xdc0e:
+				setCIA1TimerAControl(val);
+				break;
+			case 0xdc0f:
+				setCIA1TimerBControl(val);
+				break;
+
+				//	CIA 2
+			case 0xdd0d:
+				setCIA2NMIcontrol(val);
+				break;
+			case 0xdd0e:
+				setCIA2TimerAControl(val);
+				break;
+			case 0xdd0f:
+				setCIA2TimerBControl(val);
+				break;
+
+			default:
+				memory[adr] = val;
+				break;
+			}
+		}
+		else if(memtype_d000_dfff == MEMTYPE::RAM){
 			memory[adr] = val;
-			break;
-		case 0xd012:			//	Set Rasterzeilen IRQ
-			setRasterIRQlow(val);
-			break;
-		case 0xd019:			//	Clear IRQ flags, that are no longer needed
-			clearIRQStatus(val);
-			break;
-		case 0xd01a:			//	IRQ Mask (what is allowed to cause IRQs)
-			setIRQMask(val);
-			break;
-
-		//	CIA 1
-		case 0xdc00:			//	write CIA1 Keyboard / Joystick
-			writeCIA1DataPortA(val);
-			break;
-		case 0xdc01:			//	write CIA1 Keyboard / Joystick
-			writeCIA1DataPortB(val);
-			break;
-		case 0xdc02:			//	CIA1 Port A RW
-			setCIA1PortARW(val);
-			break;
-		case 0xdc03:			//	CIA1 Port B RW
-			setCIA1PortBRW(val);
-			break;
-
-		//	CIA 1
-		case 0xdc04:
-			setCIA1timerAlatchLo(val);
-			break;
-		case 0xdc05:
-			setCIA1timerAlatchHi(val);
-			break;
-		case 0xdc06:
-			setCIA1timerBlatchLo(val);
-			break;
-		case 0xdc07:
-			setCIA1timerBlatchHi(val);
-			break;
-
-		//	CIA 2
-		case 0xdd04:
-			setCIA2timerAlatchLo(val);
-			break;
-		case 0xdd05:
-			setCIA2timerAlatchHi(val);
-			break;
-		case 0xdd06:
-			setCIA2timerBlatchLo(val);
-			break;
-		case 0xdd07:
-			setCIA2timerBlatchHi(val);
-			break;
-
-		//	CIA 1
-		case 0xdc0d:
-			setCIA1IRQcontrol(val);
-			break;
-		case 0xdc0e:
-			setCIA1TimerAControl(val);
-			break;
-		case 0xdc0f:
-			setCIA1TimerBControl(val);
-			break;
-
-		//	CIA 2
-		case 0xdd0d:
-			setCIA2NMIcontrol(val);
-			break;
-		case 0xdd0e:
-			setCIA2TimerAControl(val);
-			break;
-		case 0xdd0f:
-			setCIA2TimerBControl(val);
-			break;
-
-		default:
+		}
+	}
+	else if (adr == 0xe000 && adr <= 0xffff) {
+		if (memtype_e000_ffff == MEMTYPE::RAM) {
 			memory[adr] = val;
-			break;
+		}
+	}
+	else {
+		memory[adr] = val;
 	}
 }
 

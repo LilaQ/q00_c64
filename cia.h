@@ -24,6 +24,10 @@ void setCIA1TimerBControl(uint8_t val);
 void setCIA1IRQcontrol(uint8_t val);
 
 //	CIA 2
+uint8_t readCIA2DataPortA();
+uint8_t readCIA2DataPortB();
+void writeCIA2DataPortA(uint8_t val);
+void writeCIA2DataPortB(uint8_t val);
 uint8_t readCIA2timerALo();
 uint8_t readCIA2timerAHi();
 uint8_t readCIA2timerBLo();

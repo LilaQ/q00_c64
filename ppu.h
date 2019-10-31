@@ -82,6 +82,11 @@ struct IRQ_MASK {
 	}
 };
 
+enum GRAPHICMODE {
+	LOWRES_TEXTMODE,
+	HIRES_BIMAPMODE,
+};
+
 void setIRQMask(uint8_t val);
 uint8_t getIRQMask();
 void clearIRQStatus(uint8_t val);
