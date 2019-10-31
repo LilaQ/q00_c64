@@ -20,6 +20,7 @@ int ppus = 0;
 
 int main()
 {
+	resetMMU();
 
 	//	load firmware (BASIC and KERNAL)
 	loadFirmware("fw.bin.ptc");

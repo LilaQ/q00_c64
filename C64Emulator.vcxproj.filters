@@ -56,8 +56,5 @@
     <ClInclude Include="D64Parser.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="___DEL__Disk1541.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

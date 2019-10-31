@@ -9,18 +9,14 @@
 #include "main.h"
 #include "cia.h"
 
-enum MEMTYPE {
-	IO,
-	CHARROM,
-	RAM,
-	KERNAL
-};
+
 
 unsigned char memory[0x10000] = { 0xff };
 unsigned char kernal[0x02000];		//	TODO 
 unsigned char basic[0x02000];		//	TODO --- Only chr1 and chr2 are switched to external arrays yet
 unsigned char chr1[0x800];
 unsigned char chr2[0x800];
+MEMTYPE memtype_a000_bfff = MEMTYPE::BASIC;
 MEMTYPE memtype_d000_dfff = MEMTYPE::IO;
 MEMTYPE memtype_e000_ffff = MEMTYPE::KERNAL;
 bool pbc = false;
@@ -29,12 +25,12 @@ bool pbc = false;
 string LOAD_FILE;
 D64Parser parser;
 
-void powerUp() {
-	//	TODO
+void powerUpMMU() {
+	resetMMU();
 }
 
-void reset() {
-
+void resetMMU() {
+	memory[0x0001] = 0x37;		//	Zeropage for PLA
 }
 
 void loadD64(string f) {
@@ -112,7 +108,36 @@ void loadCHRROM(string filename) {
 	}
 }
 
+void refreshMemoryMapping() {
+	//	Zeropage; this can configure the PLA, and thus the memory mapping, and the ROMs that are enabled
+	uint8_t LORAM = (memory[0x0001] & 0b1);
+	uint8_t HIRAM = ((memory[0x0001] & 0b10) >> 1);
+	uint8_t CHAREN = ((memory[0x0001] & 0b100) >> 2);
+	if (CHAREN)
+		memtype_d000_dfff = MEMTYPE::IO;
+	else {
+		if (HIRAM)
+			memtype_d000_dfff = MEMTYPE::CHARROM;
+		else
+			memtype_d000_dfff = MEMTYPE::RAM;
+	}
+	if (HIRAM)
+		memtype_e000_ffff = MEMTYPE::KERNAL;
+	else
+		memtype_e000_ffff = MEMTYPE::RAM;
+	if (HIRAM && LORAM)
+		memtype_a000_bfff = MEMTYPE::BASIC;
+	else
+		memtype_a000_bfff = MEMTYPE::RAM;
+
+}
+
 uint8_t readFromMem(uint16_t adr) {
+
+	/*
+			KERNAL HOOKS
+	*/
+
 	//	SETNAM hook
 	if (adr == 0xffbd) {
 		LOAD_FILE = "";
@@ -134,90 +159,104 @@ uint8_t readFromMem(uint16_t adr) {
 		}
 		
 	}
-	//	Evaluate PLA (0x0001, decides which memory areas are visible at which adresses)
-	uint8_t b0 = memory[0x0001] & 0b001;
-	uint8_t b1 = memory[0x0001] & 0b010;
-	uint8_t b2 = memory[0x0001] & 0b100;
-	//	TODO Continue this
 
+	//	refresh Mapping
+	refreshMemoryMapping();
 
-	switch (adr)
-	{
-		case 0xd012:			//	Current Scanline
-			return getCurrentScanline();
-			break;
-		case 0xd019:			//	IRQ flags, (active IRQs)
-			return getIRQStatus();
-			break;
-		case 0xd01a:			//	IRQ Mask (what is allowed to cause IRQs)
-			return getIRQMask();
-			break;
-		
-		case 0xdc00:			//	read CIA1 Keyboard / Joystick
-			return readCIA1DataPortA();
-			break;
-		case 0xdc01:			//	read CIA1 sKeyboard / Joystick
-			return readCIA1DataPortB();
-			break;
+	//	I/O, CHRROM, and RAM area
+	if (adr >= 0xd000 && adr < 0xe000) {
+		//	0xd000-0xdfff set to I/Os
+		if (memtype_d000_dfff == MEMTYPE::IO) {
+			switch (adr) {
+				case 0xd012:			//	Current Scanline
+					return getCurrentScanline();
+					break;
+				case 0xd019:			//	IRQ flags, (active IRQs)
+					return getIRQStatus();
+					break;
+				case 0xd01a:			//	IRQ Mask (what is allowed to cause IRQs)
+					return getIRQMask();
+					break;
 
-		//	CIA 1
-		case 0xdc04:			//	read CIA1 TimerA Low
-			return readCIA1timerALo();
-			break;
-		case 0xdc05:			//	read CIA1 TimerA High
-			return readCIA1timerAHi();
-			break;
-		case 0xdc06:			//	read CIA1 TimerB Low
-			return readCIA1timerBLo();
-			break;
-		case 0xdc07:			//	read CIA1 TimerB High
-			return readCIA1timerBHi();
-			break;
+				case 0xdc00:			//	read CIA1 Keyboard / Joystick
+					return readCIA1DataPortA();
+					break;
+				case 0xdc01:			//	read CIA1 sKeyboard / Joystick
+					return readCIA1DataPortB();
+					break;
 
-		//	CIA 2
-		case 0xdd04:			//	read CIA1 TimerA Low
-			return readCIA2timerALo();
-			break;
-		case 0xdd05:			//	read CIA1 TimerA High
-			return readCIA2timerAHi();
-			break;
-		case 0xdd06:			//	read CIA1 TimerB Low
-			return readCIA2timerBLo();
-			break;
-		case 0xdd07:			//	read CIA1 TimerB High
-			return readCIA2timerBHi();
-			break;
+					//	CIA 1
+				case 0xdc04:			//	read CIA1 TimerA Low
+					return readCIA1timerALo();
+					break;
+				case 0xdc05:			//	read CIA1 TimerA High
+					return readCIA1timerAHi();
+					break;
+				case 0xdc06:			//	read CIA1 TimerB Low
+					return readCIA1timerBLo();
+					break;
+				case 0xdc07:			//	read CIA1 TimerB High
+					return readCIA1timerBHi();
+					break;
 
-		case 0xdc0d: {			//	read CIA1 IRQ Control and Status
-			uint8_t res = readCIA1IRQStatus();
-			//cout << "CIA 1 IRQ Status is read: " << std::hex << res << "\n";
-			return res;
-			break;
-		}
-		case 0xdd0d: {			//	read CIA2 NMI Control and Status
-			uint8_t ret = readCIA2NMIStatus();
-			//cout << "CIA 2 NMI Status is read: " << std::hex << ret << "\n";
-			return ret;
-			break;
-		}
+					//	CIA 2
+				case 0xdd04:			//	read CIA1 TimerA Low
+					return readCIA2timerALo();
+					break;
+				case 0xdd05:			//	read CIA1 TimerA High
+					return readCIA2timerAHi();
+					break;
+				case 0xdd06:			//	read CIA1 TimerB Low
+					return readCIA2timerBLo();
+					break;
+				case 0xdd07:			//	read CIA1 TimerB High
+					return readCIA2timerBHi();
+					break;
 
-		default:
-			if (adr >= 0xa000 && adr < 0xc000) {		//	BASIC
-				return basic[adr % 0xa000];
+				case 0xdc0d:			//	read CIA1 IRQ Control and Status
+					return readCIA1IRQStatus();
+					break;
+				case 0xdd0d:			//	read CIA2 NMI Control and Status
+					return readCIA2NMIStatus();
+					break;
+				default:
+					return memory[adr];
+					break;
 			}
-			if (adr >= 0xe000 && adr < 0x10000) {		//	KERNAL
-				return kernal[adr % 0xe000];
-			}
+		}
+		//	0xd000-0xdfff set to RAM
+		else if (memtype_d000_dfff == MEMTYPE::RAM) {
 			return memory[adr];
-			break;
+		}
+		//	0xd000-0xdfff set to CHRROM
+		else if (memtype_d000_dfff == MEMTYPE::CHARROM) {
+			return readChar(adr % 0xc000);
+		}
 	}
+	else if (adr >= 0xa000 && adr < 0xc000) {		//	BASIC
+		if (memtype_a000_bfff == MEMTYPE::BASIC) {
+			return basic[adr % 0xa000];
+		}
+		else if (memtype_a000_bfff == MEMTYPE::RAM) {
+			return memory[adr];
+		}
+	}
+	else if (adr >= 0xe000 && adr <= 0xffff) {		//	KERNAL
+		if (memtype_e000_ffff == MEMTYPE::KERNAL) {
+			return kernal[adr % 0xe000];
+		}
+		else if (memtype_e000_ffff == MEMTYPE::RAM) {
+			return memory[adr];
+		}
+	}
+	return memory[adr];
 }
 
 //	reads from the VIC; the VIC can only read from a 16k window at once (dictated by Port B of CIA2)
 uint8_t readFromMemByVIC(uint16_t adr) {
 	uint8_t bank_no = 0b11 - (readCIA2DataPortB() & 0b11);
 	//	CHRROM
-	if (adr >= 0x1000 & adr <= 0x1fff) {
+	if (adr >= 0x1000 && adr <= 0x1fff && (bank_no == 0 || bank_no == 2)) {
 		return readChar(adr);
 	}
 	return memory[adr + bank_no * 0x4000];
@@ -233,25 +272,6 @@ uint8_t readChar(uint16_t adr) {
 
 void writeToMemByVIC(uint16_t adr, uint8_t val) {
 	memory[adr] = val;
-}
-
-void refreshMemoryMapping() {
-	//	Zeropage; this can configure the PLA, and thus the memory mapping, and the ROMs that are enabled
-	uint8_t LORAM = memory[0x0001] & 0b1;
-	uint8_t HIRAM = memory[0x0001] & 0b10;
-	uint8_t CHAREN = memory[0x0001] & 0b100;
-	if (CHAREN)
-		memtype_d000_dfff = MEMTYPE::IO;
-	else {
-		if (HIRAM)
-			memtype_d000_dfff = MEMTYPE::CHARROM;
-		else
-			memtype_d000_dfff = MEMTYPE::RAM;
-	}
-	if (HIRAM)
-		memtype_e000_ffff = MEMTYPE::KERNAL;
-	else
-		memtype_e000_ffff = MEMTYPE::RAM;
 }
 
 void writeToMem(uint16_t adr, uint8_t val) {
@@ -351,6 +371,10 @@ void writeToMem(uint16_t adr, uint8_t val) {
 		else if(memtype_d000_dfff == MEMTYPE::RAM){
 			memory[adr] = val;
 		}
+	}
+	else if (adr >= 0xa000 && adr < 0xc000) {
+		if (memtype_a000_bfff == MEMTYPE::RAM)
+			memory[adr] = val;
 	}
 	else if (adr == 0xe000 && adr <= 0xffff) {
 		if (memtype_e000_ffff == MEMTYPE::RAM) {

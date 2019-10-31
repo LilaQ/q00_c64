@@ -1,9 +1,18 @@
 #pragma once
 #include <stdint.h>
 #include <string>
+
+enum class MEMTYPE {
+	IO,
+	CHARROM,
+	RAM,
+	KERNAL,
+	BASIC
+};
+
 using namespace::std;
-void powerUp();
-void reset();
+void powerUpMMU();
+void resetMMU();
 void loadD64(string f);
 void loadPRG(string f);
 unsigned char readFromMem(uint16_t adr);

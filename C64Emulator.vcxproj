@@ -163,7 +163,6 @@
     <ClCompile Include="wmu.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="___DEL__Disk1541.h" />
     <ClInclude Include="cia.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="D64Parser.h" />
