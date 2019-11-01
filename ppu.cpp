@@ -110,8 +110,11 @@ void renderLine(uint16_t j) {
 			}
 			uint8_t color_choice = (high_bit << 1) | low_bit;
 			uint8_t color = readFromMemByVIC(colorram + offset);	//	default color
-			switch (color_choice)
-			{
+			uint8_t bg_color = readFromMemByVIC(0xd021);
+			//	4 bits for color; highest bit enables low-res multicolor mode...
+			if (color & 0b1000) {
+				switch (color_choice)
+				{
 				case 0x00:	//	BG Color
 					color = readFromMem(0xd021);
 					break;
@@ -121,11 +124,18 @@ void renderLine(uint16_t j) {
 				case 0x02:
 					color = readFromMem(0xd023);
 					break;
+				}
+				uint8_t bg_color = readFromMemByVIC(0xd021);
+				VRAM[(j * 402 * 3) + ((i + offset_x) * 3)] = COLORS[color][0];
+				VRAM[(j * 402 * 3) + ((i + offset_x) * 3) + 1] = COLORS[color][1];
+				VRAM[(j * 402 * 3) + ((i + offset_x) * 3) + 2] = COLORS[color][2];
 			}
-			uint8_t bg_color = readFromMemByVIC(0xd021);
-			VRAM[(j * 402 * 3) + ((i + offset_x) * 3)] = COLORS[color][0];
-			VRAM[(j * 402 * 3) + ((i + offset_x) * 3) + 1] = COLORS[color][1];
-			VRAM[(j * 402 * 3) + ((i + offset_x) * 3) + 2] = COLORS[color][2];
+			//	...else it's still going to be hires single color mode
+			else {
+				VRAM[(j * 402 * 3) + ((i + offset_x) * 3)] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
+				VRAM[(j * 402 * 3) + ((i + offset_x) * 3) + 1] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
+				VRAM[(j * 402 * 3) + ((i + offset_x) * 3) + 2] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
+			}
 		}
 
 		//	border
