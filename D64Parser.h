@@ -77,7 +77,7 @@ struct D64Parser {
 		entries.clear();
 		filename = f;
 		FILE* file = fopen(filename.c_str(), "rb");
-		int pos = 0;
+		uint16_t pos = 0;
 		while (fread(&data[pos], 1, 1, file)) {
 			pos++;
 		}
@@ -85,7 +85,7 @@ struct D64Parser {
 
 		//	init all available lines
 		uint32_t base_dir = 0x16600;
-		for (int i = 0; i < 0x1200; i += 0x20) {
+		for (uint16_t i = 0; i < 0x1200; i += 0x20) {
 			Entry entry;
 			entry.next_track = data[base_dir + i];
 			entry.next_sector = data[base_dir + i + 1];
@@ -93,7 +93,7 @@ struct D64Parser {
 			entry.start_track = data[base_dir + i + 3];
 			entry.start_sector = data[base_dir + i + 4];
 			entry.pet_name;
-			for (int j = 5; j < 0x15; j++) {
+			for (uint16_t j = 5; j < 0x15; j++) {
 				entry.pet_name += data[base_dir + i + j];
 			}
 			entry.sector_size = data[base_dir + i + 0x1e] + (data[base_dir + i + 0x1f] * 256);
@@ -126,15 +126,15 @@ struct D64Parser {
 		r.push_back(0x00);												//	HEADLINE 0
 		r.push_back(0x12);												//	HEADLINE BOLD ?
 		r.push_back(0x22);												//	"
-		for (int i = 0; i < diskname.size(); i++) {
+		for (uint16_t i = 0; i < diskname.size(); i++) {
 			r.push_back(diskname.at(i));
 		}
 		r.push_back(0x22);												//	"
-		for (int i = 0; i < 24 - diskname.size() - 2; i++) {
+		for (uint16_t i = 0; i < 24 - diskname.size() - 2; i++) {
 			r.push_back(0x20);											//	FILLING SPACES
 		}
 		r.push_back(0x00);
-		for (int i = 0; i < entries.size(); i++) {
+		for (uint16_t i = 0; i < entries.size(); i++) {
 			if (entries[i].available) {
 				if ((lc + 0x20) > 0xff)
 					lh++;
@@ -144,19 +144,19 @@ struct D64Parser {
 				r.push_back(entries[i].sector_size);					//	SIZE
 				r.push_back(0x00);
 				string f = std::to_string(entries[i].sector_size);
-				for (auto i = 0; i < 4 - f.size(); i++) {
+				for (uint16_t i = 0; i < 4 - f.size(); i++) {
 					r.push_back(0x20);									//	SPACE
 				}
 				r.push_back(0x22);										//	"
-				for (auto j = 0; j < entries[i].pet_name.size(); j++) {
+				for (uint16_t j = 0; j < entries[i].pet_name.size(); j++) {
 					r.push_back(entries[i].pet_name.at(j));				//	NAME
 				}
 				r.push_back(0x22);										//	"
 				r.push_back(0x20);										//	SPACE
-				for (auto j = 0; j < entries[i].file_type.size(); j++) {
+				for (uint16_t j = 0; j < entries[i].file_type.size(); j++) {
 					r.push_back(entries[i].file_type.at(j));			//	FILE_EXT
 				}
-				for (auto j = 0; j < 26 - entries[i].pet_name.size() - 5 - (4 - f.size()); j++) {
+				for (uint16_t j = 0; j < 26 - entries[i].pet_name.size() - 5 - (4 - f.size()); j++) {
 					r.push_back(0x20);									//	FILLING SPACES
 				}
 				r.push_back(0x00);
@@ -168,12 +168,12 @@ struct D64Parser {
 
 	std::vector<uint8_t> getData(uint8_t row_id) {
 		std::vector<uint8_t> ret(entries.at(row_id).sector_size * 0x100);
-		int c = 0;
+		uint16_t c = 0;
 		uint32_t next_track = entries.at(row_id).start_track;
 		uint32_t next_sector = entries.at(row_id).start_sector;
 		while(c < entries.at(row_id).sector_size) {
 			uint32_t a_adr = STARTS[next_track] + next_sector * 256;
-			for (int i = 0; i < 254; i++) {
+			for (uint16_t i = 0; i < 254; i++) {
 				ret[c * 254 + i] = data[a_adr + i + 2];
 			}
 			next_track = data[a_adr];
@@ -184,7 +184,7 @@ struct D64Parser {
 	}
 
 	bool filenameExists(string f) {
-		for (int i = 0; i < entries.size(); i++) {
+		for (uint16_t i = 0; i < entries.size(); i++) {
 			cout << entries.at(i).pet_name << " - " << f << "\n";
 			if (entries.at(i).pet_name == f)
 				return true;
@@ -194,17 +194,17 @@ struct D64Parser {
 
 	std::vector<uint8_t> getDataByFilename(string f) {
 		Entry selected;
-		for (int i = 0; i < entries.size(); i++) {
+		for (uint16_t i = 0; i < entries.size(); i++) {
 			if (entries.at(i).pet_name == f)
 				selected = entries.at(i);
 		}
-		int c = 0;
+		uint16_t c = 0;
 		std::vector<uint8_t> ret(selected.sector_size * 0x100);
 		uint32_t next_track = selected.start_track;
 		uint32_t next_sector = selected.start_sector;
 		while (c < selected.sector_size) {
 			uint32_t a_adr = STARTS[next_track] + next_sector * 256;
-			for (int i = 0; i < 254; i++) {
+			for (uint16_t i = 0; i < 254; i++) {
 				ret[c * 254 + i] = data[a_adr + i + 2];
 			}
 			next_track = data[a_adr];
@@ -216,7 +216,7 @@ struct D64Parser {
 
 	void printAll() {
 		cout << "\t\t" << diskname << "\n";
-		for (int i = 0; i < entries.size(); i ++) {
+		for (uint16_t i = 0; i < entries.size(); i ++) {
 			if (entries.at(i).available) {
 				cout << entries.at(i).file_type << "\t";
 				cout << hex << +entries.at(i).start_track;
