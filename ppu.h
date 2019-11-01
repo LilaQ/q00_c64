@@ -45,10 +45,10 @@ struct IRQ_STATUS {
 
 	uint8_t get() {
 		uint8_t ret = 0x00;
-		ret |= irq_caused_by_vic << 7;
-		ret |= irq_req_by_sprite_sprite_collision << 2;
-		ret |= irq_req_by_sprite_bg_collision << 1;
-		ret |= irq_req_by_rasterline;
+		ret |= (uint8_t)irq_caused_by_vic << 7;
+		ret |= (uint8_t)irq_req_by_sprite_sprite_collision << 2;
+		ret |= (uint8_t)irq_req_by_sprite_bg_collision << 1;
+		ret |= (uint8_t)irq_req_by_rasterline;
 		return ret;
 	}
 };
@@ -75,9 +75,9 @@ struct IRQ_MASK {
 
 	uint8_t get() {
 		uint8_t ret = 0x00;
-		ret |= irq_can_be_cause_by_sprite_sprite << 2;
-		ret |= irq_can_be_cause_by_sprite_bg << 1;
-		ret |= irq_can_be_cause_by_rasterline;
+		ret |= (uint8_t)irq_can_be_cause_by_sprite_sprite << 2;
+		ret |= (uint8_t)irq_can_be_cause_by_sprite_bg << 1;
+		ret |= (uint8_t)irq_can_be_cause_by_rasterline;
 		return ret;
 	}
 };

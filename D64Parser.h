@@ -13,7 +13,7 @@ struct Entry {
 	string pet_name;
 	uint32_t adress_start;
 	uint32_t adress_end;
-	uint16_t sector_size;
+	uint8_t sector_size;
 	uint8_t sectors;
 };
 
@@ -144,19 +144,19 @@ struct D64Parser {
 				r.push_back(entries[i].sector_size);					//	SIZE
 				r.push_back(0x00);
 				string f = std::to_string(entries[i].sector_size);
-				for (int i = 0; i < 4 - f.size(); i++) {
+				for (auto i = 0; i < 4 - f.size(); i++) {
 					r.push_back(0x20);									//	SPACE
 				}
 				r.push_back(0x22);										//	"
-				for (int j = 0; j < entries[i].pet_name.size(); j++) {
+				for (auto j = 0; j < entries[i].pet_name.size(); j++) {
 					r.push_back(entries[i].pet_name.at(j));				//	NAME
 				}
 				r.push_back(0x22);										//	"
 				r.push_back(0x20);										//	SPACE
-				for (int j = 0; j < entries[i].file_type.size(); j++) {
+				for (auto j = 0; j < entries[i].file_type.size(); j++) {
 					r.push_back(entries[i].file_type.at(j));			//	FILE_EXT
 				}
-				for (int j = 0; j < 26 - entries[i].pet_name.size() - 5 - (4 - f.size()); j++) {
+				for (auto j = 0; j < 26 - entries[i].pet_name.size() - 5 - (4 - f.size()); j++) {
 					r.push_back(0x20);									//	FILLING SPACES
 				}
 				r.push_back(0x00);

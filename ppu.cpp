@@ -97,15 +97,15 @@ void renderLine(uint16_t j) {
 			uint8_t index = (7 - (i % 8));
 			uint8_t current_byte = row;
 			//	If we are at bit 0 of the 2 bits...
-			uint8_t high_bit = ((current_byte & (1 << index + 1)) > 0) ? 1 : 0;
+			uint8_t high_bit = ((current_byte & (1 << (index + 1))) > 0) ? 1 : 0;
 			uint8_t low_bit = ((current_byte & (1 << index)) > 0) ? 1 : 0;
 			//	Else, we are at bit 1 of the 2 bits
 			if (index % 2) {
 				high_bit = ((current_byte & (1 << index)) > 0) ? 1 : 0;
-				low_bit = ((current_byte & (1 << index - 1)) > 0) ? 1 : 0;
+				low_bit = ((current_byte & (1 << (index - 1))) > 0) ? 1 : 0;
 				//	edge case, index is at the end, we jump to the next byte
 				if (index == 0) {
-					low_bit = (((readFromMemByVIC(chrrom + (char_id * 8) + ((j - 40) % 8)) + 1) & (1 << index + 1)) > 0) ? 1 : 0;
+					low_bit = (((readFromMemByVIC(chrrom + (char_id * 8) + ((j - 40) % 8)) + 1) & (1 << (index + 1))) > 0) ? 1 : 0;
 				}
 			}
 			uint8_t color_choice = (high_bit << 1) | low_bit;

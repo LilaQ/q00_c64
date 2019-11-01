@@ -85,10 +85,10 @@ struct CIA1_IRQ_STATUS {
 
 	//	reading clears every bit
 	uint8_t get() {
-		uint8_t res =	(IRQ_occured_general_flag << 7) |
-						(IRQ_occured_by_alarm_equals_clock << 2) |
-						(IRQ_occured_by_underflow_timerB << 1) |
-						(IRQ_occured_by_underflow_timerA);
+		uint8_t res =	((uint8_t)IRQ_occured_general_flag << 7) |
+						((uint8_t)IRQ_occured_by_alarm_equals_clock << 2) |
+						((uint8_t)IRQ_occured_by_underflow_timerB << 1) |
+						((uint8_t)IRQ_occured_by_underflow_timerA);
 		IRQ_occured_general_flag = false;
 		IRQ_occured_by_alarm_equals_clock = false;
 		IRQ_occured_by_underflow_timerA = false;
@@ -131,10 +131,10 @@ struct CIA2_NMI_STATUS {
 
 	//	when read, all bits are cleared
 	uint8_t get() {
-		uint8_t res =	(NMI_occured_general_flag << 7) |
-						(NMI_occured_by_alarm_equals_clock << 2) |
-						(NMI_occured_by_underflow_timerB << 1) |
-						(NMI_occured_by_underflow_timerA);
+		uint8_t res =	((uint8_t)NMI_occured_general_flag << 7) |
+						((uint8_t)NMI_occured_by_alarm_equals_clock << 2) |
+						((uint8_t)NMI_occured_by_underflow_timerB << 1) |
+						((uint8_t)NMI_occured_by_underflow_timerA);
 		NMI_occured_general_flag = false;
 		NMI_occured_by_alarm_equals_clock = false;
 		NMI_occured_by_underflow_timerA = false;
