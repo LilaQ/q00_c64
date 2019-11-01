@@ -117,7 +117,6 @@ void setCIA1IRQcontrol(uint8_t val) {
 		Bit 7: Source bit. 0 = set bits 0..4 are clearing the according mask bit. 1 = set bits 0..4 are setting the according mask bit. If all bits 0..4 are cleared, there will be no change to the mask.
 	*/
 	cia1_irq_status.set(val);
-	printf("Setting CIA1 IRQ Control: %02x\n", val);
 }
 
 void setCIA1TimerAControl(uint8_t val) {
@@ -132,11 +131,10 @@ void setCIA1TimerAControl(uint8_t val) {
 		Bit 7: Real Time Clock, 0 = 60 Hz, 1 = 50 Hz
 	*/
 	cia1_timerA.set(val, cia1_irq_status);
-	printf("Setting CIA1 Timer A Control: %02x\n", val);
 }
 
 void setCIA1TimerBControl(uint8_t val) {
-	printf("Setting CIA1 Timer B Control: %02x\n", val);
+	cia1_timerB.set(val, cia1_irq_status);
 }
 
 //	CIA 2
@@ -183,12 +181,12 @@ uint8_t readCIA2DataPortB() {
 
 void setCIA2timerAlatchHi(uint8_t val) {
 	cia2_timerA.timer_latch = (cia2_timerA.timer_latch & 0x00ff) | (val << 8);
-	printf("Timer A Latch High: 0x%02x\n", val);
+	//printf("Timer A Latch High: 0x%02x\n", val);
 }
 
 void setCIA2timerAlatchLo(uint8_t val) {
 	cia2_timerA.timer_latch = (cia2_timerA.timer_latch & 0xff00) | val;
-	printf("Timer A Latch Low: 0x%02x\n", val);
+	//printf("Timer A Latch Low: 0x%02x\n", val);
 }
 
 void setCIA2timerBlatchHi(uint8_t val) {
