@@ -2,12 +2,15 @@
 #include <stdint.h>
 #include <iostream>
 #include <string>
+#include <array>
 #include "ppu.h"
 #include "mmu.h"
 #include "cpu.h"
 #include "wmu.h"
 #include "SDL2/include/SDL.h"
+using namespace std;
 
+array<uint8_t, 0x31> VIC_REGISTERS;
 int cpu_cycles = 0;
 uint16_t render_row = 0;
 uint16_t raster_irq_row = 0;
@@ -17,7 +20,16 @@ IRQ_MASK irq_mask;
 SDL_Renderer* renderer;
 SDL_Window* window;
 SDL_Texture* texture;
+
 unsigned char VRAM[402 * 284 * 3];	//	RGB - 320 * 200 pixel inside, with border 402 * 284
+
+//	local function declaration
+void setRasterIRQhi(uint8_t val);
+void setRasterIRQlow(uint8_t val);
+void clearIRQStatus(uint8_t val);
+void setIRQMask(uint8_t val);
+uint8_t getIRQMask();
+uint8_t getIRQStatus();
 
 const unsigned char COLORS[16][3] = {
 	{0x00, 0x00, 0x00},
@@ -64,15 +76,15 @@ void initPPU(string filename) {
 void renderLine(uint16_t j) {
 
 	//	Textmode Variables
-	uint16_t chrrom = 1024 * (readFromMemByVIC(0xd018) & 0b1110);
-	uint16_t screen = 0x400 * ((readFromMemByVIC(0xd018) & 0b11110000) / 0x10);
-	uint8_t offset_x = readFromMemByVIC(0xd016) & 0b111;
-	uint8_t border_mode_offset = (readFromMemByVIC(0xd016) & 0b1000) ? 0 : 16;	//	38 cols if off, 40 cols if on
+	uint16_t chrrom = 1024 * (VIC_REGISTERS[0x18] & 0b1110);
+	uint16_t screen = 0x400 * ((VIC_REGISTERS[0x18] & 0b11110000) / 0x10);
+	uint8_t offset_x = VIC_REGISTERS[0x16] & 0b111;
+	uint8_t border_mode_offset = (VIC_REGISTERS[0x16] & 0b1000) ? 0 : 16;	//	38 cols if off, 40 cols if on
 	uint16_t colorram = 0xd800;
 
 	//	Bitmap Variables
-	uint16_t bmp_start_address = (readFromMemByVIC(0xd018) & 0b1000) ? 0x2000 : 0x0000;
-	uint16_t bmp_color_address = ((readFromMemByVIC(0xd018) & 0b11110000) >> 4) * 0x400;
+	uint16_t bmp_start_address = (VIC_REGISTERS[0x18] & 0b1000) ? 0x2000 : 0x0000;
+	uint16_t bmp_color_address = ((VIC_REGISTERS[0x18] & 0b11110000) >> 4) * 0x400;
 
 	//	Render Line
 	for (int i = 0; i < 402; i++) {
@@ -82,27 +94,27 @@ void renderLine(uint16_t j) {
 		uint16_t OFFSET = ((j - 40) / 8) * 40 + (i - 40) / 8;
 
 		//	TEXTMODE
-		if ((readFromMemByVIC(0xd011) & 0b100000) == 0) {
+		if ((VIC_REGISTERS[0x11] & 0b100000) == 0) {
 
 			//	inside
 			
 			uint8_t char_id = readFromMemByVIC(screen + OFFSET);
-			uint8_t bg_color = readFromMemByVIC(0xd021);
+			uint8_t bg_color = VIC_REGISTERS[0x21];
 
 			//	EXTENDED BG COLOR MODE
-			if (readFromMemByVIC(0xd011) & 0b1000000) {
+			if (VIC_REGISTERS[0x11] & 0b1000000) {
 				switch ((char_id >> 6) & 0b11) {
 				case 0b00:
-					bg_color = readFromMemByVIC(0xd021);
+					bg_color = VIC_REGISTERS[0x21];
 					break;
 				case 0b01:
-					bg_color = readFromMemByVIC(0xd022);
+					bg_color = VIC_REGISTERS[0x22];
 					break;
 				case 0b10:
-					bg_color = readFromMemByVIC(0xd023);
+					bg_color = VIC_REGISTERS[0x23];
 					break;
 				case 0b11:
-					bg_color = readFromMemByVIC(0xd024);
+					bg_color = VIC_REGISTERS[0x24];
 					break;
 				}
 				char_id &= 0b111111;
@@ -112,7 +124,7 @@ void renderLine(uint16_t j) {
 			uint8_t chr = readFromMemByVIC(char_address);
 
 			//	NORMAL MODE
-			if ((readFromMemByVIC(0xd016) & 0b10000) == 0) {
+			if ((VIC_REGISTERS[0x16] & 0b10000) == 0) {
 				VRAM[ADR] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
 				VRAM[ADR + 1] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
 				VRAM[ADR + 2] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
@@ -146,13 +158,13 @@ void renderLine(uint16_t j) {
 					switch (color_choice)
 					{
 					case 0x00:	//	BG Color
-						color = readFromMem(0xd021);
+						color = VIC_REGISTERS[0x21];
 						break;
 					case 0x01:
-						color = readFromMem(0xd022);
+						color = VIC_REGISTERS[0x22];
 						break;
 					case 0x02:
-						color = readFromMem(0xd023);
+						color = VIC_REGISTERS[0x23];
 						break;
 					}
 					VRAM[ADR] = COLORS[color][0];
@@ -174,7 +186,7 @@ void renderLine(uint16_t j) {
 			uint8_t color_index = (bit) ? (readFromMemByVIC(bmp_color_address + OFFSET) & 0b11110000) >> 4 : readFromMemByVIC(bmp_color_address + OFFSET) & 0b1111;
 
 			//	MULTICOLOR MODE
-			if ((readFromMemByVIC(0xd016) & 0b10000)) {
+			if ((VIC_REGISTERS[0x16] & 0b10000)) {
 				uint8_t index = (7 - (i % 8));
 				uint8_t current_byte = readFromMemByVIC(bmp_start_address + BMP_OFFSET);
 				//	If we are at bit 0 of the 2 bits...
@@ -193,7 +205,7 @@ void renderLine(uint16_t j) {
 				switch (color_choice)
 				{
 					case 0x00:	//	BG Color
-						color_index = readFromMem(0xd021);
+						color_index = VIC_REGISTERS[0x21];
 						break;
 					case 0x01:
 						color_index = (readFromMemByVIC(bmp_color_address + OFFSET) & 0b11110000) >> 4;
@@ -205,7 +217,7 @@ void renderLine(uint16_t j) {
 						color_index = readFromMemByVIC(0xd800 + OFFSET) & 0b1111;
 						break;
 				}
-				uint8_t bg_color = readFromMemByVIC(0xd021);
+				uint8_t bg_color = VIC_REGISTERS[0x21];
 			}
 
 			VRAM[ADR] = COLORS[color_index][0];
@@ -214,7 +226,7 @@ void renderLine(uint16_t j) {
 		}
 
 		//	border
-		uint16_t border_color = readFromMemByVIC(0xd020);
+		uint8_t border_color = VIC_REGISTERS[0x20];
 		if (i <= (39 + border_mode_offset) || i >= (360 - border_mode_offset) || j <= 39 || j >= 240) {
 			VRAM[(j * 402 * 3) + (i * 3)] = COLORS[border_color][0];
 			VRAM[(j * 402 * 3) + (i * 3) + 1] = COLORS[border_color][1];
@@ -252,6 +264,44 @@ void stepPPU(uint8_t cpu_cyc) {
 
 uint8_t getCurrentScanline() {
 	return render_row & 0xff;
+}
+
+void writeVICregister(uint16_t adr, uint8_t val) {
+	switch (adr)
+	{
+		case 0xd011:
+			setRasterIRQhi(val);
+			break;
+		case 0xd012:			//	Set Rasterzeilen IRQ
+			setRasterIRQlow(val);
+			break;
+		case 0xd019:			//	Clear IRQ flags, that are no longer needed
+			clearIRQStatus(val);
+			break;
+		case 0xd01a:			//	IRQ Mask (what is allowed to cause IRQs)
+			setIRQMask(val);
+			break;
+		default:
+			break;
+	}
+	VIC_REGISTERS[adr % 0xd000] = val;
+}
+
+uint8_t readVICregister(uint16_t adr) {
+	switch (adr) {
+		case 0xd012:			//	Current Scanline
+			return getCurrentScanline();
+			break;
+		case 0xd019:			//	IRQ flags, (active IRQs)
+			return getIRQStatus();
+			break;
+		case 0xd01a:			//	IRQ Mask (what is allowed to cause IRQs)
+			return getIRQMask();
+			break;
+		default:
+			return VIC_REGISTERS[adr % 0xd000];
+			break;
+	}
 }
 
 void setIRQMask(uint8_t val) {

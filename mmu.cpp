@@ -134,32 +134,6 @@ void refreshMemoryMapping() {
 
 uint8_t readFromMem(uint16_t adr) {
 
-	/*
-			KERNAL HOOKS
-	*/
-
-	//	SETNAM hook
-	if (adr == 0xffbd) {
-		LOAD_FILE = "";
-		printf("SETTING NAME y: %x x: %x\n", getCPURegs().Y, getCPURegs().X);
-		for (int i = 0; i < 16; i++) {
-			LOAD_FILE += memory[((getCPURegs().Y << 8) | getCPURegs().X) + i];
-		}
-	}
-	//	LOAD ,8,1 HOOK
-	if (adr == 0xf52e || adr == 0xf4de) {
-		if (parser.filenameExists(LOAD_FILE)) {
-			clearCarry();		//	File exists
-			cout << "File exists " << LOAD_FILE << "\n";
-			loadPRGFromDisk(LOAD_FILE);
-		}
-		else {
-			setCarry();			//	File does not exist
-			cout << "File does not exist " << LOAD_FILE << "\n";
-		}
-		
-	}
-
 	//	refresh Mapping
 	refreshMemoryMapping();
 
@@ -167,16 +141,23 @@ uint8_t readFromMem(uint16_t adr) {
 	if (adr >= 0xd000 && adr < 0xe000) {
 		//	0xd000-0xdfff set to I/Os
 		if (memtype_d000_dfff == MEMTYPE::IO) {
-			switch (adr) {
-				case 0xd012:			//	Current Scanline
-					return getCurrentScanline();
-					break;
-				case 0xd019:			//	IRQ flags, (active IRQs)
-					return getIRQStatus();
-					break;
-				case 0xd01a:			//	IRQ Mask (what is allowed to cause IRQs)
-					return getIRQMask();
-					break;
+			if (adr >= 0xd000 && adr <= 0xd030) {
+				return readVICregister(adr);
+			}
+			else {
+				switch (adr) {
+					/*case 0xd000 ... 0xd030:
+						readVICregister(adr);
+						break;*/
+						/*case 0xd012:			//	Current Scanline
+							return getCurrentScanline();
+							break;
+						case 0xd019:			//	IRQ flags, (active IRQs)
+							return getIRQStatus();
+							break;
+						case 0xd01a:			//	IRQ Mask (what is allowed to cause IRQs)
+							return getIRQMask();
+							break;*/
 
 				case 0xdc00:			//	read CIA1 Keyboard / Joystick
 					return readCIA1DataPortA();
@@ -222,6 +203,7 @@ uint8_t readFromMem(uint16_t adr) {
 				default:
 					return memory[adr];
 					break;
+				}
 			}
 		}
 		//	0xd000-0xdfff set to RAM
@@ -243,6 +225,31 @@ uint8_t readFromMem(uint16_t adr) {
 	}
 	else if (adr >= 0xe000 && adr <= 0xffff) {		//	KERNAL
 		if (memtype_e000_ffff == MEMTYPE::KERNAL) {
+			/*
+					KERNAL HOOKS
+			*/
+
+			//	SETNAM hook
+			if (adr == 0xffbd) {
+				LOAD_FILE = "";
+				printf("SETTING NAME y: %x x: %x\n", getCPURegs().Y, getCPURegs().X);
+				for (int i = 0; i < 16; i++) {
+					LOAD_FILE += memory[((getCPURegs().Y << 8) | getCPURegs().X) + i];
+				}
+			}
+			//	LOAD ,8,1 HOOK
+			if (adr == 0xf52e || adr == 0xf4de) {
+				if (parser.filenameExists(LOAD_FILE)) {
+					clearCarry();		//	File exists
+					cout << "File exists " << LOAD_FILE << "\n";
+					loadPRGFromDisk(LOAD_FILE);
+				}
+				else {
+					setCarry();			//	File does not exist
+					cout << "File does not exist " << LOAD_FILE << "\n";
+				}
+
+			}
 			return kernal[adr % 0xe000];
 		}
 		else if (memtype_e000_ffff == MEMTYPE::RAM) {
@@ -276,6 +283,9 @@ void writeToMemByVIC(uint16_t adr, uint8_t val) {
 
 void writeToMem(uint16_t adr, uint8_t val) {
 
+	if (adr == 0xd011)
+		printf("MMU %x mit %x\n", adr, val);
+
 	//	refresh Mapping
 	refreshMemoryMapping();
 
@@ -283,89 +293,107 @@ void writeToMem(uint16_t adr, uint8_t val) {
 	if (adr >= 0xd000 && adr < 0xe000) 
 	{
 		if (memtype_d000_dfff == MEMTYPE::IO) {
-			switch (adr)
-			{
-			case 0xd011:			//	Set Rasterzeilen IRQ
-				setRasterIRQhi(val);
-				memory[adr] = val;
-				break;
-			case 0xd012:			//	Set Rasterzeilen IRQ
-				setRasterIRQlow(val);
-				break;
-			case 0xd019:			//	Clear IRQ flags, that are no longer needed
-				clearIRQStatus(val);
-				break;
-			case 0xd01a:			//	IRQ Mask (what is allowed to cause IRQs)
-				setIRQMask(val);
-				break;
+			/*
+				VIC
+			*/
+			if (adr >= 0xd000 && adr <= 0xd030) {
+				if (adr == 0xd011)
+					printf("MMU2 %x mit %x\n", adr, val);
+				writeVICregister(adr, val);
+			}
+			else {
+				switch (adr)
+				{
 
-				//	CIA 1
-			case 0xdc00:			//	write CIA1 Keyboard / Joystick
-				writeCIA1DataPortA(val);
-				break;
-			case 0xdc01:			//	write CIA1 Keyboard / Joystick
-				writeCIA1DataPortB(val);
-				break;
-			case 0xdc02:			//	CIA1 Port A RW
-				setCIA1PortARW(val);
-				break;
-			case 0xdc03:			//	CIA1 Port B RW
-				setCIA1PortBRW(val);
-				break;
+					/*case 0xd000 ... 0xd030:			//	Set Rasterzeilen IRQ
+						writeVICregister(adr, val);
+						break;*/
+						/*case 0xd011:
+							setRasterIRQhi(val);
 
-				//	CIA 1
-			case 0xdc04:
-				setCIA1timerAlatchLo(val);
-				break;
-			case 0xdc05:
-				setCIA1timerAlatchHi(val);
-				break;
-			case 0xdc06:
-				setCIA1timerBlatchLo(val);
-				break;
-			case 0xdc07:
-				setCIA1timerBlatchHi(val);
-				break;
+							break;
+						case 0xd012:			//	Set Rasterzeilen IRQ
+							setRasterIRQlow(val);
+							break;
 
-				//	CIA 2
-			case 0xdd04:
-				setCIA2timerAlatchLo(val);
-				break;
-			case 0xdd05:
-				setCIA2timerAlatchHi(val);
-				break;
-			case 0xdd06:
-				setCIA2timerBlatchLo(val);
-				break;
-			case 0xdd07:
-				setCIA2timerBlatchHi(val);
-				break;
+						case 0xd019:			//	Clear IRQ flags, that are no longer needed
+							clearIRQStatus(val);
+							break;
+						case 0xd01a:			//	IRQ Mask (what is allowed to cause IRQs)
+							setIRQMask(val);
+							break;*/
 
-				//	CIA 1
-			case 0xdc0d:
-				setCIA1IRQcontrol(val);
-				break;
-			case 0xdc0e:
-				setCIA1TimerAControl(val);
-				break;
-			case 0xdc0f:
-				setCIA1TimerBControl(val);
-				break;
+							/*
+								CIAs
+							*/
+							//	CIA 1
+				case 0xdc00:			//	write CIA1 Keyboard / Joystick
+					writeCIA1DataPortA(val);
+					break;
+				case 0xdc01:			//	write CIA1 Keyboard / Joystick
+					writeCIA1DataPortB(val);
+					break;
+				case 0xdc02:			//	CIA1 Port A RW
+					setCIA1PortARW(val);
+					break;
+				case 0xdc03:			//	CIA1 Port B RW
+					setCIA1PortBRW(val);
+					break;
 
-				//	CIA 2
-			case 0xdd0d:
-				setCIA2NMIcontrol(val);
-				break;
-			case 0xdd0e:
-				setCIA2TimerAControl(val);
-				break;
-			case 0xdd0f:
-				setCIA2TimerBControl(val);
-				break;
+					//	CIA 1
+				case 0xdc04:
+					setCIA1timerAlatchLo(val);
+					break;
+				case 0xdc05:
+					setCIA1timerAlatchHi(val);
+					break;
+				case 0xdc06:
+					setCIA1timerBlatchLo(val);
+					break;
+				case 0xdc07:
+					setCIA1timerBlatchHi(val);
+					break;
 
-			default:
-				memory[adr] = val;
-				break;
+					//	CIA 2
+				case 0xdd04:
+					setCIA2timerAlatchLo(val);
+					break;
+				case 0xdd05:
+					setCIA2timerAlatchHi(val);
+					break;
+				case 0xdd06:
+					setCIA2timerBlatchLo(val);
+					break;
+				case 0xdd07:
+					setCIA2timerBlatchHi(val);
+					break;
+
+					//	CIA 1
+				case 0xdc0d:
+					setCIA1IRQcontrol(val);
+					break;
+				case 0xdc0e:
+					setCIA1TimerAControl(val);
+					break;
+				case 0xdc0f:
+					setCIA1TimerBControl(val);
+					break;
+
+					//	CIA 2
+				case 0xdd0d:
+					setCIA2NMIcontrol(val);
+					break;
+				case 0xdd0e:
+					setCIA2TimerAControl(val);
+					break;
+				case 0xdd0f:
+					setCIA2TimerBControl(val);
+					break;
+
+				default:
+					memory[adr] = val;
+					break;
+				}
 			}
 		}
 		else if(memtype_d000_dfff == MEMTYPE::RAM){

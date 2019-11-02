@@ -216,7 +216,7 @@ int NMI() {
 	writeToMem(SP_ + 0x100, status.status);
 	SP_--;
 	PC = (readFromMem(0xfffb) << 8) | readFromMem(0xfffa);
-	//status.setInterruptDisable(1);
+	status.setInterruptDisable(1);
 	return 7;
 }
 
