@@ -77,7 +77,7 @@ struct D64Parser {
 		entries.clear();
 		filename = f;
 		FILE* file = fopen(filename.c_str(), "rb");
-		uint16_t pos = 0;
+		uint32_t pos = 0;
 		while (fread(&data[pos], 1, 1, file)) {
 			pos++;
 		}

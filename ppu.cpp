@@ -155,7 +155,6 @@ void renderLine(uint16_t j) {
 						color = readFromMem(0xd023);
 						break;
 					}
-					uint8_t bg_color = readFromMemByVIC(0xd021);
 					VRAM[ADR] = COLORS[color][0];
 					VRAM[ADR + 1] = COLORS[color][1];
 					VRAM[ADR + 2] = COLORS[color][2];
@@ -173,6 +172,41 @@ void renderLine(uint16_t j) {
 			uint16_t BMP_OFFSET = (OFFSET / 40) * 320 + (OFFSET % 40) * 8 + (j % 8);
 			uint8_t bit = readFromMemByVIC(bmp_start_address + BMP_OFFSET) & (0b10000000 >> (i % 8));
 			uint8_t color_index = (bit) ? (readFromMemByVIC(bmp_color_address + OFFSET) & 0b11110000) >> 4 : readFromMemByVIC(bmp_color_address + OFFSET) & 0b1111;
+
+			//	MULTICOLOR MODE
+			if ((readFromMemByVIC(0xd016) & 0b10000)) {
+				uint8_t index = (7 - (i % 8));
+				uint8_t current_byte = readFromMemByVIC(bmp_start_address + BMP_OFFSET);
+				//	If we are at bit 0 of the 2 bits...
+				uint8_t high_bit = ((current_byte & (1 << (index + 1))) > 0) ? 1 : 0;
+				uint8_t low_bit = ((current_byte & (1 << index)) > 0) ? 1 : 0;
+				//	Else, we are at bit 1 of the 2 bits
+				if (index % 2) {
+					high_bit = ((current_byte & (1 << index)) > 0) ? 1 : 0;
+					low_bit = ((current_byte & (1 << (index - 1))) > 0) ? 1 : 0;
+					//	edge case, index is at the end, we jump to the next byte
+					if (index == 0) {
+						low_bit = (((readFromMemByVIC(bmp_start_address + BMP_OFFSET + 1)) & (1 << (index + 1))) > 0) ? 1 : 0;
+					}
+				}
+				uint8_t color_choice = (high_bit << 1) | low_bit;
+				switch (color_choice)
+				{
+					case 0x00:	//	BG Color
+						color_index = readFromMem(0xd021);
+						break;
+					case 0x01:
+						color_index = (readFromMemByVIC(bmp_color_address + OFFSET) & 0b11110000) >> 4;
+						break;
+					case 0x02:
+						color_index = readFromMemByVIC(bmp_color_address + OFFSET) & 0b1111;
+						break;
+					case 0x03:
+						color_index = readFromMemByVIC(0xd800 + OFFSET) & 0b1111;
+						break;
+				}
+				uint8_t bg_color = readFromMemByVIC(0xd021);
+			}
 
 			VRAM[ADR] = COLORS[color_index][0];
 			VRAM[ADR + 1] = COLORS[color_index][1];
