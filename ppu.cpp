@@ -70,19 +70,40 @@ void renderLine(uint16_t j) {
 	for (int i = 0; i < 402; i++) {
 
 		//	TEXTMODE
+		uint32_t ADR = (j * 402 * 3) + ((i + offset_x) * 3);
 		
 		//	inside
 		uint16_t offset = ((j - 40) / 8) * 40 + (i - 40) / 8;
 		uint8_t char_id = readFromMemByVIC(screen + offset);
-		uint8_t row = readFromMemByVIC(chrrom + (char_id * 8) + ((j - 40) % 8));
+		uint8_t bg_color = readFromMemByVIC(0xd021);
+
+		//	EXTENDED BG COLOR MODE
+		if (readFromMemByVIC(0xd011) & 0b1000000) {
+			switch ((char_id >> 6) & 0b11) {
+				case 0b00:
+					bg_color = readFromMemByVIC(0xd021);
+					break;
+				case 0b01:
+					bg_color = readFromMemByVIC(0xd022);
+					break;
+				case 0b10:
+					bg_color = readFromMemByVIC(0xd023);
+					break;
+				case 0b11:
+					bg_color = readFromMemByVIC(0xd024);
+					break;
+			}
+			char_id &= 0b111111;
+		}
+		uint16_t char_address = chrrom + (char_id * 8) + ((j - 40) % 8);
+		uint8_t color = readFromMemByVIC(colorram + offset);
+		uint8_t chr = readFromMemByVIC(char_address);
 
 		//	NORMAL MODE
 		if ((readFromMemByVIC(0xd016) & 0b10000) == 0) {
-			uint8_t color = readFromMemByVIC(colorram + offset);
-			uint8_t bg_color = readFromMemByVIC(0xd021);
-			VRAM[(j * 402 * 3) + ((i + offset_x) * 3)] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
-			VRAM[(j * 402 * 3) + ((i + offset_x) * 3) + 1] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
-			VRAM[(j * 402 * 3) + ((i + offset_x) * 3) + 2] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
+			VRAM[ADR] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
+			VRAM[ADR + 1] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
+			VRAM[ADR + 2] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
 		}
 
 		//	MULTICOLOR MODE
@@ -95,7 +116,7 @@ void renderLine(uint16_t j) {
 			*/
 			//	TODO - Der Edge case fehlt noch, wenn wir auf Bit 7 sind, und zum nächsten Byte springen müssen
 			uint8_t index = (7 - (i % 8));
-			uint8_t current_byte = row;
+			uint8_t current_byte = chr;
 			//	If we are at bit 0 of the 2 bits...
 			uint8_t high_bit = ((current_byte & (1 << (index + 1))) > 0) ? 1 : 0;
 			uint8_t low_bit = ((current_byte & (1 << index)) > 0) ? 1 : 0;
@@ -109,8 +130,6 @@ void renderLine(uint16_t j) {
 				}
 			}
 			uint8_t color_choice = (high_bit << 1) | low_bit;
-			uint8_t color = readFromMemByVIC(colorram + offset);	//	default color
-			uint8_t bg_color = readFromMemByVIC(0xd021);
 			//	4 bits for color; highest bit enables low-res multicolor mode...
 			if (color & 0b1000) {
 				switch (color_choice)
@@ -126,15 +145,15 @@ void renderLine(uint16_t j) {
 					break;
 				}
 				uint8_t bg_color = readFromMemByVIC(0xd021);
-				VRAM[(j * 402 * 3) + ((i + offset_x) * 3)] = COLORS[color][0];
-				VRAM[(j * 402 * 3) + ((i + offset_x) * 3) + 1] = COLORS[color][1];
-				VRAM[(j * 402 * 3) + ((i + offset_x) * 3) + 2] = COLORS[color][2];
+				VRAM[ADR] = COLORS[color][0];
+				VRAM[ADR + 1] = COLORS[color][1];
+				VRAM[ADR + 2] = COLORS[color][2];
 			}
 			//	...else it's still going to be hires single color mode
 			else {
-				VRAM[(j * 402 * 3) + ((i + offset_x) * 3)] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
-				VRAM[(j * 402 * 3) + ((i + offset_x) * 3) + 1] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
-				VRAM[(j * 402 * 3) + ((i + offset_x) * 3) + 2] = ((row & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
+				VRAM[ADR] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
+				VRAM[ADR + 1] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
+				VRAM[ADR + 2] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
 			}
 		}
 
