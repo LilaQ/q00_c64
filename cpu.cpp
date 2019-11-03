@@ -208,7 +208,7 @@ void setNMI(bool v) {
 }
 
 int NMI() {
-	printf("NMI\n");
+	//printf("NMI\n");
 	writeToMem(SP_ + 0x100, PC >> 8);
 	SP_--;
 	writeToMem(SP_ + 0x100, PC & 0xff);
@@ -216,7 +216,7 @@ int NMI() {
 	writeToMem(SP_ + 0x100, status.status);
 	SP_--;
 	PC = (readFromMem(0xfffb) << 8) | readFromMem(0xfffa);
-	status.setInterruptDisable(1);
+	//status.setInterruptDisable(1);
 	return 7;
 }
 
@@ -251,8 +251,8 @@ void setGO() {
 	mach = true;
 }
 
-void printCurrentPC() {
-	printf("Current PC: 0x%04x\n", PC);
+void printLog() {
+	printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d Keyboard: %x\n", PC, readFromMem(PC), readFromMem(PC + 1), readFromMem(PC + 2), registers.A, registers.X, registers.Y, status.status, SP_, c, readFromMem(0xdc01));
 }
 
 int stepCPU() {
@@ -268,7 +268,7 @@ int stepCPU() {
 		return IRQorBRK();
 	}
 
-	//if (PC == 0x1006)
+	//if (PC == 0x1000)
 		//mach = true;
 
 	if(mach && PC >= 0x1000 && PC <= 0x1200)

@@ -316,9 +316,6 @@ void writeToMemByVIC(uint16_t adr, uint8_t val) {
 
 void writeToMem(uint16_t adr, uint8_t val) {
 
-	if (adr == 0xd011)
-		printf("MMU %x mit %x\n", adr, val);
-
 	//	refresh Mapping
 	refreshMemoryMapping();
 
@@ -330,8 +327,6 @@ void writeToMem(uint16_t adr, uint8_t val) {
 				VIC
 			*/
 			if (adr >= 0xd000 && adr <= 0xd030) {
-				if (adr == 0xd011)
-					printf("MMU2 %x mit %x\n", adr, val);
 				writeVICregister(adr, val);
 			}
 			else {

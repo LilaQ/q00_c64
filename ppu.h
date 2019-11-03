@@ -89,6 +89,12 @@ enum GRAPHICMODE {
 	HIRES_BIMAPMODE,
 };
 
+enum SCREEN_POS {
+	SCREEN,
+	BORDER_LR,
+	BORDER_TB,
+};
+
 /*void setIRQMask(uint8_t val);
 uint8_t getIRQMask();
 void clearIRQStatus(uint8_t val);

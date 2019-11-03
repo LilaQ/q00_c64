@@ -180,7 +180,6 @@ void setTitle(string filename) {
 	filename = filename.substr(last_slash, distance);
 	snprintf(title, sizeof title, "[ q00.c64 ][ rom: %s ]", filename.c_str());
 	for (int i = 0; i < sizeof(title); i++) {
-		cout << title[i] << std::dec << "  " << +title[i] << "\n";
 		if (title[i] < 0x00)
 			title[i] = 0x20;
 	}

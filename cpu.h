@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <stdio.h>
-void printCurrentPC();
+void printLog();
 void setCarry();		//	Only for hooking C64 LOAD routines for filechecking
 void clearCarry();		//	Only for hooking C64 LOAD routines for filechecking
 void setIRQ(bool v);
