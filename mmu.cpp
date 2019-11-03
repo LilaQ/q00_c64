@@ -113,7 +113,7 @@ void refreshMemoryMapping() {
 	uint8_t LORAM = (memory[0x0001] & 0b1);
 	uint8_t HIRAM = ((memory[0x0001] & 0b10) >> 1);
 	uint8_t CHAREN = ((memory[0x0001] & 0b100) >> 2);
-	if (CHAREN)
+	/*if (CHAREN)
 		memtype_d000_dfff = MEMTYPE::IO;
 	else {
 		if (HIRAM)
@@ -128,8 +128,34 @@ void refreshMemoryMapping() {
 	if (HIRAM && LORAM)
 		memtype_a000_bfff = MEMTYPE::BASIC;
 	else
+		memtype_a000_bfff = MEMTYPE::RAM;*/
+	if (!LORAM && !HIRAM) {
 		memtype_a000_bfff = MEMTYPE::RAM;
-
+		memtype_d000_dfff = MEMTYPE::RAM;
+		memtype_e000_ffff = MEMTYPE::RAM;
+	}
+	else if (LORAM && !HIRAM) {
+		memtype_a000_bfff = MEMTYPE::RAM;
+		memtype_e000_ffff = MEMTYPE::RAM;
+	}
+	else if (!LORAM && HIRAM) {
+		memtype_a000_bfff = MEMTYPE::RAM;
+		memtype_e000_ffff = MEMTYPE::KERNAL;
+	}
+	else if (LORAM && HIRAM) {
+		memtype_a000_bfff = MEMTYPE::BASIC;
+		memtype_e000_ffff = MEMTYPE::KERNAL;
+	}
+	if (!CHAREN) {
+		if (LORAM || HIRAM) {
+			memtype_d000_dfff = MEMTYPE::CHARROM;
+		}
+	}
+	else if (CHAREN) {
+		if (LORAM || HIRAM) {
+			memtype_d000_dfff = MEMTYPE::IO;
+		}
+	}
 }
 
 uint8_t readFromMem(uint16_t adr) {

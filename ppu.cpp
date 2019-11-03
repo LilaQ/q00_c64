@@ -23,14 +23,6 @@ SDL_Texture* texture;
 
 unsigned char VRAM[402 * 284 * 3];	//	RGB - 320 * 200 pixel inside, with border 402 * 284
 
-//	local function declaration
-void setRasterIRQhi(uint8_t val);
-void setRasterIRQlow(uint8_t val);
-void clearIRQStatus(uint8_t val);
-void setIRQMask(uint8_t val);
-uint8_t getIRQMask();
-uint8_t getIRQStatus();
-
 const unsigned char COLORS[16][3] = {
 	{0x00, 0x00, 0x00},
 	{0xff, 0xff, 0xff},
@@ -270,16 +262,18 @@ void writeVICregister(uint16_t adr, uint8_t val) {
 	switch (adr)
 	{
 		case 0xd011:
-			setRasterIRQhi(val);
+			raster_irq_row &= 0b11111111;
+			raster_irq_row |= ((val & 0b10000000) << 1);
 			break;
 		case 0xd012:			//	Set Rasterzeilen IRQ
-			setRasterIRQlow(val);
+			raster_irq_row &= 0b100000000;
+			raster_irq_row |= val;
 			break;
 		case 0xd019:			//	Clear IRQ flags, that are no longer needed
-			clearIRQStatus(val);
+			irq_status.clearFlags(val);
 			break;
 		case 0xd01a:			//	IRQ Mask (what is allowed to cause IRQs)
-			setIRQMask(val);
+			irq_mask.set(val);
 			break;
 		default:
 			break;
@@ -293,39 +287,13 @@ uint8_t readVICregister(uint16_t adr) {
 			return getCurrentScanline();
 			break;
 		case 0xd019:			//	IRQ flags, (active IRQs)
-			return getIRQStatus();
+			return irq_status.get();
 			break;
 		case 0xd01a:			//	IRQ Mask (what is allowed to cause IRQs)
-			return getIRQMask();
+			return irq_mask.get();
 			break;
 		default:
 			return VIC_REGISTERS[adr % 0xd000];
 			break;
 	}
-}
-
-void setIRQMask(uint8_t val) {
-	irq_mask.set(val);
-}
-
-uint8_t getIRQMask() {
-	return irq_mask.get();
-}
-
-void clearIRQStatus(uint8_t val) {
-	irq_status.clearFlags(val);
-}
-
-uint8_t getIRQStatus() {
-	return irq_status.get();
-}
-
-void setRasterIRQlow(uint8_t val) {
-	raster_irq_row &= 0b100000000;
-	raster_irq_row |= val;
-}
-
-void setRasterIRQhi(uint8_t val) {
-	raster_irq_row &= 0b11111111;
-	raster_irq_row |= ((val & 0b10000000) << 1);
 }
