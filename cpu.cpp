@@ -216,7 +216,7 @@ int NMI() {
 	writeToMem(SP_ + 0x100, status.status);
 	SP_--;
 	PC = (readFromMem(0xfffb) << 8) | readFromMem(0xfffa);
-	//status.setInterruptDisable(1);
+	status.setInterruptDisable(1);
 	return 7;
 }
 
@@ -227,7 +227,7 @@ void setIRQ(bool v) {
 }
 
 int IRQorBRK() {
-	//printf("IRQ %d\n", fff++);
+	printf("IRQ \n");
 	writeToMem(SP_ + 0x100, PC >> 8);
 	SP_--;
 	writeToMem(SP_ + 0x100, PC & 0xff);

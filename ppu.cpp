@@ -284,8 +284,9 @@ void stepPPU(uint8_t cpu_cyc) {
 		//	VBLANK (bottom of the screen)
 		else if (current_scanline >= 298 && current_scanline <= 311) {
 			//	Set VBlank IRQ
-			if (cycles_on_current_scanline == 0) {
+			if (cycles_on_current_scanline == 0 && current_scanline == 298) {
 				setIRQ(true);
+				printf("irq vblank -->");
 			}
 		}
 
@@ -294,6 +295,7 @@ void stepPPU(uint8_t cpu_cyc) {
 			if (current_scanline == raster_irq_row) {
 				irq_status.setFlags(0b10000001);		//	set "IRQ FROM VIC", and as reason set "IRQ FROM RASTERLINE"
 				setIRQ(true);
+				printf("raster vblank -->");
 				return;
 			}
 		}
