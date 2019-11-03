@@ -37,34 +37,12 @@ void initWindow(SDL_Window* win, string filename) {
 	HMENU hFile = CreateMenu();
 	HMENU hEdit = CreateMenu();
 	HMENU hMem = CreateMenu();
-	HMENU hConfig = CreateMenu();
-	HMENU hSound = CreateMenu();
-	HMENU hPalettes = CreateMenu();
-	HMENU hSavestates = CreateMenu();
-	HMENU hVol = CreateMenu();
 	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hFile, "[ main ]");
-	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hConfig, "[ config ]");
-	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hVol, "[ vol ]");
-	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hSavestates, "[ savestates ]");
 	AppendMenu(hMenuBar, MF_STRING, 11, "[ ||> un/pause ]");
 	AppendMenu(hMenuBar, MF_STRING, 2, "[ memory ]");
 	AppendMenu(hFile, MF_STRING, 9, "» load rom");
 	AppendMenu(hFile, MF_STRING, 7, "» reset");
 	AppendMenu(hFile, MF_STRING, 1, "» exit");
-	AppendMenu(hSavestates, MF_STRING, 12, "» save state");
-	AppendMenu(hSavestates, MF_STRING, 13, "» load state");
-	AppendMenu(hConfig, MF_POPUP, (UINT_PTR)hSound, "[ sound ]");
-	AppendMenu(hSound, MF_STRING, 14, "» disable/enable");
-	AppendMenu(hVol, MF_STRING, 24, "» 10%");
-	AppendMenu(hVol, MF_STRING, 25, "» 20%");
-	AppendMenu(hVol, MF_STRING, 26, "» 30%");
-	AppendMenu(hVol, MF_STRING, 27, "» 40%");
-	AppendMenu(hVol, MF_STRING, 28, "» 50%");
-	AppendMenu(hVol, MF_STRING, 29, "» 60%");
-	AppendMenu(hVol, MF_STRING, 30, "» 70%");
-	AppendMenu(hVol, MF_STRING, 31, "» 80%");
-	AppendMenu(hVol, MF_STRING, 32, "» 90%");
-	AppendMenu(hVol, MF_STRING, 33, "» 100%");
 	SetMenu(hwnd, hMenuBar);
 
 	//	Enable WM events for SDL Window
@@ -153,7 +131,7 @@ void handleWindowEvents(SDL_Event event) {
 				ZeroMemory(&ofn, sizeof(ofn));
 				ofn.lStructSize = sizeof(ofn);
 				ofn.hwndOwner = NULL;  // If you have a window to center over, put its HANDLE here
-				ofn.lpstrFilter = "C64 Disks\0*.d64;*.prg\0C64 Programs\0*.prg\0";
+				ofn.lpstrFilter = "C64 Disks\0*.d64;*.prg\0";
 				ofn.lpstrFile = f;
 				ofn.nMaxFile = MAX_PATH;
 				ofn.lpstrTitle = "[ rom selection ]";
@@ -172,72 +150,6 @@ void handleWindowEvents(SDL_Event event) {
 			//	pause / unpause
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 11) {
 				togglePause();
-			}
-			//	save state
-			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 12) {
-				//	TODO STUB
-				/*printf("saving state\n");
-				char f[100];
-				OPENFILENAME ofn;
-
-				ZeroMemory(&f, sizeof(f));
-				ZeroMemory(&ofn, sizeof(ofn));
-				ofn.lStructSize = sizeof(ofn);
-				ofn.hwndOwner = NULL;  // If you have a window to center over, put its HANDLE here
-				ofn.lpstrFilter = "GameBoy Savestates\0*.gbss\0";
-				ofn.lpstrFile = f;
-				ofn.lpstrDefExt = "gbss";
-				ofn.nMaxFile = MAX_PATH;
-				ofn.lpstrTitle = "[ rom selection ]";
-				ofn.Flags = OFN_DONTADDTORECENT;
-
-				if (GetSaveFileNameA(&ofn)) {
-					filename = f;
-					saveState(f, registers, flags, pc, sp);
-				}*/
-			}
-			//	load state
-			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 13) {
-
-				//	halt emulation to avoid damaging the data (keep it that way, user must unpause)
-				/*unpaused = false;
-
-				printf("loading savestate\n");
-				char f[100];
-				OPENFILENAME ofn;
-
-				ZeroMemory(&f, sizeof(f));
-				ZeroMemory(&ofn, sizeof(ofn));
-				ofn.lStructSize = sizeof(ofn);
-				ofn.hwndOwner = NULL;
-				ofn.lpstrFilter = "GameBoy Savestates\0*.gbss\0";
-				ofn.lpstrFile = f;
-				ofn.nMaxFile = MAX_PATH;
-				ofn.lpstrTitle = "[ savestate selection ]";
-				ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
-
-				if (GetOpenFileNameA(&ofn)) {
-					filename = f;
-					loadState(f, registers, flags, pc, sp);
-				}*/
-			}
-			//	disable / enable sound
-			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 14) {
-				//toggleAudio();
-			}
-			//	set volume
-			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 24 ||
-				LOWORD(event.syswm.msg->msg.win.wParam) == 25 ||
-				LOWORD(event.syswm.msg->msg.win.wParam) == 26 ||
-				LOWORD(event.syswm.msg->msg.win.wParam) == 27 ||
-				LOWORD(event.syswm.msg->msg.win.wParam) == 28 ||
-				LOWORD(event.syswm.msg->msg.win.wParam) == 29 ||
-				LOWORD(event.syswm.msg->msg.win.wParam) == 30 ||
-				LOWORD(event.syswm.msg->msg.win.wParam) == 31 ||
-				LOWORD(event.syswm.msg->msg.win.wParam) == 32 ||
-				LOWORD(event.syswm.msg->msg.win.wParam) == 33
-				) {
-				//setVolume((float)(LOWORD(event.syswm.msg->msg.win.wParam) - 23) * 0.1);
 			}
 		}
 		//	close a window
@@ -261,4 +173,20 @@ void handleWindowEvents(SDL_Event event) {
 	setKeyboardInput(keys);
 }
 
+void setTitle(string filename) {
+	char title[50];
+	uint8_t last_slash = (filename.find_last_of("\\") != string::npos) ? filename.find_last_of("\\") + 1 : 0;
+	uint8_t distance = filename.size() - last_slash;
+	filename = filename.substr(last_slash, distance);
+	snprintf(title, sizeof title, "[ q00.c64 ][ rom: %s ]", filename.c_str());
+	for (int i = 0; i < sizeof(title); i++) {
+		cout << title[i] << std::dec << "  " << +title[i] << "\n";
+		if (title[i] < 0x00)
+			title[i] = 0x20;
+	}
+	SDL_SetWindowTitle(mainWindow, title);
+	SDL_SysWMinfo wmInfo;
+	SDL_VERSION(&wmInfo.version);
+	SDL_GetWindowWMInfo(mainWindow, &wmInfo);
+}
 

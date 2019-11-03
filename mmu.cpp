@@ -1,8 +1,10 @@
+#pragma once
 #define _CRT_SECURE_NO_DEPRECATE
 #include <stdint.h>
 #include <stdio.h>
 #include <vector>
 #include "D64Parser.h"
+#include "wmu.h"
 #include "cpu.h"
 #include "ppu.h"
 #include "mmu.h"
@@ -33,6 +35,8 @@ void resetMMU() {
 	memory[0x0001] = 0x37;		//	Zeropage for PLA
 }
 
+//	TODO CLEAR MEMORY, FROM PRIOR SOFTWARE, BEFORE LOADING ANY PRG
+
 void loadD64(string f) {
 	parser.init(f);
 	parser.printAll();
@@ -54,6 +58,7 @@ void loadPRG(string f) {
 	for (uint16_t i = 2; i < d.size(); i++) {
 		memory[((d.at(1) << 8) | d.at(0)) - 2 + i] = d.at(i);
 	}
+	setTitle(f);
 }
 
 void loadPRGFromDisk(string f) {
@@ -63,6 +68,7 @@ void loadPRGFromDisk(string f) {
 			memory[((res.at(1) << 8) | res.at(0)) - 2 + i] = res.at(i);
 		}
 	}
+	setTitle(f);
 }
 
 void loadFirmware(string filename) {
@@ -86,6 +92,7 @@ void loadFirmware(string filename) {
 		kernal[i] = cartridge[0x2000 + i];
 	}
 }
+
 
 void loadCHRROM(string filename) {
 	
