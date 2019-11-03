@@ -3,11 +3,8 @@
 using namespace std;
 void stepPPU(uint8_t cpu_cycles);
 void initPPU(string name);
-/*void setRasterIRQlow(uint8_t val);
-void setRasterIRQhi(uint8_t val);*/
 void writeVICregister(uint16_t adr, uint8_t val);
 uint8_t readVICregister(uint16_t adr);
-uint8_t getCurrentScanline();
 
 struct IRQ_STATUS {
 	/*
@@ -84,18 +81,18 @@ struct IRQ_MASK {
 	}
 };
 
-enum GRAPHICMODE {
+enum class GRAPHICMODE {
 	LOWRES_TEXTMODE,
 	HIRES_BIMAPMODE,
 };
 
-enum SCREEN_POS {
+enum class SCREEN_POS {
 	SCREEN,
 	BORDER_LR,
 	BORDER_TB,
 };
 
-/*void setIRQMask(uint8_t val);
-uint8_t getIRQMask();
-void clearIRQStatus(uint8_t val);
-uint8_t getIRQStatus();*/
+enum class COL_MODE {
+	COL_38,
+	COL_40
+};

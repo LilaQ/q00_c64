@@ -80,7 +80,6 @@ void renderByCycles(int16_t current_scanline, uint16_t cycles_on_current_scanlin
 	uint16_t chrrom = 1024 * (VIC_REGISTERS[0x18] & 0b1110);
 	uint16_t screen = 0x400 * ((VIC_REGISTERS[0x18] & 0b11110000) / 0x10);
 	uint8_t offset_x = VIC_REGISTERS[0x16] & 0b111;
-	uint8_t border_mode_offset = (VIC_REGISTERS[0x16] & 0b1000) ? 0 : 16;	//	38 cols if off, 40 cols if on
 	uint16_t colorram = 0xd800;
 
 	//	Bitmap Variables
@@ -228,6 +227,7 @@ void renderByCycles(int16_t current_scanline, uint16_t cycles_on_current_scanlin
 }
 
 void stepPPU(uint8_t cpu_cyc) {
+	COL_MODE COLMODE = (VIC_REGISTERS[0x16] & 0b1000) ? COL_MODE::COL_40 : COL_MODE::COL_38;
 	while (--cpu_cyc) {
 		//	Raster Ray
 		cycles_on_current_scanline++;
@@ -264,7 +264,14 @@ void stepPPU(uint8_t cpu_cyc) {
 					renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_TB);
 				}
 				else if	(current_scanline >= 56 && current_scanline <= 255) {
-					renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::SCREEN);
+					//	38-40 Col Area
+					if ((cycles_on_current_scanline == 12 || cycles_on_current_scanline == 51) &&	COLMODE == COL_MODE::COL_38) {
+						renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_LR);
+					}
+					//	Screen Only Area
+					else {
+						renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::SCREEN);
+					}
 				}
 				else if (current_scanline >= 256 && current_scanline <= 297) {
 					renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_TB);
@@ -283,11 +290,7 @@ void stepPPU(uint8_t cpu_cyc) {
 
 		//	VBLANK (bottom of the screen)
 		else if (current_scanline >= 298 && current_scanline <= 311) {
-			//	Set VBlank IRQ
-			if (cycles_on_current_scanline == 0 && current_scanline == 298) {
-				setIRQ(true);
-				printf("irq vblank -->");
-			}
+			//	do nothing
 		}
 
 		//	Rasterzeileninterrupt
@@ -295,15 +298,10 @@ void stepPPU(uint8_t cpu_cyc) {
 			if (current_scanline == raster_irq_row) {
 				irq_status.setFlags(0b10000001);		//	set "IRQ FROM VIC", and as reason set "IRQ FROM RASTERLINE"
 				setIRQ(true);
-				printf("raster vblank -->");
 				return;
 			}
 		}
 	}
-}
-
-uint8_t getCurrentScanline() {
-	return current_scanline & 0xff;
 }
 
 void writeVICregister(uint16_t adr, uint8_t val) {
@@ -335,7 +333,7 @@ uint8_t readVICregister(uint16_t adr) {
 			return raster_irq_row;
 			break;
 		case 0xd012:			//	Current Scanline
-			return getCurrentScanline();
+			return current_scanline & 0xff;
 			break;
 		case 0xd019:			//	IRQ flags, (active IRQs)
 			return irq_status.get();

@@ -66,7 +66,6 @@ uint8_t readCIA1DataPortB() {
 			}
 		}
 	}
-	printf("%x\n", cia1_data_port_B);
 	return cia1_data_port_B;
 }
 
