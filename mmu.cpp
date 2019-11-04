@@ -10,14 +10,14 @@
 #include "mmu.h"
 #include "main.h"
 #include "cia.h"
-
+#include <fstream>
 
 
 unsigned char memory[0x10000] = { 0xff };
 unsigned char kernal[0x02000];		//	TODO 
 unsigned char basic[0x02000];		//	TODO --- Only chr1 and chr2 are switched to external arrays yet
-unsigned char chr1[0x800];
-unsigned char chr2[0x800];
+unsigned char chr[0x1000];
+unsigned char colorram[0x400];
 MEMTYPE memtype_a000_bfff = MEMTYPE::BASIC;
 MEMTYPE memtype_d000_dfff = MEMTYPE::IO;
 MEMTYPE memtype_e000_ffff = MEMTYPE::KERNAL;
@@ -105,13 +105,9 @@ void loadCHRROM(string filename) {
 	}
 	fclose(file);
 
-	//	map first character ROM
-	for (int i = 0; i < 0x800; i++) {
-		chr1[i] = cartridge[i];
-	}
-	//	map second character ROM
-	for (int i = 0; i < 0x800; i++) {
-		chr2[i] = cartridge[i + 0x800];
+	//	map character ROM
+	for (int i = 0; i < 0x1000; i++) {
+		chr[i] = cartridge[i];
 	}
 }
 
@@ -174,68 +170,61 @@ uint8_t readFromMem(uint16_t adr) {
 	if (adr >= 0xd000 && adr < 0xe000) {
 		//	0xd000-0xdfff set to I/Os
 		if (memtype_d000_dfff == MEMTYPE::IO) {
+			//	VIC REGISTERS
 			if (adr >= 0xd000 && adr <= 0xd030) {
 				return readVICregister(adr);
 			}
+			//	COLOR RAM
+			/*else if (adr >= 0xd800 && adr < 0xdc00) {
+				return colorram[adr % 0xd800];
+			}*/
+			//	CIA REGISTERS & DEFAULT
 			else {
 				switch (adr) {
-					/*case 0xd000 ... 0xd030:
-						readVICregister(adr);
-						break;*/
-						/*case 0xd012:			//	Current Scanline
-							return getCurrentScanline();
-							break;
-						case 0xd019:			//	IRQ flags, (active IRQs)
-							return getIRQStatus();
-							break;
-						case 0xd01a:			//	IRQ Mask (what is allowed to cause IRQs)
-							return getIRQMask();
-							break;*/
+					case 0xdc00:			//	read CIA1 Keyboard / Joystick
+						return readCIA1DataPortA();
+						break;
+					case 0xdc01:			//	read CIA1 sKeyboard / Joystick
+						return readCIA1DataPortB();
+						break;
 
-				case 0xdc00:			//	read CIA1 Keyboard / Joystick
-					return readCIA1DataPortA();
-					break;
-				case 0xdc01:			//	read CIA1 sKeyboard / Joystick
-					return readCIA1DataPortB();
-					break;
+						//	CIA 1
+					case 0xdc04:			//	read CIA1 TimerA Low
+						return readCIA1timerALo();
+						break;
+					case 0xdc05:			//	read CIA1 TimerA High
+						return readCIA1timerAHi();
+						break;
+					case 0xdc06:			//	read CIA1 TimerB Low
+						return readCIA1timerBLo();
+						break;
+					case 0xdc07:			//	read CIA1 TimerB High
+						return readCIA1timerBHi();
+						break;
 
-					//	CIA 1
-				case 0xdc04:			//	read CIA1 TimerA Low
-					return readCIA1timerALo();
-					break;
-				case 0xdc05:			//	read CIA1 TimerA High
-					return readCIA1timerAHi();
-					break;
-				case 0xdc06:			//	read CIA1 TimerB Low
-					return readCIA1timerBLo();
-					break;
-				case 0xdc07:			//	read CIA1 TimerB High
-					return readCIA1timerBHi();
-					break;
+						//	CIA 2
+					case 0xdd04:			//	read CIA1 TimerA Low
+						return readCIA2timerALo();
+						break;
+					case 0xdd05:			//	read CIA1 TimerA High
+						return readCIA2timerAHi();
+						break;
+					case 0xdd06:			//	read CIA1 TimerB Low
+						return readCIA2timerBLo();
+						break;
+					case 0xdd07:			//	read CIA1 TimerB High
+						return readCIA2timerBHi();
+						break;
 
-					//	CIA 2
-				case 0xdd04:			//	read CIA1 TimerA Low
-					return readCIA2timerALo();
-					break;
-				case 0xdd05:			//	read CIA1 TimerA High
-					return readCIA2timerAHi();
-					break;
-				case 0xdd06:			//	read CIA1 TimerB Low
-					return readCIA2timerBLo();
-					break;
-				case 0xdd07:			//	read CIA1 TimerB High
-					return readCIA2timerBHi();
-					break;
-
-				case 0xdc0d:			//	read CIA1 IRQ Control and Status
-					return readCIA1IRQStatus();
-					break;
-				case 0xdd0d:			//	read CIA2 NMI Control and Status
-					return readCIA2NMIStatus();
-					break;
-				default:
-					return memory[adr];
-					break;
+					case 0xdc0d:			//	read CIA1 IRQ Control and Status
+						return readCIA1IRQStatus();
+						break;
+					case 0xdd0d:			//	read CIA2 NMI Control and Status
+						return readCIA2NMIStatus();
+						break;
+					default:
+						return memory[adr];
+						break;
 				}
 			}
 		}
@@ -245,7 +234,7 @@ uint8_t readFromMem(uint16_t adr) {
 		}
 		//	0xd000-0xdfff set to CHRROM
 		else if (memtype_d000_dfff == MEMTYPE::CHARROM) {
-			return readChar(adr % 0xc000);
+			return chr[adr % 0xd000];
 		}
 	}
 	else if (adr >= 0xa000 && adr < 0xc000) {		//	BASIC
@@ -297,17 +286,14 @@ uint8_t readFromMemByVIC(uint16_t adr) {
 	uint8_t bank_no = 0b11 - (readCIA2DataPortB() & 0b11);
 	//	CHRROM
 	if (adr >= 0x1000 && adr <= 0x1fff && (bank_no == 0 || bank_no == 2)) {
-		return readChar(adr);
+		//return readChar(adr);
+		return chr[adr % 0x1000];
 	}
+	//	COLORRAM
+	/*else if (adr >= 0xd800 && adr < 0xdc00) {
+		return colorram[adr % 0xd800];
+	}*/
 	return memory[adr + bank_no * 0x4000];
-}
-
-uint8_t readChar(uint16_t adr) {
-	if (adr >= 0x1000 && adr < 0x1800)
-		return chr1[adr % 0x1000];
-	else if (adr >= 0x1800 && adr < 0x2000)
-		return chr2[adr % 0x1800];
-	return 0x00;
 }
 
 void writeToMemByVIC(uint16_t adr, uint8_t val) {
@@ -320,15 +306,17 @@ void writeToMem(uint16_t adr, uint8_t val) {
 	refreshMemoryMapping();
 
 	//	I/O, can be disabled by Zeropage $01
-	if (adr >= 0xd000 && adr < 0xe000) 
-	{
+	if (adr >= 0xd000 && adr < 0xe000) {
 		if (memtype_d000_dfff == MEMTYPE::IO) {
-			/*
-				VIC
-			*/
+			//	VIC REGISTERS
 			if (adr >= 0xd000 && adr <= 0xd030) {
 				writeVICregister(adr, val);
 			}
+			//	COLOR RAM
+			/*else if (adr >= 0xd800 && adr < 0xdc00) {
+				colorram[adr % 0xd800] = val;
+			}*/
+			//	CIA REGISTERS & DEFAULT
 			else {
 				switch (adr)
 				{
@@ -424,7 +412,7 @@ void writeToMem(uint16_t adr, uint8_t val) {
 				}
 			}
 		}
-		else if(memtype_d000_dfff == MEMTYPE::RAM){
+		else if (memtype_d000_dfff == MEMTYPE::RAM) {
 			memory[adr] = val;
 		}
 	}
@@ -484,4 +472,15 @@ uint16_t getIndirectYIndex(uint16_t adr, uint8_t Y) {
 	a = ((readFromMem((readFromMem(adr) + 1) % 0x100) << 8) | (readFromMem(readFromMem(adr))));
 	pbc = (a & 0xff00) != ((a + Y) & 0xff00);
 	return (a + Y) % 0x10000;
+}
+
+void dumpMem() {
+	ofstream myfile("memdump_myemu.bin");
+	if (myfile.is_open())
+	{
+		for (int i = 0; i < sizeof(memory); i++) {
+			myfile << memory[i];
+		}
+		myfile.close();
+	}
 }
