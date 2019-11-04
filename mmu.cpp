@@ -175,9 +175,9 @@ uint8_t readFromMem(uint16_t adr) {
 				return readVICregister(adr);
 			}
 			//	COLOR RAM
-			/*else if (adr >= 0xd800 && adr < 0xdc00) {
+			else if (adr >= 0xd800 && adr < 0xdc00) {
 				return colorram[adr % 0xd800];
-			}*/
+			}
 			//	CIA REGISTERS & DEFAULT
 			else {
 				switch (adr) {
@@ -290,9 +290,9 @@ uint8_t readFromMemByVIC(uint16_t adr) {
 		return chr[adr % 0x1000];
 	}
 	//	COLORRAM
-	/*else if (adr >= 0xd800 && adr < 0xdc00) {
+	else if (adr >= 0xd800 && adr < 0xdc00) {
 		return colorram[adr % 0xd800];
-	}*/
+	}
 	return memory[adr + bank_no * 0x4000];
 }
 
@@ -313,9 +313,9 @@ void writeToMem(uint16_t adr, uint8_t val) {
 				writeVICregister(adr, val);
 			}
 			//	COLOR RAM
-			/*else if (adr >= 0xd800 && adr < 0xdc00) {
+			else if (adr >= 0xd800 && adr < 0xdc00) {
 				colorram[adr % 0xd800] = val;
-			}*/
+			}
 			//	CIA REGISTERS & DEFAULT
 			else {
 				switch (adr)

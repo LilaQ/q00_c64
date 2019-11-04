@@ -95,3 +95,5 @@ Debug/output3_blink_with_write_log.log
 Debug/output3.log
 Debug/output2.log
 Debug/fw.bin.ptc
+memdump_myemu.txt
+memdump_myemu.bin

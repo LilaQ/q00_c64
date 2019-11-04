@@ -333,7 +333,7 @@ uint8_t readVICregister(uint16_t adr) {
 			return raster_irq_row;
 			break;
 		case 0xd012:			//	Current Scanline
-			return current_scanline & 0xff;
+			return current_scanline;
 			break;
 		case 0xd019:			//	IRQ flags, (active IRQs)
 			return irq_status.get();
