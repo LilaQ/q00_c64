@@ -59,9 +59,9 @@ uint8_t readCIA1DataPortB() {
 		}
 	}
 	else if (cia1_data_port_A != 0xff) {
-		for (uint8_t c = 0; c < 8; c++) {
+		for (uint8_t f = 0; f < 8; f++) {
 			for (uint8_t i = 0; i < 8; i++) {
-				if (KEYS[KEYMAP[c][i]])
+				if (KEYS[KEYMAP[f][i]])
 					cia1_data_port_B &= ~(1 << i);
 			}
 		}

@@ -8,10 +8,11 @@
 #include "cpu.h"
 #include "wmu.h"
 #include "SDL2/include/SDL.h"
+#include <array>
 using namespace std;
 
 array<uint8_t, 0x31> VIC_REGISTERS;
-int cycles_on_current_scanline = 0;
+uint16_t cycles_on_current_scanline = 0;
 int last_cycles_on_current_scanline = 0;
 uint16_t current_scanline = 0;
 uint16_t raster_irq_row = 0;
@@ -23,7 +24,7 @@ SDL_Renderer* renderer;
 SDL_Window* window;
 SDL_Texture* texture;
 
-unsigned char VRAM[400 * 284 * 3];	//	RGB - 320 * 200 pixel inside, with border 402 * 284
+uint8_t VRAM[400 * 284 * 3];	//	RGB - 320 * 200 pixel inside, with border 402 * 284
 
 const unsigned char COLORS[16][3] = {
 	{0x00, 0x00, 0x00},
@@ -64,17 +65,25 @@ void initPPU(string filename) {
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 400, 284);
 	initWindow(window, filename);
 
+	VIC_REGISTERS.fill(0x00);
+
 	drawFrame();
 }
 
-void renderByCycles(int16_t current_scanline, uint16_t cycles_on_current_scanline, SCREEN_POS SCREENPOS) {
+void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanline, SCREEN_POS SCREENPOS) {
 
 	//	remove the offset of VBLANK (for drawing/rendering)
-	current_scanline -= 14;
+	_current_scanline -= 14;
+	if (_current_scanline < 0 || _current_scanline >= 284)
+		printf("Scanline Problem %d\n", _current_scanline);
 
 	//	calculate the pixels we need to draw at this cycle position
-	uint16_t pixel_from = (cycles_on_current_scanline - 6 - 1) * 8;
-	uint16_t pixel_to = (cycles_on_current_scanline - 6) * 8;
+	uint16_t pixel_to = (_cycles_on_current_scanline - 6) * 8;
+	uint16_t pixel_from = pixel_to - 8;
+	if (pixel_to < 0 || pixel_to > 400)
+		printf("pixel to Problem %d at %d line %d\n", pixel_to, _cycles_on_current_scanline, _current_scanline);
+	if (pixel_from < 0 || pixel_from > 400)
+		printf("pixel from Problem %d at %d line %d\n", pixel_from, _cycles_on_current_scanline, _current_scanline);
 
 	//	Textmode Variables
 	uint16_t chrrom = 1024 * (VIC_REGISTERS[0x18] & 0b1110);
@@ -87,12 +96,12 @@ void renderByCycles(int16_t current_scanline, uint16_t cycles_on_current_scanlin
 	uint16_t bmp_color_address = ((VIC_REGISTERS[0x18] & 0b11110000) >> 4) * 0x400;
 
 	//	Render Line (if visible scanline)
-	if (current_scanline >= 0) {
+	if (_current_scanline >= 0) {
 		for (int i = pixel_from; i < pixel_to; i++) {
 
 			//	Basic VRAM start address and OFFSET of the pixel we want to write to in this iteration
-			uint32_t ADR = (current_scanline * 400 * 3) + ((i + offset_x) * 3);
-			uint16_t OFFSET = ((current_scanline - 42) / 8) * 40 + (i - 40) / 8;
+			uint32_t ADR = (_current_scanline * 400 * 3) + ((i + offset_x) * 3);
+			uint16_t OFFSET = (uint16_t)(((_current_scanline - 42) / 8) * 40 + (i - 40) / 8);
 
 			//	TEXTMODE
 			if ((VIC_REGISTERS[0x11] & 0b100000) == 0 || VIC_REGISTERS[0x11] & 0b1000000) {
@@ -107,7 +116,7 @@ void renderByCycles(int16_t current_scanline, uint16_t cycles_on_current_scanlin
 					bg_color = VIC_REGISTERS[0x21 + ((char_id >> 6) & 0b11)];
 					char_id &= 0b111111;
 				}
-				uint16_t char_address = chrrom + (char_id * 8) + ((current_scanline - 42) % 8);
+				uint16_t char_address = chrrom + (char_id * 8) + ((_current_scanline - 42) % 8);
 				uint8_t color = readFromMemByVIC(colorram + OFFSET);
 				uint8_t chr = readFromMemByVIC(char_address);
 
@@ -137,7 +146,7 @@ void renderByCycles(int16_t current_scanline, uint16_t cycles_on_current_scanlin
 						low_bit = ((current_byte & (1 << (index - 1))) > 0) ? 1 : 0;
 						//	edge case, index is at the end, we jump to the next byte
 						if (index == 0) {
-							low_bit = (((readFromMemByVIC(chrrom + (char_id * 8) + ((current_scanline - 40) % 8)) + 1) & (1 << (index + 1))) > 0) ? 1 : 0;
+							low_bit = (((readFromMemByVIC(chrrom + (char_id * 8) + ((_current_scanline - 40) % 8)) + 1) & (1 << (index + 1))) > 0) ? 1 : 0;
 						}
 					}
 					uint8_t color_choice = (high_bit << 1) | low_bit;
@@ -169,7 +178,7 @@ void renderByCycles(int16_t current_scanline, uint16_t cycles_on_current_scanlin
 			}
 			//	BITMAP MODE
 			else {
-				uint16_t BMP_OFFSET = (OFFSET / 40) * 320 + (OFFSET % 40) * 8 + ((current_scanline - 42) % 8);
+				uint16_t BMP_OFFSET = (OFFSET / 40) * 320 + (OFFSET % 40) * 8 + ((_current_scanline - 42) % 8);
 				uint8_t bit = readFromMemByVIC(bmp_start_address + BMP_OFFSET) & (0b10000000 >> (i % 8));
 				uint8_t color_index = (bit) ? (readFromMemByVIC(bmp_color_address + OFFSET) & 0b11110000) >> 4 : readFromMemByVIC(bmp_color_address + OFFSET) & 0b1111;
 
@@ -205,7 +214,6 @@ void renderByCycles(int16_t current_scanline, uint16_t cycles_on_current_scanlin
 						color_index = readFromMemByVIC(0xd800 + OFFSET) & 0b1111;
 						break;
 					}
-					uint8_t bg_color = VIC_REGISTERS[0x21];
 				}
 
 				VRAM[ADR] = COLORS[color_index][0];
@@ -215,12 +223,13 @@ void renderByCycles(int16_t current_scanline, uint16_t cycles_on_current_scanlin
 
 			//	border
 			uint8_t border_color = VIC_REGISTERS[0x20];
-			if (SCREENPOS == SCREEN_POS::BORDER_LR || SCREENPOS == SCREEN_POS::BORDER_TB) {
-				if (DRAW_BORDER) {
-					VRAM[(current_scanline * 400 * 3) + (i * 3)] = COLORS[border_color][0];
-					VRAM[(current_scanline * 400 * 3) + (i * 3) + 1] = COLORS[border_color][1];
-					VRAM[(current_scanline * 400 * 3) + (i * 3) + 2] = COLORS[border_color][2];
-				}
+			if (((SCREENPOS == SCREEN_POS::BORDER_LR || SCREENPOS == SCREEN_POS::BORDER_TB) && DRAW_BORDER) ||
+				((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {
+				if (ADR > 340799 || ADR < 0)
+					printf("ASSERTION! Mem addressed out of range! %d\n", ADR);
+				VRAM[ADR] = COLORS[border_color][0];
+				VRAM[ADR + 1] = COLORS[border_color][1];
+				VRAM[ADR + 2] = COLORS[border_color][2];
 			}
 		}
 	}
@@ -248,14 +257,14 @@ void stepPPU(uint8_t cpu_cyc) {
 		}
 
 		//	Border and Screen
-		else if (current_scanline >= 14 && current_scanline <= 297) {
+		else if (current_scanline >= 14 && current_scanline < 297) {
 
 			//	Left HBLANK
-			if (cycles_on_current_scanline >= 0 && cycles_on_current_scanline <= 5) {
+			if (cycles_on_current_scanline >= 0 && cycles_on_current_scanline <= 6) {
 				//	do nothing
 			}
 			//	Left Border
-			else if (cycles_on_current_scanline >= 6 && cycles_on_current_scanline <= 11) {
+			else if (cycles_on_current_scanline > 6 && cycles_on_current_scanline <= 11) {
 				renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_LR);
 			}
 			//	Screen
@@ -282,14 +291,14 @@ void stepPPU(uint8_t cpu_cyc) {
 				renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_LR);
 			}
 			//	Right HBLANK
-			else if (cycles_on_current_scanline >= 57 && cycles_on_current_scanline <= 62) {
+			else if (cycles_on_current_scanline > 56 && cycles_on_current_scanline <= 62) {
 				//	do nothing
 			}
 			
 		}
 
 		//	VBLANK (bottom of the screen)
-		else if (current_scanline >= 298 && current_scanline <= 311) {
+		else if (current_scanline >= 297 && current_scanline <= 311) {
 			//	do nothing
 		}
 
@@ -330,10 +339,10 @@ void writeVICregister(uint16_t adr, uint8_t val) {
 uint8_t readVICregister(uint16_t adr) {
 	switch (adr) {
 		case 0xd011:	
-			return raster_irq_row;
+			return (uint8_t)(raster_irq_row & 0xff);
 			break;
 		case 0xd012:			//	Current Scanline
-			return current_scanline;
+			return (uint8_t)(current_scanline & 0xff);
 			break;
 		case 0xd019:			//	IRQ flags, (active IRQs)
 			return irq_status.get();

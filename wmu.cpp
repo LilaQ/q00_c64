@@ -35,8 +35,6 @@ void initWindow(SDL_Window* win, string filename) {
 	HWND hwnd = wmInfo.info.win.window;
 	HMENU hMenuBar = CreateMenu();
 	HMENU hFile = CreateMenu();
-	HMENU hEdit = CreateMenu();
-	HMENU hMem = CreateMenu();
 	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hFile, "[ main ]");
 	AppendMenu(hMenuBar, MF_STRING, 11, "[ ||> un/pause ]");
 	AppendMenu(hMenuBar, MF_STRING, 2, "[ memory ]");
@@ -72,28 +70,27 @@ void showMemoryMap() {
 	for (int i = 0; i < 0x10000; i += 0x10) {
 		char title[70];
 		snprintf(title, sizeof title, "0x%04x      %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x \r\n", i,
-			readFromMem(i),
-			readFromMem(i + 1),
-			readFromMem(i + 2),
-			readFromMem(i + 3),
-			readFromMem(i + 4),
-			readFromMem(i + 5),
-			readFromMem(i + 6),
-			readFromMem(i + 7),
-			readFromMem(i + 8),
-			readFromMem(i + 9),
-			readFromMem(i + 10),
-			readFromMem(i + 11),
-			readFromMem(i + 12),
-			readFromMem(i + 13),
-			readFromMem(i + 14),
-			readFromMem(i + 15)
+			readFromMem((uint16_t)i),
+			readFromMem((uint16_t)(i + 1)),
+			readFromMem((uint16_t)(i + 2)),
+			readFromMem((uint16_t)(i + 3)),
+			readFromMem((uint16_t)(i + 4)),
+			readFromMem((uint16_t)(i + 5)),
+			readFromMem((uint16_t)(i + 6)),
+			readFromMem((uint16_t)(i + 7)),
+			readFromMem((uint16_t)(i + 8)),
+			readFromMem((uint16_t)(i + 9)),
+			readFromMem((uint16_t)(i + 10)),
+			readFromMem((uint16_t)(i + 11)),
+			readFromMem((uint16_t)(i + 12)),
+			readFromMem((uint16_t)(i + 13)),
+			readFromMem((uint16_t)(i + 14)),
+			readFromMem((uint16_t)(i + 15))
 		);
 		s.append((string)title);
 	}
 
 	const TCHAR* text = s.c_str();
-	HDC wdc = GetWindowDC(hScroll);
 	HFONT font = (HFONT)GetStockObject(ANSI_FIXED_FONT);
 	LOGFONT lf;
 	GetObject(font, sizeof(LOGFONT), &lf);
@@ -175,8 +172,8 @@ void handleWindowEvents(SDL_Event event) {
 
 void setTitle(string filename) {
 	char title[50];
-	uint8_t last_slash = (filename.find_last_of("\\") != string::npos) ? filename.find_last_of("\\") + 1 : 0;
-	uint8_t distance = filename.size() - last_slash;
+	uint8_t last_slash = (filename.find_last_of("\\") != string::npos) ? (uint8_t)filename.find_last_of("\\") + 1 : 0;
+	uint8_t distance = (uint8_t)filename.size() - last_slash;
 	filename = filename.substr(last_slash, distance);
 	snprintf(title, sizeof title, "[ q00.c64 ][ rom: %s ]", filename.c_str());
 	for (int i = 0; i < sizeof(title); i++) {

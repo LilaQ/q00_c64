@@ -14,19 +14,11 @@ using namespace::std;
 
 SDL_Event event;					//	Eventhandler for all SDL events
 bool unpaused = true;
-
-int lastcyc = 0;
-int ppus = 0;
+uint8_t lastcyc = 0;
 
 int main()
 {
 	resetMMU();
-
-	//	load firmware (BASIC and KERNAL)
-	loadFirmware("fw.bin.ptc");
-
-	//	load char ROM
-	loadCHRROM("char.bin");
 
 	resetCPU();
 

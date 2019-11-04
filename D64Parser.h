@@ -5,16 +5,16 @@ using namespace std;
 
 struct Entry {
 	bool available = false;
-	uint8_t next_track;
-	uint8_t next_sector;
-	string file_type;
-	uint8_t start_track;
-	uint8_t start_sector;
-	string pet_name;
-	uint32_t adress_start;
-	uint32_t adress_end;
-	uint8_t sector_size;
-	uint8_t sectors;
+	uint8_t next_track = 0x00;
+	uint8_t next_sector = 0x00;
+	string file_type = "";
+	uint8_t start_track = 0x00;
+	uint8_t start_sector = 0x00;
+	string pet_name = "";
+	uint32_t adress_start = 0x00;
+	uint32_t adress_end = 0x00;
+	uint8_t sector_size = 0x00;
+	uint8_t sectors = 0x00;
 };
 
 /*
@@ -96,7 +96,7 @@ struct D64Parser {
 			for (uint16_t j = 5; j < 0x15; j++) {
 				entry.pet_name += data[base_dir + i + j];
 			}
-			entry.sector_size = data[base_dir + i + 0x1e] + (data[base_dir + i + 0x1f] * 256);
+			entry.sector_size = (uint8_t)(data[base_dir + i + 0x1e] + (data[base_dir + i + 0x1f] * 256));
 			entry.available = (entry.file_type != "");
 			
 			entry.sectors = 21;
@@ -144,7 +144,7 @@ struct D64Parser {
 				r.push_back(entries[i].sector_size);					//	SIZE
 				r.push_back(0x00);
 				string f = std::to_string(entries[i].sector_size);
-				for (uint16_t i = 0; i < 4 - f.size(); i++) {
+				for (uint16_t j = 0; j < 4 - f.size(); j++) {
 					r.push_back(0x20);									//	SPACE
 				}
 				r.push_back(0x22);										//	"

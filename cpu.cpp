@@ -111,7 +111,7 @@ uint8_t LSR(uint16_t adr, uint8_t cycles) {
 	return cycles;
 }
 uint8_t ROLA(uint8_t cycles) {
-	int tmp = status.carry;
+	uint8_t tmp = status.carry;
 	status.setCarry(registers.A >> 7);
 	registers.A = (registers.A << 1) | tmp;
 	status.setZero(registers.A == 0);
@@ -119,7 +119,7 @@ uint8_t ROLA(uint8_t cycles) {
 	return cycles;
 }
 uint8_t ROL(uint16_t adr, uint8_t cycles) {
-	int tmp = status.carry;
+	uint8_t tmp = status.carry;
 	status.setCarry(readFromMem(adr) >> 7);
 	writeToMem(adr, (readFromMem(adr) << 1) | tmp);
 	status.setZero(readFromMem(adr) == 0);
@@ -127,7 +127,7 @@ uint8_t ROL(uint16_t adr, uint8_t cycles) {
 	return cycles;
 }
 uint8_t RORA(uint8_t cycles) {
-	int tmp = registers.A & 1;
+	uint8_t tmp = registers.A & 1;
 	registers.A = (registers.A >> 1) | (status.carry << 7);
 	status.setCarry(tmp);
 	status.setZero(registers.A == 0);
@@ -135,7 +135,7 @@ uint8_t RORA(uint8_t cycles) {
 	return cycles;
 }
 uint8_t ROR(uint16_t adr, uint8_t cycles) {
-	int tmp = readFromMem(adr) & 1;
+	uint8_t tmp = readFromMem(adr) & 1;
 	writeToMem(adr, (readFromMem(adr) >> 1) | (status.carry << 7));
 	status.setCarry(tmp);
 	status.setZero(readFromMem(adr) == 0);
@@ -197,6 +197,7 @@ uint8_t RRA(uint16_t adr, uint8_t cycles) {
 }
 
 void resetCPU() {
+	resetMMU();
 	PC = readFromMem(0xfffd) << 8 | readFromMem(0xfffc);
 	printf("Reset CPU, starting at PC: %x\n", PC);
 }
@@ -207,7 +208,7 @@ void setNMI(bool v) {
 	nmi = v;
 }
 
-int NMI() {
+uint8_t NMI() {
 	//printf("NMI\n");
 	writeToMem(SP_ + 0x100, PC >> 8);
 	SP_--;
@@ -226,7 +227,7 @@ void setIRQ(bool v) {
 	irq = v;
 }
 
-int IRQorBRK() {
+uint8_t IRQorBRK() {
 	//printf("IRQ \n");
 	writeToMem(SP_ + 0x100, PC >> 8);
 	SP_--;
@@ -244,7 +245,7 @@ Registers getCPURegs() {
 }
 
 int c = 0;
-int r = 0; //	don't delete, return val holder
+uint8_t r = 0; //	don't delete, return val holder
 uint16_t ff = 1;
 bool mach = false;
 void setGO() {
@@ -255,7 +256,7 @@ void printLog() {
 	printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d Keyboard: %x\n", PC, readFromMem(PC), readFromMem(PC + 1), readFromMem(PC + 2), registers.A, registers.X, registers.Y, status.status, SP_, c, readFromMem(0xdc01));
 }
 
-int stepCPU() {
+uint8_t stepCPU() {
 	c += getLastCyc();
 
 	if (nmi) {
@@ -288,7 +289,7 @@ int stepCPU() {
 	case 0x07: { PC++; return SLO(getZeropage(PC++), 5); break; } // SLO zp 2,5
 	case 0x08: { PC++; writeToMem(SP_ + 0x100, status.status | 0x30); SP_--; return 3; break; }
 	case 0x09: { PC++; return ORA(getImmediate(PC++), 2); break; }
-	case 0x0a: { PC++; return ASLA(2); PC++; break; }
+	case 0x0a: { PC++; return ASLA(2); break; }
 	case 0x0c: { PC += 3; return 4; break; }
 	case 0x0d: { PC++; r = ORA(getAbsolute(PC), 4); PC += 2; return r; break; }
 	case 0x0e: { PC++; r = ASL(getAbsolute(PC), 6); PC += 2; return r; break; }
@@ -317,7 +318,7 @@ int stepCPU() {
 	case 0x27: { PC++; return RLA(getZeropage(PC++), 5); break; } // RLA zp 2,5
 	case 0x28: { PC++; SP_++; status.setStatus(readFromMem(SP_ + 0x100) & 0xef); return 4; break; }
 	case 0x29: { PC++; return AND(getImmediate(PC++), 2); break; }
-	case 0x2a: { PC++; return ROLA(2); PC++; break; }
+	case 0x2a: { PC++; return ROLA(2); break; }
 	case 0x2c: { PC++; r = BIT(getAbsolute(PC), 4); PC += 2; return r; break; }
 	case 0x2d: { PC++; r = AND(getAbsolute(PC), 4); PC += 2; return r; break; }
 	case 0x2e: { PC++; r = ROL(getAbsolute(PC), 6); PC += 2; return r; break; }
@@ -496,7 +497,7 @@ int stepCPU() {
 	case 0xee: { PC++; r = INC(getAbsolute(PC), 6); PC += 2; return r; break; }
 	case 0xef: { PC++; r = ISC(getAbsolute(PC), 6); PC += 2; return r; break; } //	ISC abs 3/6
 	case 0xf0: {
-		int pageBreach = (PC + 2 & 0xff00) != ((PC + 2 + (int8_t)readFromMem(PC + 1)) & 0xff00);
+		uint8_t pageBreach = (PC + 2 & 0xff00) != ((PC + 2 + (int8_t)readFromMem(PC + 1)) & 0xff00);
 		if (status.zero) {
 			PC += 2 + (int8_t)readFromMem(PC + 1);
 			return 3 + pageBreach;
@@ -528,6 +529,4 @@ int stepCPU() {
 		std::exit(1);
 		break;
 	}
-
-	return 0;
 }

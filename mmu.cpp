@@ -13,18 +13,18 @@
 #include <fstream>
 
 
-unsigned char memory[0x10000] = { 0xff };
-unsigned char kernal[0x02000];		//	TODO 
-unsigned char basic[0x02000];		//	TODO --- Only chr1 and chr2 are switched to external arrays yet
-unsigned char chr[0x1000];
-unsigned char colorram[0x400];
+unsigned char memory[0x10000] = { 0x00 };
+unsigned char kernal[0x02000] = { 0x00 };
+unsigned char basic[0x02000] = { 0x00 };
+unsigned char chr[0x1000] = { 0x00 };
+unsigned char colorram[0x400] = { 0x00 };
 MEMTYPE memtype_a000_bfff = MEMTYPE::BASIC;
 MEMTYPE memtype_d000_dfff = MEMTYPE::IO;
 MEMTYPE memtype_e000_ffff = MEMTYPE::KERNAL;
 bool pbc = false;
 
 // disk hotloading
-string LOAD_FILE;
+string LOAD_FILE = "";
 D64Parser parser;
 
 void powerUpMMU() {
@@ -32,6 +32,24 @@ void powerUpMMU() {
 }
 
 void resetMMU() {
+	unsigned char r = 0x00;
+	for (int i = 0; i < sizeof(memory); i++)
+		memory[i] = r;
+	for (int i = 0; i < sizeof(kernal); i++)
+		kernal[i] = r;
+	for (int i = 0; i < sizeof(basic); i++)
+		basic[i] = r;
+	for (int i = 0; i < sizeof(chr); i++)
+		chr[i] = r;
+	for (int i = 0; i < sizeof(colorram); i++)
+		colorram[i] = r;
+
+	//	load firmware (BASIC and KERNAL)
+	loadFirmware("fw.bin.ptc");
+
+	//	load char ROM
+	loadCHRROM("char.bin");
+
 	memory[0x0001] = 0x37;		//	Zeropage for PLA
 }
 
@@ -41,7 +59,7 @@ void loadD64(string f) {
 	parser.init(f);
 	parser.printAll();
 	std::vector<uint8_t> r = parser.dirList();
-	for (int i = 0; i < r.size(); i++) {
+	for (uint32_t i = 0; i < r.size(); i++) {
 		memory[0x801 + i] = r.at(i);
 	}
 }
@@ -64,7 +82,7 @@ void loadPRG(string f) {
 void loadPRGFromDisk(string f) {
 	if (parser.filenameExists(f)) {
 		std::vector<uint8_t> res = parser.getDataByFilename(f);
-		for (int i = 2; i < res.size(); i++) {
+		for (uint32_t i = 2; i < res.size(); i++) {
 			memory[((res.at(1) << 8) | res.at(0)) - 2 + i] = res.at(i);
 		}
 	}
@@ -176,7 +194,7 @@ uint8_t readFromMem(uint16_t adr) {
 			}
 			//	COLOR RAM
 			else if (adr >= 0xd800 && adr < 0xdc00) {
-				return colorram[adr % 0xd800];
+				return colorram[(adr % 0xd800) % 0x0fff];
 			}
 			//	CIA REGISTERS & DEFAULT
 			else {
@@ -234,12 +252,12 @@ uint8_t readFromMem(uint16_t adr) {
 		}
 		//	0xd000-0xdfff set to CHRROM
 		else if (memtype_d000_dfff == MEMTYPE::CHARROM) {
-			return chr[adr % 0xd000];
+			return chr[(adr % 0xd000) & 0x0fff];
 		}
 	}
 	else if (adr >= 0xa000 && adr < 0xc000) {		//	BASIC
 		if (memtype_a000_bfff == MEMTYPE::BASIC) {
-			return basic[adr % 0xa000];
+			return basic[(adr % 0xa000) & 0x1fff];
 		}
 		else if (memtype_a000_bfff == MEMTYPE::RAM) {
 			return memory[adr];
@@ -272,13 +290,13 @@ uint8_t readFromMem(uint16_t adr) {
 				}
 
 			}
-			return kernal[adr % 0xe000];
+			return kernal[(adr % 0xe000) & 0x1fff];
 		}
 		else if (memtype_e000_ffff == MEMTYPE::RAM) {
 			return memory[adr];
 		}
 	}
-	return memory[adr];
+	return memory[adr & 0xffff];
 }
 
 //	reads from the VIC; the VIC can only read from a 16k window at once (dictated by Port B of CIA2)
@@ -291,7 +309,7 @@ uint8_t readFromMemByVIC(uint16_t adr) {
 	}
 	//	COLORRAM
 	else if (adr >= 0xd800 && adr < 0xdc00) {
-		return colorram[adr % 0xd800];
+		return colorram[(adr % 0xd800) & 0x0fff];
 	}
 	return memory[adr + bank_no * 0x4000];
 }
@@ -314,7 +332,7 @@ void writeToMem(uint16_t adr, uint8_t val) {
 			}
 			//	COLOR RAM
 			else if (adr >= 0xd800 && adr < 0xdc00) {
-				colorram[adr % 0xd800] = val;
+				colorram[(adr % 0xd800) % 0x0fff] = val;
 			}
 			//	CIA REGISTERS & DEFAULT
 			else {

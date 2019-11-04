@@ -97,3 +97,11 @@ Debug/output2.log
 Debug/fw.bin.ptc
 memdump_myemu.txt
 memdump_myemu.bin
+.vs/C64Emulator/v16/Preview/Browse.VC.db
+.vs/C64Emulator/v16/Preview/Browse.VC.opendb
+.vs/C64Emulator/v16/Preview/ipch/AutoPCH/4e95c172acbb8bd/MMU.ipch
+.vs/C64Emulator/v16/Preview/ipch/AutoPCH/ceb849627a5cbb15/PPU.ipch
+.vs/C64Emulator/v16/Preview/ipch/AutoPCH/dc9d759be4e3f95/PPU.ipch
+.vs/C64Emulator/v16/Preview/ipch/AutoPCH/e30caaff087a92ae/CPU.ipch
+.vs/C64Emulator/v16/Preview/ipch/AutoPCH/e655efdcab2dba73/MAIN.ipch
+.vs/C64Emulator/v16/Preview/ipch/AutoPCH/fefc97a553089077/WMU.ipch
