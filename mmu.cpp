@@ -221,6 +221,13 @@ uint8_t readFromMem(uint16_t adr) {
 						break;
 
 						//	CIA 2
+					case 0xdd00:			//	read VIC Bank selection
+						return readCIA2DataPortA();
+						break;	
+					case 0xdd01:			//	read Serial Port (Unused for now)
+						return readCIA2DataPortB();
+						break;
+
 					case 0xdd04:			//	read CIA1 TimerA Low
 						return readCIA2timerALo();
 						break;
@@ -301,7 +308,7 @@ uint8_t readFromMem(uint16_t adr) {
 
 //	reads from the VIC; the VIC can only read from a 16k window at once (dictated by Port B of CIA2)
 uint8_t readFromMemByVIC(uint16_t adr) {
-	uint8_t bank_no = 0b11 - (readCIA2DataPortB() & 0b11);
+	uint8_t bank_no = 0b11 - (readCIA2DataPortA() & 0b11);
 	//	CHRROM
 	if (adr >= 0x1000 && adr <= 0x1fff && (bank_no == 0 || bank_no == 2)) {
 		//return readChar(adr);
@@ -319,6 +326,7 @@ void writeToMemByVIC(uint16_t adr, uint8_t val) {
 }
 
 void writeToMem(uint16_t adr, uint8_t val) {
+
 
 	//	refresh Mapping
 	refreshMemoryMapping();
@@ -389,6 +397,13 @@ void writeToMem(uint16_t adr, uint8_t val) {
 					break;
 
 					//	CIA 2
+				case 0xdd00:			//	write VIC Bank selection
+					writeCIA2DataPortA(val);
+					break;
+				case 0xdd01:			//	write Serial Port (Unused for now)
+					writeCIA1DataPortB(val);
+					break;
+
 				case 0xdd04:
 					setCIA2timerAlatchLo(val);
 					break;

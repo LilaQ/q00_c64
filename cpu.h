@@ -80,3 +80,4 @@ struct Status
 uint8_t stepCPU();
 void resetCPU();
 Registers getCPURegs();
+void setLog(bool v);

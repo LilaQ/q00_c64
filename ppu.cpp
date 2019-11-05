@@ -7,8 +7,10 @@
 #include "mmu.h"
 #include "cpu.h"
 #include "wmu.h"
+#include "cia.h"
 #include "SDL2/include/SDL.h"
 #include <array>
+#include <vector>
 using namespace std;
 
 array<uint8_t, 0x31> VIC_REGISTERS;
@@ -17,6 +19,7 @@ int last_cycles_on_current_scanline = 0;
 uint16_t current_scanline = 0;
 uint16_t raster_irq_row = 0;
 bool DRAW_BORDER = true;
+uint32_t ADR = 0;
 
 IRQ_STATUS irq_status;
 IRQ_MASK irq_mask;
@@ -24,7 +27,7 @@ SDL_Renderer* renderer;
 SDL_Window* window;
 SDL_Texture* texture;
 
-uint8_t VRAM[400 * 284 * 3];	//	RGB - 320 * 200 pixel inside, with border 402 * 284
+vector<uint8_t> VRAM(400 * 284 * 3);	//	RGB - 320 * 200 pixel inside, with border 402 * 284
 
 const unsigned char COLORS[16][3] = {
 	{0x00, 0x00, 0x00},
@@ -46,7 +49,7 @@ const unsigned char COLORS[16][3] = {
 };
 
 void drawFrame() {
-	SDL_UpdateTexture(texture, NULL, VRAM, 400 * sizeof(unsigned char) * 3);
+	SDL_UpdateTexture(texture, NULL, (uint8_t*)VRAM.data(), 400 * sizeof(unsigned char) * 3);
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
 }
@@ -55,7 +58,7 @@ void initPPU(string filename) {
 
 	//	init and create window and renderer
 	SDL_Init(SDL_INIT_VIDEO);
-	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+	//SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 	SDL_CreateWindowAndRenderer(400, 284, 0, &window, &renderer);
 	SDL_SetWindowSize(window, 800, 588);
 	//SDL_RenderSetLogicalSize(renderer, 512, 480);
@@ -72,18 +75,14 @@ void initPPU(string filename) {
 
 void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanline, SCREEN_POS SCREENPOS) {
 
+	uint8_t bank_no = 0b11 - (readCIA2DataPortA() & 0b11);
+
 	//	remove the offset of VBLANK (for drawing/rendering)
 	_current_scanline -= 14;
-	if (_current_scanline < 0 || _current_scanline >= 284)
-		printf("Scanline Problem %d\n", _current_scanline);
-
+ 
 	//	calculate the pixels we need to draw at this cycle position
 	uint16_t pixel_to = (_cycles_on_current_scanline - 6) * 8;
 	uint16_t pixel_from = pixel_to - 8;
-	if (pixel_to < 0 || pixel_to > 400)
-		printf("pixel to Problem %d at %d line %d\n", pixel_to, _cycles_on_current_scanline, _current_scanline);
-	if (pixel_from < 0 || pixel_from > 400)
-		printf("pixel from Problem %d at %d line %d\n", pixel_from, _cycles_on_current_scanline, _current_scanline);
 
 	//	Textmode Variables
 	uint16_t chrrom = 1024 * (VIC_REGISTERS[0x18] & 0b1110);
@@ -92,15 +91,14 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 	uint16_t colorram = 0xd800;
 
 	//	Bitmap Variables
-	uint16_t bmp_start_address = (VIC_REGISTERS[0x18] & 0b1000) ? 0x2000 : 0x0000;
+	uint16_t bmp_start_address = bank_no * 0x4000 + (VIC_REGISTERS[0x18] & 0b1000) ? 0x2000 : 0x0000;
 	uint16_t bmp_color_address = ((VIC_REGISTERS[0x18] & 0b11110000) >> 4) * 0x400;
 
 	//	Render Line (if visible scanline)
-	if (_current_scanline >= 0) {
-		for (int i = pixel_from; i < pixel_to; i++) {
+	for (int i = pixel_from; i < pixel_to; i++) {
 
 			//	Basic VRAM start address and OFFSET of the pixel we want to write to in this iteration
-			uint32_t ADR = (_current_scanline * 400 * 3) + ((i + offset_x) * 3);
+			ADR = (_current_scanline * 400 * 3) + ((i + offset_x) * 3);
 			uint16_t OFFSET = (uint16_t)(((_current_scanline - 42) / 8) * 40 + (i - 40) / 8);
 
 			//	TEXTMODE
@@ -223,16 +221,16 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 
 			//	border
 			uint8_t border_color = VIC_REGISTERS[0x20];
-			if (((SCREENPOS == SCREEN_POS::BORDER_LR || SCREENPOS == SCREEN_POS::BORDER_TB) && DRAW_BORDER) ||
-				((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {
-				if (ADR > 340799 || ADR < 0)
+			/*if (((SCREENPOS == SCREEN_POS::BORDER_LR || SCREENPOS == SCREEN_POS::BORDER_TB) && DRAW_BORDER) ||
+				((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {*/
+			if ((SCREENPOS == SCREEN_POS::BORDER_LR || SCREENPOS == SCREEN_POS::BORDER_TB) && DRAW_BORDER) {
+				if (ADR > 340797 || ADR < 0)
 					printf("ASSERTION! Mem addressed out of range! %d\n", ADR);
 				VRAM[ADR] = COLORS[border_color][0];
 				VRAM[ADR + 1] = COLORS[border_color][1];
 				VRAM[ADR + 2] = COLORS[border_color][2];
 			}
 		}
-	}
 }
 
 void stepPPU(uint8_t cpu_cyc) {
@@ -317,8 +315,8 @@ void writeVICregister(uint16_t adr, uint8_t val) {
 	switch (adr)
 	{
 		case 0xd011:
-			raster_irq_row &= 0b11111111;
-			raster_irq_row |= ((val & 0b10000000) << 1);
+			raster_irq_row &= 0b01111111;
+			raster_irq_row |= (val & 0b10000000);
 			break;
 		case 0xd012:			//	Set Rasterzeilen IRQ
 			raster_irq_row &= 0b100000000;
@@ -338,9 +336,13 @@ void writeVICregister(uint16_t adr, uint8_t val) {
 
 uint8_t readVICregister(uint16_t adr) {
 	switch (adr) {
-		case 0xd011:	
-			return (uint8_t)(raster_irq_row & 0xff);
+		case 0xd011: {
+			uint8_t ret = VIC_REGISTERS[adr % 0xd000];
+			ret &= 0b01111111;
+			ret |= (current_scanline >> 1) & 0b10000000;
+			return ret;
 			break;
+		}
 		case 0xd012:			//	Current Scanline
 			return (uint8_t)(current_scanline & 0xff);
 			break;

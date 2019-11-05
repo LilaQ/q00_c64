@@ -5,7 +5,7 @@
 
 //	set up vars
 uint16_t PC = 0xc000;
-uint8_t SP_ = 0xfd;
+uint8_t SP_ = 0xff;
 Registers registers;
 Status status;
 
@@ -256,6 +256,11 @@ void printLog() {
 	printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d Keyboard: %x\n", PC, readFromMem(PC), readFromMem(PC + 1), readFromMem(PC + 2), registers.A, registers.X, registers.Y, status.status, SP_, c, readFromMem(0xdc01));
 }
 
+bool logNow = false;
+void setLog(bool v) {
+	logNow = v;
+}
+
 uint8_t stepCPU() {
 	c += getLastCyc();
 
@@ -269,15 +274,17 @@ uint8_t stepCPU() {
 		return IRQorBRK();
 	}
 
-	if (PC == 0x0f1b) {
+	if (PC == 0x0831) {
+		//printLog();
 		//dumpMem();
 	}
+	
+	if (registers.Y == 0xff && PC == 0xea0f && registers.X == 0x00) {
+		mach = true;
+	}
 
-	//if (PC == 0x080e)
-		 //mach = true;
-
-	if(mach && PC >= 0x0801 && PC <= 0x0920)
-	//if(mach)
+	//if(mach && PC >= 0x0801 && PC <= 0x0920)
+	if(mach && logNow)
 		printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d Keyboard: %x\n", PC, readFromMem(PC), readFromMem(PC+1), readFromMem(PC+2), registers.A, registers.X, registers.Y, status.status, SP_, c, readFromMem(0xdc01));
 	switch (readFromMem(PC)) {
 	case 0x00: { status.setBrk(1); irq = true; printf("BREAK "); return 7; break; }
