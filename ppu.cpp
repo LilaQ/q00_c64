@@ -102,7 +102,7 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 			uint16_t OFFSET = (uint16_t)(((_current_scanline - 42) / 8) * 40 + (i - 40) / 8);
 
 			//	TEXTMODE
-			if ((VIC_REGISTERS[0x11] & 0b100000) == 0 || VIC_REGISTERS[0x11] & 0b1000000) {
+			if ((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b100000) == 0 || VIC_REGISTERS[0x11] & 0b1000000)) {
 
 				//	inside
 
@@ -177,7 +177,7 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 				}
 			}
 			//	BITMAP MODE
-			else {
+			else if(SCREENPOS == SCREEN_POS::SCREEN) {
 				uint16_t BMP_OFFSET = (OFFSET / 40) * 320 + (OFFSET % 40) * 8 + ((_current_scanline - 42) % 8);
 				uint8_t bit = readFromMemByVIC(bmp_start_address + BMP_OFFSET) & (0b10000000 >> (i % 8));
 				uint8_t color_index = (bit) ? (readFromMemByVIC(bmp_color_address + OFFSET) & 0b11110000) >> 4 : readFromMemByVIC(bmp_color_address + OFFSET) & 0b1111;
@@ -306,6 +306,7 @@ void stepPPU(uint8_t cpu_cyc) {
 		//	Rasterzeileninterrupt
 		if (irq_mask.irq_can_be_cause_by_rasterline && cycles_on_current_scanline == 0) {	//	enabled?
 			if (current_scanline == raster_irq_row) {
+				printf("RasterIRQ at %d \n", raster_irq_row);
 				irq_status.setFlags(0b10000001);		//	set "IRQ FROM VIC", and as reason set "IRQ FROM RASTERLINE"
 				setIRQ(true);
 				return;
@@ -323,7 +324,7 @@ void writeVICregister(uint16_t adr, uint8_t val) {
 	{
 		case 0xd011:
 			raster_irq_row &= 0b01111111;
-			raster_irq_row |= (val & 0b10000000);
+			raster_irq_row |= (val & 0b10000000) << 1;
 			break;
 		case 0xd012:			//	Set Rasterzeilen IRQ
 			raster_irq_row &= 0b100000000;

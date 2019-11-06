@@ -282,6 +282,7 @@ uint8_t readFromMem(uint16_t adr) {
 				printf("SETTING NAME y: %x x: %x\n", getCPURegs().Y, getCPURegs().X);
 				for (int i = 0; i < 16; i++) {
 					LOAD_FILE += memory[((getCPURegs().Y << 8) | getCPURegs().X) + i];
+					cout << LOAD_FILE << "<-- FILENAME";
 				}
 			}
 			//	LOAD ,8,1 HOOK
@@ -318,6 +319,8 @@ uint8_t readFromMemByVIC(uint16_t adr) {
 	else if (adr >= 0xd800 && adr < 0xdc00) {
 		return colorram[(adr % 0xd800) & 0x0fff];
 	}
+	if ((adr + bank_no * 0x4000) > 0xffff)
+		printf("WTF! Accessing outside of memory! adr:%x bank_no:%d fulladdr:%d\n", adr, bank_no, (adr + bank_no * 0x4000));
 	return memory[adr + bank_no * 0x4000];
 }
 
@@ -326,11 +329,6 @@ void writeToMemByVIC(uint16_t adr, uint8_t val) {
 }
 
 void writeToMem(uint16_t adr, uint8_t val) {
-
-	if (adr == 0xd020) {
-		printf("Border Color set (%x) -> ", val);
-		printLog();
-	}
 
 	//	refresh Mapping
 	refreshMemoryMapping();
