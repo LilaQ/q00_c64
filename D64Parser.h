@@ -89,7 +89,7 @@ struct D64Parser {
 			Entry entry;
 			entry.next_track = data[base_dir + i];
 			entry.next_sector = data[base_dir + i + 1];
-			entry.file_type = (data[base_dir + i + 2]) ? FILE_TYPE.at(data[base_dir + i + 2] - 0x80) : "";
+			entry.file_type = (data[base_dir + i + 2] > 0x80 && data[base_dir + i + 2] < 0x84) ? FILE_TYPE.at(data[base_dir + i + 2] - 0x80) : "";
 			entry.start_track = data[base_dir + i + 3];
 			entry.start_sector = data[base_dir + i + 4];
 			entry.pet_name;

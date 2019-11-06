@@ -327,6 +327,10 @@ void writeToMemByVIC(uint16_t adr, uint8_t val) {
 
 void writeToMem(uint16_t adr, uint8_t val) {
 
+	if (adr == 0xd020) {
+		printf("Border Color set (%x) -> ", val);
+		printLog();
+	}
 
 	//	refresh Mapping
 	refreshMemoryMapping();

@@ -107,15 +107,15 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 				//	inside
 
 				uint8_t char_id = readFromMemByVIC(screen + OFFSET);
-				uint8_t bg_color = VIC_REGISTERS[0x21];
+				uint8_t bg_color = VIC_REGISTERS[0x21] & 0xf;
 
 				//	EXTENDED BG COLOR MODE
 				if (VIC_REGISTERS[0x11] & 0b1000000) {
-					bg_color = VIC_REGISTERS[0x21 + ((char_id >> 6) & 0b11)];
+					bg_color = VIC_REGISTERS[0x21 + ((char_id >> 6) & 0b11)] & 0xf;
 					char_id &= 0b111111;
 				}
 				uint16_t char_address = chrrom + (char_id * 8) + ((_current_scanline - 42) % 8);
-				uint8_t color = readFromMemByVIC(colorram + OFFSET);
+				uint8_t color = readFromMemByVIC(colorram + OFFSET) & 0xf;
 				uint8_t chr = readFromMemByVIC(char_address);
 
 				//	NORMAL MODE
@@ -162,12 +162,14 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 							color = VIC_REGISTERS[0x23];
 							break;
 						}
+						color &= 0xf;
 						VRAM[ADR] = COLORS[color][0];
 						VRAM[ADR + 1] = COLORS[color][1];
 						VRAM[ADR + 2] = COLORS[color][2];
 					}
 					//	...else it's still going to be hires single color mode
 					else {
+						color &= 0xf;
 						VRAM[ADR] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
 						VRAM[ADR + 1] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
 						VRAM[ADR + 2] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
@@ -213,6 +215,7 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 						break;
 					}
 				}
+				color_index &= 0xf;
 
 				VRAM[ADR] = COLORS[color_index][0];
 				VRAM[ADR + 1] = COLORS[color_index][1];
@@ -220,7 +223,7 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 			}
 
 			//	border
-			uint8_t border_color = VIC_REGISTERS[0x20];
+			uint8_t border_color = VIC_REGISTERS[0x20] & 0xf;
 			/*if (((SCREENPOS == SCREEN_POS::BORDER_LR || SCREENPOS == SCREEN_POS::BORDER_TB) && DRAW_BORDER) ||
 				((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {*/
 			if ((SCREENPOS == SCREEN_POS::BORDER_LR || SCREENPOS == SCREEN_POS::BORDER_TB) && DRAW_BORDER) {
@@ -312,6 +315,10 @@ void stepPPU(uint8_t cpu_cyc) {
 }
 
 void writeVICregister(uint16_t adr, uint8_t val) {
+	//	
+	if (adr == 0xd020) {
+		
+	}
 	switch (adr)
 	{
 		case 0xd011:

@@ -274,13 +274,12 @@ uint8_t stepCPU() {
 		return IRQorBRK();
 	}
 
-	if (PC == 0x0831) {
-		//printLog();
-		//dumpMem();
+	if (PC == 0xed5d) {
+		mach = true;
 	}
 	
 	if (registers.Y == 0xff && PC == 0xea0f && registers.X == 0x00) {
-		mach = true;
+		//mach = true;
 	}
 
 	//if(mach && PC >= 0x0801 && PC <= 0x0920)
