@@ -32,14 +32,19 @@ struct IRQ_STATUS {
 	}
 
 	void clearFlags(uint8_t val) {
-		if (val & 0x80)
-			irq_caused_by_vic = false;
 		if (val & 0x04)
 			irq_req_by_sprite_sprite_collision = false;
 		if (val & 0x02)
 			irq_req_by_sprite_bg_collision = false;
 		if (val & 0x01)
 			irq_req_by_rasterline = false;
+		//	clear "caused by VIC" flag when other flags are off
+		if (!irq_req_by_sprite_sprite_collision &&
+			!irq_req_by_sprite_bg_collision &&
+			!irq_req_by_rasterline
+			) {
+			irq_caused_by_vic = false;
+		}
 	}
 
 	uint8_t get() {

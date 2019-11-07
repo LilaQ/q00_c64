@@ -81,7 +81,7 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 	_current_scanline -= 14;
  
 	//	calculate the pixels we need to draw at this cycle position
-	uint16_t pixel_to = (_cycles_on_current_scanline - 6) * 8;
+	uint16_t pixel_to = (_cycles_on_current_scanline - 12) * 8;
 	uint16_t pixel_from = pixel_to - 8;
 
 	//	Textmode Variables
@@ -224,9 +224,8 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 
 			//	border
 			uint8_t border_color = VIC_REGISTERS[0x20] & 0xf;
-			/*if (((SCREENPOS == SCREEN_POS::BORDER_LR || SCREENPOS == SCREEN_POS::BORDER_TB) && DRAW_BORDER) ||
-				((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {*/
-			if ((SCREENPOS == SCREEN_POS::BORDER_LR || SCREENPOS == SCREEN_POS::BORDER_TB) && DRAW_BORDER) {
+			if (((SCREENPOS == SCREEN_POS::BORDER_LR || SCREENPOS == SCREEN_POS::BORDER_TB) && DRAW_BORDER) ||
+				((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {
 				if (ADR > 340797 || ADR < 0)
 					printf("ASSERTION! Mem addressed out of range! %d\n", ADR);
 				VRAM[ADR] = COLORS[border_color][0];
@@ -238,7 +237,7 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 
 void stepPPU(uint8_t cpu_cyc) {
 	COL_MODE COLMODE = (VIC_REGISTERS[0x16] & 0b1000) ? COL_MODE::COL_40 : COL_MODE::COL_38;
-	while (--cpu_cyc) {
+	while (cpu_cyc--) {
 		//	Raster Ray
 		cycles_on_current_scanline++;
 		if (cycles_on_current_scanline >= 63) {
@@ -261,25 +260,25 @@ void stepPPU(uint8_t cpu_cyc) {
 		else if (current_scanline >= 14 && current_scanline < 297) {
 
 			//	Left HBLANK
-			if (cycles_on_current_scanline >= 0 && cycles_on_current_scanline <= 6) {
+			if (cycles_on_current_scanline >= 0 && cycles_on_current_scanline <= 12) {
 				//	do nothing
 			}
 			//	Left Border
-			else if (cycles_on_current_scanline > 6 && cycles_on_current_scanline <= 11) {
+			else if (cycles_on_current_scanline > 12 && cycles_on_current_scanline <= 17) {
 				renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_LR);
 			}
 			//	Screen
-			else if (cycles_on_current_scanline >= 12 && cycles_on_current_scanline <= 51) {
+			else if (cycles_on_current_scanline >= 18 && cycles_on_current_scanline <= 57) {
 				if (current_scanline >= 14 && current_scanline <= 49) {
 					renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_TB);
 				}
 				else if	(current_scanline >= 50 && current_scanline <= 249) {
 					//	38-40 Col Area
-					if ((cycles_on_current_scanline == 12 || cycles_on_current_scanline == 51) &&	COLMODE == COL_MODE::COL_38) {
+					if ((cycles_on_current_scanline == 18 || cycles_on_current_scanline == 57) &&	COLMODE == COL_MODE::COL_38) {
 						renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_LR);
 					}
 					//	Screen Only Area
-					else {
+					else if(cycles_on_current_scanline >= 18 && cycles_on_current_scanline <= 57) {
 						renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::SCREEN);
 					}
 				}
@@ -288,14 +287,9 @@ void stepPPU(uint8_t cpu_cyc) {
 				}
 			}
 			//	Right Border
-			else if (cycles_on_current_scanline >= 52 && cycles_on_current_scanline <= 56) {
+			else if (cycles_on_current_scanline >= 58 && cycles_on_current_scanline <= 62) {
 				renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_LR);
 			}
-			//	Right HBLANK
-			else if (cycles_on_current_scanline > 56 && cycles_on_current_scanline <= 62) {
-				//	do nothing
-			}
-			
 		}
 
 		//	VBLANK (bottom of the screen)
@@ -307,6 +301,7 @@ void stepPPU(uint8_t cpu_cyc) {
 		if (irq_mask.irq_can_be_cause_by_rasterline && cycles_on_current_scanline == 0) {	//	enabled?
 			if (current_scanline == raster_irq_row) {
 				irq_status.setFlags(0b10000001);		//	set "IRQ FROM VIC", and as reason set "IRQ FROM RASTERLINE"
+				printf("Raster IRQ on line %d\n", current_scanline);
 				setIRQ(true);
 				return;
 			}

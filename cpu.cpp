@@ -55,12 +55,12 @@ uint8_t ADD(uint8_t val, uint8_t cycles) {
 		status.setNegative(registers.A >> 7);
 	}
 	else {
-		printf("BCD Arithmetik happening\n");
 		uint16_t v1 = (registers.A / 16) * 10 + (registers.A % 16);
 		uint16_t v2 = (val / 16) * 10 + (val % 16);
 		uint16_t sum = ((v1 + v2 + status.carry) / 10 * 16) + (v1 + v2 + status.carry) % 10;
 		status.setCarry((v1 + v2) > 99);
 		registers.A = sum & 0xff;
+		printf("BCD %x +/- %x = %x\n", v1, v2, registers.A);
 	}
 	return cycles;
 }
@@ -274,16 +274,7 @@ uint8_t stepCPU() {
 		return IRQorBRK();
 	}
 
-	if (PC == 0xed5d) {
-		mach = true;
-	}
-	
-	if (registers.Y == 0xff && PC == 0xea0f && registers.X == 0x00) {
-		//mach = true;
-	}
-
-	//if(mach && PC >= 0x0801 && PC <= 0x0920)
-	if(mach && logNow)
+	if(logNow && PC >= 0x0801 && PC <= 0x0920)
 		printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d Keyboard: %x\n", PC, readFromMem(PC), readFromMem(PC+1), readFromMem(PC+2), registers.A, registers.X, registers.Y, status.status, SP_, c, readFromMem(0xdc01));
 	switch (readFromMem(PC)) {
 	case 0x00: { status.setBrk(1); irq = true; printf("BREAK "); return 7; break; }

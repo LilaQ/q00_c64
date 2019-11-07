@@ -45,7 +45,7 @@ void resetMMU() {
 		colorram[i] = r;
 
 	//	load firmware (BASIC and KERNAL)
-	loadFirmware("fw.bin.ptc");
+	loadFirmware("./fw.bin.ptc");
 
 	//	load char ROM
 	loadCHRROM("char.bin");
