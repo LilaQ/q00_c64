@@ -86,12 +86,12 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 
 	//	Textmode Variables
 	uint16_t chrrom = 1024 * (VIC_REGISTERS[0x18] & 0b1110);
-	uint16_t screen = 0x400 * ((VIC_REGISTERS[0x18] & 0b11110000) / 0x10);
+	uint16_t screen = 0x40 * (VIC_REGISTERS[0x18] & 0b11110000);
 	uint8_t offset_x = VIC_REGISTERS[0x16] & 0b111;
 	uint16_t colorram = 0xd800;
 
 	//	Bitmap Variables
-	uint16_t bmp_start_address = bank_no * 0x4000 + (VIC_REGISTERS[0x18] & 0b1000) ? 0x2000 : 0x0000;
+	uint16_t bmp_start_address = ((VIC_REGISTERS[0x18] & 0b1000) ? 0x2000 : 0x0000);
 	uint16_t bmp_color_address = ((VIC_REGISTERS[0x18] & 0b11110000) >> 4) * 0x400;
 
 	//	Render Line (if visible scanline)
@@ -228,9 +228,9 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 				((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {
 				if (ADR > 340797 || ADR < 0)
 					printf("ASSERTION! Mem addressed out of range! %d\n", ADR);
-				VRAM[ADR] = COLORS[border_color][0];
+				/*VRAM[ADR] = COLORS[border_color][0];
 				VRAM[ADR + 1] = COLORS[border_color][1];
-				VRAM[ADR + 2] = COLORS[border_color][2];
+				VRAM[ADR + 2] = COLORS[border_color][2];*/
 			}
 		}
 }
