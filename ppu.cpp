@@ -99,10 +99,10 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 
 			//	Basic VRAM start address and OFFSET of the pixel we want to write to in this iteration
 			ADR = (_current_scanline * 400 * 3) + ((i + offset_x) * 3);
-			uint16_t OFFSET = (uint16_t)(((_current_scanline - 36) / 8) * 40 + (i - 40) / 8);
+			uint16_t OFFSET = (uint16_t)(((_current_scanline - 37) / 8) * 40 + (i - 40) / 8);
 
 			//	TEXTMODE
-			if ((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b100000) == 0 || VIC_REGISTERS[0x11] & 0b1000000)) {
+			if ((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b100000) == 0)) {
 
 				//	inside
 
@@ -114,7 +114,7 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 					bg_color = VIC_REGISTERS[0x21 + ((char_id >> 6) & 0b11)] & 0xf;
 					char_id &= 0b111111;
 				}
-				uint16_t char_address = chrrom + (char_id * 8) + ((_current_scanline - 36) % 8);
+				uint16_t char_address = chrrom + (char_id * 8) + ((_current_scanline - 37) % 8);
 				uint8_t color = readFromMemByVIC(colorram + OFFSET) & 0xf;
 				uint8_t chr = readFromMemByVIC(char_address);
 
@@ -144,7 +144,7 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 						low_bit = ((current_byte & (1 << (index - 1))) > 0) ? 1 : 0;
 						//	edge case, index is at the end, we jump to the next byte
 						if (index == 0) {
-							low_bit = (((readFromMemByVIC(chrrom + (char_id * 8) + ((_current_scanline - 36) % 8)) + 1) & (1 << (index + 1))) > 0) ? 1 : 0;
+							low_bit = (((readFromMemByVIC(chrrom + (char_id * 8) + ((_current_scanline - 37) % 8)) + 1) & (1 << (index + 1))) > 0) ? 1 : 0;
 						}
 					}
 					uint8_t color_choice = (high_bit << 1) | low_bit;
@@ -178,7 +178,7 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 			}
 			//	BITMAP MODE
 			else if(SCREENPOS == SCREEN_POS::SCREEN) {
-				uint16_t BMP_OFFSET = (OFFSET / 40) * 320 + (OFFSET % 40) * 8 + ((_current_scanline - 36) % 8);
+				uint16_t BMP_OFFSET = (OFFSET / 40) * 320 + (OFFSET % 40) * 8 + ((_current_scanline - 37) % 8);
 				uint8_t bit = readFromMemByVIC(bmp_start_address + BMP_OFFSET) & (0b10000000 >> (i % 8));
 				uint8_t color_index = (bit) ? (readFromMemByVIC(bmp_color_address + OFFSET) & 0b11110000) >> 4 : readFromMemByVIC(bmp_color_address + OFFSET) & 0b1111;
 
@@ -228,9 +228,9 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 				((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {
 				if (ADR > 340797 || ADR < 0)
 					printf("ASSERTION! Mem addressed out of range! %d\n", ADR);
-				/*VRAM[ADR] = COLORS[border_color][0];
+				VRAM[ADR] = COLORS[border_color][0];
 				VRAM[ADR + 1] = COLORS[border_color][1];
-				VRAM[ADR + 2] = COLORS[border_color][2];*/
+				VRAM[ADR + 2] = COLORS[border_color][2];
 			}
 		}
 }
@@ -269,10 +269,10 @@ void stepPPU(uint8_t cpu_cyc) {
 			}
 			//	Screen
 			else if (cycles_on_current_scanline >= 18 && cycles_on_current_scanline <= 57) {
-				if (current_scanline >= 14 && current_scanline <= 49) {
+				if (current_scanline >= 14 && current_scanline <= 50) {
 					renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_TB);
 				}
-				else if	(current_scanline >= 50 && current_scanline <= 249) {
+				else if	(current_scanline >= 51 && current_scanline <= 250) {
 					//	38-40 Col Area
 					if ((cycles_on_current_scanline == 18 || cycles_on_current_scanline == 57) &&	COLMODE == COL_MODE::COL_38) {
 						renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_LR);
@@ -282,7 +282,7 @@ void stepPPU(uint8_t cpu_cyc) {
 						renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::SCREEN);
 					}
 				}
-				else if (current_scanline >= 250 && current_scanline <= 297) {
+				else if (current_scanline >= 251 && current_scanline <= 297) {
 					renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_TB);
 				}
 			}
@@ -301,7 +301,7 @@ void stepPPU(uint8_t cpu_cyc) {
 		if (irq_mask.irq_can_be_cause_by_rasterline && cycles_on_current_scanline == 0) {	//	enabled?
 			if (current_scanline == raster_irq_row) {
 				irq_status.setFlags(0b10000001);		//	set "IRQ FROM VIC", and as reason set "IRQ FROM RASTERLINE"
-				printf("Raster IRQ on line %d\n", current_scanline);
+				//printf("Raster IRQ on line %d\n", current_scanline);
 				setIRQ(true);
 				return;
 			}
@@ -310,10 +310,6 @@ void stepPPU(uint8_t cpu_cyc) {
 }
 
 void writeVICregister(uint16_t adr, uint8_t val) {
-	//	
-	if (adr == 0xd020) {
-		
-	}
 	switch (adr)
 	{
 		case 0xd011:
@@ -332,6 +328,10 @@ void writeVICregister(uint16_t adr, uint8_t val) {
 			break;
 		default:
 			break;
+	}
+	if (adr == 0xd011) {
+		printLog();
+		printf("Writing to 0xd011 with value %x\n", val);
 	}
 	VIC_REGISTERS[adr % 0xd000] = val;
 }

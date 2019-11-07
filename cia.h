@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "SDL2/include/SDL.h"
+#include "cpu.h"
 
 //	CIA 1
 uint8_t readCIA1DataPortA();
@@ -185,10 +186,10 @@ struct TIMER {
 	bool tick(uint8_t cycles) {
 		while (cycles--) {
 			if (timer_running) {
-				if (!timer_counts_cnt_slopes) {
+				if (!timer_counts_cnt_slopes && timer_value) {
 					//	0,9852486 MHz PAL
 					timer_value--;
-					if (timer_value <= 0) {
+					if (timer_value == 0) {
 						if (timer_stop_timer_after_underflow) {
 							timer_running = false;
 						}

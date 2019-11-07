@@ -111,3 +111,5 @@ great g.s. intro.prg
 .vs/C64Emulator/v16/Preview/ipch/AutoPCH/43faea0e6ebd3d3d/MMU.ipch
 Debug/GG.log
 int.karate.u-fcg.prg
+Release/vcasan.pdb
+Release/vcasan.pdb

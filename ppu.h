@@ -32,6 +32,7 @@ struct IRQ_STATUS {
 	}
 
 	void clearFlags(uint8_t val) {
+		//printf("clearing IRQ flags %x\n", val);
 		if (val & 0x04)
 			irq_req_by_sprite_sprite_collision = false;
 		if (val & 0x02)

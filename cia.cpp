@@ -251,7 +251,7 @@ void tickAllTimers(uint8_t cycles) {
 	}
 	//	CIA 2 Timers
 	if (cia2_timerA.tick(cycles)) {
-		if (cia2_nmi_status.NMI_on_timerA_underflow) {
+		if (cia2_nmi_status.NMI_on_timerA_underflow && !cia2_nmi_status.NMI_occured_general_flag) {
 			cia2_nmi_status.NMI_occured_general_flag = true;
 			cia2_nmi_status.NMI_occured_by_underflow_timerA = true;
 			//setGO();
@@ -259,7 +259,7 @@ void tickAllTimers(uint8_t cycles) {
 		}
 	}
 	if (cia2_timerB.tick(cycles)) {
-		if (cia2_nmi_status.NMI_on_timerB_underflow) {
+		if (cia2_nmi_status.NMI_on_timerB_underflow && !cia2_nmi_status.NMI_occured_general_flag) {
 			cia2_nmi_status.NMI_occured_general_flag = true;
 			cia2_nmi_status.NMI_occured_by_underflow_timerB = true;
 			setNMI(true);

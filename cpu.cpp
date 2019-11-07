@@ -247,10 +247,6 @@ Registers getCPURegs() {
 int c = 0;
 uint8_t r = 0; //	don't delete, return val holder
 uint16_t ff = 1;
-bool mach = false;
-void setGO() {
-	mach = true;
-}
 
 void printLog() {
 	printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d Keyboard: %x\n", PC, readFromMem(PC), readFromMem(PC + 1), readFromMem(PC + 2), registers.A, registers.X, registers.Y, status.status, SP_, c, readFromMem(0xdc01));
@@ -274,7 +270,7 @@ uint8_t stepCPU() {
 		return IRQorBRK();
 	}
 
-	if(logNow && PC >= 0x0801 && PC <= 0x0920)
+	if(logNow)
 		printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d Keyboard: %x\n", PC, readFromMem(PC), readFromMem(PC+1), readFromMem(PC+2), registers.A, registers.X, registers.Y, status.status, SP_, c, readFromMem(0xdc01));
 	switch (readFromMem(PC)) {
 	case 0x00: { status.setBrk(1); irq = true; printf("BREAK "); return 7; break; }
