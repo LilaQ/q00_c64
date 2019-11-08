@@ -161,6 +161,9 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 						case 0x02:
 							color = VIC_REGISTERS[0x23];
 							break;
+						case 0x03:
+							color = readFromMemByVIC(OFFSET + colorram) % 8;
+							break;
 						}
 						color &= 0xf;
 						VRAM[ADR] = COLORS[color][0];
@@ -328,10 +331,6 @@ void writeVICregister(uint16_t adr, uint8_t val) {
 			break;
 		default:
 			break;
-	}
-	if (adr == 0xd011) {
-		printLog();
-		printf("Writing to 0xd011 with value %x\n", val);
 	}
 	VIC_REGISTERS[adr % 0xd000] = val;
 }

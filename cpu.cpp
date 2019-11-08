@@ -45,6 +45,45 @@ uint8_t EOR(uint16_t adr, uint8_t cycles) {
 	status.setNegative(registers.A >> 7);
 	return cycles;
 }
+
+/*
+
+	A,   Accumulator 
+AL, /* low nybble of accumulator 
+AH, /* high nybble of accumulator 
+
+C,  /* Carry flag 
+Z,  /* Zero flag 
+V,  /* oVerflow flag 
+N,  /* Negative flag 
+
+s;  /* value to be added to Accumulator 
+
+AL = (A & 15) + (s & 15) + C;         /* Calculate the lower nybble. 
+
+AH = (A >> 4) + (s >> 4) + (AL > 15); /* Calculate the upper nybble. 
+
+if (AL > 9) AL += 6;                  /* BCD fixup for lower nybble. 
+
+Z = ((A + s + C) & 255 != 0);         /* Zero flag is set just
+										 like in Binary mode. 
+
+										 /* Negative and Overflow flags are set with the same logic than in
+											Binary mode, but after fixing the lower nybble. 
+
+N = (AH & 8 != 0);
+V = ((AH << 4) ^ A) & 128 && !((A ^ s) & 128);
+
+if (AH > 9) AH += 6;                   BCD fixup for upper nybble. 
+
+ Carry is the only flag set after fixing the result. 
+
+C = (AH > 15);
+A = ((AH << 4) | (AL & 15)) & 255;
+
+*/
+
+
 uint8_t ADD(uint8_t val, uint8_t cycles) {
 	if (status.decimal == 0) {
 		uint16_t sum = registers.A + val + status.carry;
