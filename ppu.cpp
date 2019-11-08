@@ -231,16 +231,24 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 				((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {
 				if (ADR > 340797 || ADR < 0)
 					printf("ASSERTION! Mem addressed out of range! %d\n", ADR);
-				VRAM[ADR] = COLORS[border_color][0];
+				/*VRAM[ADR] = COLORS[border_color][0];
 				VRAM[ADR + 1] = COLORS[border_color][1];
-				VRAM[ADR + 2] = COLORS[border_color][2];
+				VRAM[ADR + 2] = COLORS[border_color][2];*/
+				
+					VRAM[(_current_scanline * 400 * 3) + (i * 3)] = COLORS[border_color][0];
+					VRAM[(_current_scanline * 400 * 3) + (i * 3) + 1] = COLORS[border_color][1];
+					VRAM[(_current_scanline * 400 * 3) + (i * 3) + 2] = COLORS[border_color][2];
+				
 			}
 		}
 }
 
 void stepPPU(uint8_t cpu_cyc) {
-	COL_MODE COLMODE = (VIC_REGISTERS[0x16] & 0b1000) ? COL_MODE::COL_40 : COL_MODE::COL_38;
 	while (cpu_cyc--) {
+
+		//	Column Mode
+		COL_MODE COLMODE = (VIC_REGISTERS[0x16] & 0b1000) ? COL_MODE::COL_40 : COL_MODE::COL_38;
+
 		//	Raster Ray
 		cycles_on_current_scanline++;
 		if (cycles_on_current_scanline >= 63) {
@@ -272,19 +280,22 @@ void stepPPU(uint8_t cpu_cyc) {
 			}
 			//	Screen
 			else if (cycles_on_current_scanline >= 18 && cycles_on_current_scanline <= 57) {
+				//	Top Border
 				if (current_scanline >= 14 && current_scanline <= 50) {
 					renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_TB);
 				}
+				//	Actual Screen
 				else if	(current_scanline >= 51 && current_scanline <= 250) {
-					//	38-40 Col Area
-					if ((cycles_on_current_scanline == 18 || cycles_on_current_scanline == 57) &&	COLMODE == COL_MODE::COL_38) {
-						renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_LR);
-					}
 					//	Screen Only Area
-					else if(cycles_on_current_scanline >= 18 && cycles_on_current_scanline <= 57) {
+					if(cycles_on_current_scanline >= 18 && cycles_on_current_scanline <= 57) {
 						renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::SCREEN);
 					}
+					//	38-40 Col Area
+					if ((cycles_on_current_scanline == 18 || cycles_on_current_scanline == 57) && COLMODE == COL_MODE::COL_38) {
+						renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_LR);
+					}
 				}
+				//	Bottom Border
 				else if (current_scanline >= 251 && current_scanline <= 297) {
 					renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_TB);
 				}
