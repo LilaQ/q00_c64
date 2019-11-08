@@ -76,8 +76,8 @@ void initPPU(string filename) {
 void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR) {
 
 	//	adjust x and y to accomodate to the sprite-raster that sprites can be drawn to
-	int16_t x = pixel_on_scanline - 17;
-	int16_t y = scanline + 14;
+	int16_t x = pixel_on_scanline - 16;
+	int16_t y = scanline + 13;
 	uint16_t screen_start = 0x40 * (VIC_REGISTERS[0x18] & 0b11110000);
 
 	//	iterate through all 8 available sprites
@@ -402,7 +402,7 @@ void stepPPU(uint8_t cpu_cyc) {
 		}
 
 		//	Rasterzeileninterrupt
-		if (irq_mask.irq_can_be_cause_by_rasterline && cycles_on_current_scanline == 0) {	//	enabled?
+		if (irq_mask.irq_can_be_cause_by_rasterline && irq_status.irq_req_by_rasterline == false) {	//	enabled?
 			if (current_scanline == raster_irq_row) {
 				irq_status.setFlags(0b10000001);		//	set "IRQ FROM VIC", and as reason set "IRQ FROM RASTERLINE"
 				//printf("Raster IRQ on line %d\n", current_scanline);
