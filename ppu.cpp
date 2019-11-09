@@ -15,7 +15,6 @@ using namespace std;
 
 array<uint8_t, 0x31> VIC_REGISTERS;
 uint16_t cycles_on_current_scanline = 0;
-int last_cycles_on_current_scanline = 0;
 uint16_t current_scanline = 0;
 uint16_t raster_irq_row = 0;
 bool DRAW_BORDER = true;
@@ -317,7 +316,7 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 		}
 
 		//	sprites
-		renderSprites(i, _current_scanline, ADR);
+		//renderSprites(i, _current_scanline, ADR);
 
 		//	border
 		uint8_t border_color = VIC_REGISTERS[0x20] & 0xf;
@@ -333,7 +332,10 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 	}
 }
 
+uint8_t cycles_carry = 0;
 void stepPPU(uint8_t cpu_cyc) {
+	cpu_cyc += cycles_carry;
+	cycles_carry = 0;
 	while (cpu_cyc--) {
 
 		//	Column Mode
@@ -402,14 +404,16 @@ void stepPPU(uint8_t cpu_cyc) {
 		}
 
 		//	Rasterzeileninterrupt
-		if (irq_mask.irq_can_be_cause_by_rasterline && irq_status.irq_req_by_rasterline == false) {	//	enabled?
+		if (irq_mask.irq_can_be_cause_by_rasterline && cycles_on_current_scanline == 0) {	//	enabled?
 			if (current_scanline == raster_irq_row) {
 				irq_status.setFlags(0b10000001);		//	set "IRQ FROM VIC", and as reason set "IRQ FROM RASTERLINE"
 				//printf("Raster IRQ on line %d\n", current_scanline);
 				setIRQ(true);
+				cycles_carry = cpu_cyc;
 				return;
 			}
 		}
+
 	}
 }
 
