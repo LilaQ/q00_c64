@@ -16,6 +16,9 @@ SDL_Event event;					//	Eventhandler for all SDL events
 bool unpaused = true;
 uint8_t lastcyc = 0;
 
+//	DEBUG
+bool lcy = false;
+
 int main()
 {
 	resetMMU();
@@ -27,6 +30,11 @@ int main()
 	while (1) {
 		if (unpaused) {
 			lastcyc = stepCPU();
+			if (lcy) {
+				lcy = false;
+				printf("[ Cycles: %d ]\n", lastcyc);
+				logDraw();
+			}
 			stepPPU(lastcyc);
 			tickAllTimers(lastcyc);
 		}
@@ -34,6 +42,10 @@ int main()
 	}
 
 	return 1;
+}
+
+void logCycles() {
+	lcy = true;
 }
 
 int getLastCyc() {

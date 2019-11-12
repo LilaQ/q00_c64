@@ -14,8 +14,6 @@
 using namespace std;
 
 array<uint8_t, 0x31> VIC_REGISTERS;
-uint16_t cycles_on_current_scanline = 0;
-int last_cycles_on_current_scanline = 0;
 uint16_t current_scanline = 0;
 uint16_t raster_irq_row = 0;
 bool DRAW_BORDER = true;
@@ -73,11 +71,25 @@ void initPPU(string filename) {
 	drawFrame();
 }
 
+void setScreenSize(UI_SCREEN_SIZE scr_s) {
+	switch (scr_s)
+	{
+		case UI_SCREEN_SIZE::ORIG:
+			SDL_SetWindowSize(window, 400, 304);
+			break;
+		case UI_SCREEN_SIZE::X2:
+			SDL_SetWindowSize(window, 800, 588);
+			break;
+		default:
+			break;
+	}
+}
+
 void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR) {
 
 	//	adjust x and y to accomodate to the sprite-raster that sprites can be drawn to
-	int16_t x = pixel_on_scanline - 16;
-	int16_t y = scanline + 13;
+	int16_t x = pixel_on_scanline - 24;
+	int16_t y = scanline + 15;
 	uint16_t screen_start = 0x40 * (VIC_REGISTERS[0x18] & 0b11110000);
 
 	//	iterate through all 8 available sprites
@@ -164,16 +176,9 @@ void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR) 
 	}
 }
 
-void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanline, SCREEN_POS SCREENPOS) {
-
+void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
+	
 	uint8_t bank_no = 0b11 - (readCIA2DataPortA() & 0b11);
-
-	//	remove the offset of VBLANK (for drawing/rendering)
-	_current_scanline -= 14;
- 
-	//	calculate the pixels we need to draw at this cycle position
-	uint16_t pixel_to = (_cycles_on_current_scanline - 12) * 8;
-	uint16_t pixel_from = pixel_to - 8;
 
 	//	Textmode Variables
 	uint16_t chrrom = 1024 * (VIC_REGISTERS[0x18] & 0b1110);
@@ -185,15 +190,18 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 	uint16_t bmp_start_address = ((VIC_REGISTERS[0x18] & 0b1000) ? 0x2000 : 0x0000);
 	uint16_t bmp_color_address = ((VIC_REGISTERS[0x18] & 0b11110000) >> 4) * 0x400;
 
-	//	Render Line (if visible scanline)
-	for (uint16_t i = pixel_from; i < pixel_to; i++) {
 
+	if (SCREENPOS != SCREEN_POS::NO_RENDER) {
 		//	Basic VRAM start address and OFFSET of the pixel we want to write to in this iteration
-		ADR = (_current_scanline * 400 * 3) + ((i + offset_x) * 3);
-		uint16_t OFFSET = (uint16_t)(((_current_scanline - 37) / 8) * 40 + (i - 40) / 8);
+		ADR = (scanline * 400 * 3) + ((x + offset_x) * 3);
+		uint16_t OFFSET = (uint16_t)(((scanline - 35) / 8) * 40 + (x - 48) / 8);
 
 		//	TEXTMODE
-		if ((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b100000) == 0)) {
+		if (((SCREENPOS == SCREEN_POS::SCREEN)  ||
+			(SCREENPOS == SCREEN_POS::ROW_38_AREA) ||
+			(SCREENPOS == SCREEN_POS::COL_38_AREA)) &&
+			((VIC_REGISTERS[0x11] & 0b100000) == 0)
+			) {
 
 			//	inside
 
@@ -205,15 +213,15 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 				bg_color = VIC_REGISTERS[0x21 + ((char_id >> 6) & 0b11)] & 0xf;
 				char_id &= 0b111111;
 			}
-			uint16_t char_address = chrrom + (char_id * 8) + ((_current_scanline - 37) % 8);
+			uint16_t char_address = chrrom + (char_id * 8) + ((scanline - 35) % 8);
 			uint8_t color = readFromMemByVIC(colorram + OFFSET) & 0xf;
 			uint8_t chr = readFromMemByVIC(char_address);
 
 			//	NORMAL MODE
 			if ((VIC_REGISTERS[0x16] & 0b10000) == 0) {
-				VRAM[ADR] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
-				VRAM[ADR + 1] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
-				VRAM[ADR + 2] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
+				VRAM[ADR] = ((chr & (1 << (7 - (x - 48) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
+				VRAM[ADR + 1] = ((chr & (1 << (7 - (x - 48) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
+				VRAM[ADR + 2] = ((chr & (1 << (7 - (x - 48) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
 			}
 
 			//	MULTICOLOR MODE
@@ -224,7 +232,7 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 					%10 = $d023
 					%11 = Farbe laut Farb-RAM (ab $d800)
 				*/
-				uint8_t index = (7 - (i % 8));
+				uint8_t index = (7 - (x % 8));
 				uint8_t current_byte = chr;
 				//	If we are at bit 0 of the 2 bits...
 				uint8_t high_bit = ((current_byte & (1 << (index + 1))) > 0) ? 1 : 0;
@@ -235,7 +243,7 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 					low_bit = ((current_byte & (1 << (index - 1))) > 0) ? 1 : 0;
 					//	edge case, index is at the end, we jump to the next byte
 					if (index == 0) {
-						low_bit = (((readFromMemByVIC(chrrom + (char_id * 8) + ((_current_scanline - 37) % 8)) + 1) & (1 << (index + 1))) > 0) ? 1 : 0;
+						low_bit = (((readFromMemByVIC(chrrom + (char_id * 8) + ((scanline - 35) % 8)) + 1) & (1 << (index + 1))) > 0) ? 1 : 0;
 					}
 				}
 				uint8_t color_choice = (high_bit << 1) | low_bit;
@@ -264,21 +272,24 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 				//	...else it's still going to be hires single color mode
 				else {
 					color &= 0xf;
-					VRAM[ADR] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
-					VRAM[ADR + 1] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
-					VRAM[ADR + 2] = ((chr & (1 << (7 - (i - 40) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
+					VRAM[ADR] = ((chr & (1 << (7 - (x - 48) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
+					VRAM[ADR + 1] = ((chr & (1 << (7 - (x - 48) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
+					VRAM[ADR + 2] = ((chr & (1 << (7 - (x - 48) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
 				}
 			}
 		}
 		//	BITMAP MODE
-		else if(SCREENPOS == SCREEN_POS::SCREEN) {
-			uint16_t BMP_OFFSET = (OFFSET / 40) * 320 + (OFFSET % 40) * 8 + ((_current_scanline - 37) % 8);
-			uint8_t bit = readFromMemByVIC(bmp_start_address + BMP_OFFSET) & (0b10000000 >> (i % 8));
+		else if ((SCREENPOS == SCREEN_POS::SCREEN) ||
+				 (SCREENPOS == SCREEN_POS::COL_38_AREA) ||
+				 (SCREENPOS == SCREEN_POS::ROW_38_AREA)
+			) {
+			uint16_t BMP_OFFSET = (OFFSET / 40) * 320 + (OFFSET % 40) * 8 + ((scanline - 35) % 8);
+			uint8_t bit = readFromMemByVIC(bmp_start_address + BMP_OFFSET) & (0b10000000 >> (x % 8));
 			uint8_t color_index = (bit) ? (readFromMemByVIC(bmp_color_address + OFFSET) & 0b11110000) >> 4 : readFromMemByVIC(bmp_color_address + OFFSET) & 0b1111;
 
 			//	MULTICOLOR MODE
 			if ((VIC_REGISTERS[0x16] & 0b10000)) {
-				uint8_t index = (7 - (i % 8));
+				uint8_t index = (7 - (x % 8));
 				uint8_t current_byte = readFromMemByVIC(bmp_start_address + BMP_OFFSET);
 				//	If we are at bit 0 of the 2 bits...
 				uint8_t high_bit = ((current_byte & (1 << (index + 1))) > 0) ? 1 : 0;
@@ -317,7 +328,7 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 		}
 
 		//	sprites
-		renderSprites(i, _current_scanline, ADR);
+		renderSprites(x, scanline, ADR);
 
 		//	border
 		uint8_t border_color = VIC_REGISTERS[0x20] & 0xf;
@@ -325,15 +336,17 @@ void renderByCycles(int16_t _current_scanline, uint16_t _cycles_on_current_scanl
 			((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {
 			if (ADR > 340797 || ADR < 0)
 				printf("ASSERTION! Mem addressed out of range! %d\n", ADR);
-			VRAM[(_current_scanline * 400 * 3) + (i * 3)] = COLORS[border_color][0];
-			VRAM[(_current_scanline * 400 * 3) + (i * 3) + 1] = COLORS[border_color][1];
-			VRAM[(_current_scanline * 400 * 3) + (i * 3) + 2] = COLORS[border_color][2];
-				
+			VRAM[(scanline * 400 * 3) + (x * 3)] = COLORS[border_color][0];
+			VRAM[(scanline * 400 * 3) + (x * 3) + 1] = COLORS[border_color][1];
+			VRAM[(scanline * 400 * 3) + (x * 3) + 2] = COLORS[border_color][2];
+
 		}
 	}
 }
 
-void stepPPU(uint8_t cpu_cyc) {
+
+/*void stepPPU(uint8_t cpu_cyc) {
+
 	while (cpu_cyc--) {
 
 		//	Column Mode
@@ -350,7 +363,7 @@ void stepPPU(uint8_t cpu_cyc) {
 		}
 
 		//	VBLANK (top of the screen)
-		if (current_scanline >= 0 && current_scanline <= 13) {
+		if (current_scanline >= 0 && current_scanline <= 12) {
 			//	actually draw the screen
 			if (cycles_on_current_scanline == 0 && current_scanline == 0) {
 				drawFrame();
@@ -358,7 +371,7 @@ void stepPPU(uint8_t cpu_cyc) {
 		}
 
 		//	Border and Screen
-		else if (current_scanline >= 14 && current_scanline < 297) {
+		else if (current_scanline >= 13 && current_scanline < 296) {
 
 			//	Left HBLANK
 			if (cycles_on_current_scanline >= 0 && cycles_on_current_scanline <= 12) {
@@ -371,11 +384,11 @@ void stepPPU(uint8_t cpu_cyc) {
 			//	Screen
 			else if (cycles_on_current_scanline >= 18 && cycles_on_current_scanline <= 57) {
 				//	Top Border
-				if (current_scanline >= 14 && current_scanline <= 50) {
+				if (current_scanline >= 13 && current_scanline <= 49) {
 					renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_TB);
 				}
 				//	Actual Screen
-				else if	(current_scanline >= 51 && current_scanline <= 250) {
+				else if	(current_scanline >= 50 && current_scanline <= 249) {
 					//	Screen Only Area
 					if(cycles_on_current_scanline >= 18 && cycles_on_current_scanline <= 57) {
 						renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::SCREEN);
@@ -386,7 +399,7 @@ void stepPPU(uint8_t cpu_cyc) {
 					}
 				}
 				//	Bottom Border
-				else if (current_scanline >= 251 && current_scanline <= 297) {
+				else if (current_scanline >= 250 && current_scanline <= 297) {
 					renderByCycles(current_scanline, cycles_on_current_scanline, SCREEN_POS::BORDER_TB);
 				}
 			}
@@ -397,12 +410,12 @@ void stepPPU(uint8_t cpu_cyc) {
 		}
 
 		//	VBLANK (bottom of the screen)
-		else if (current_scanline >= 297 && current_scanline <= 311) {
+		else if (current_scanline >= 296 && current_scanline <= 311) {
 			//	do nothing
 		}
 
 		//	Rasterzeileninterrupt
-		if (irq_mask.irq_can_be_cause_by_rasterline && irq_status.irq_req_by_rasterline == false) {	//	enabled?
+		if (irq_mask.irq_can_be_cause_by_rasterline && cycles_on_current_scanline == 0) {	//	enabled?
 			if (current_scanline == raster_irq_row) {
 				irq_status.setFlags(0b10000001);		//	set "IRQ FROM VIC", and as reason set "IRQ FROM RASTERLINE"
 				//printf("Raster IRQ on line %d\n", current_scanline);
@@ -410,7 +423,161 @@ void stepPPU(uint8_t cpu_cyc) {
 				return;
 			}
 		}
+
 	}
+}*/
+
+
+
+/*
+					  Raster-  Takt-   sichtb.  sichtbare
+	VIC-II    System  zeilen   zyklen  Zeilen   Pixel/Zeile
+	-------------------------------------------------------
+	6569      PAL      312       63      284       403
+*/
+uint16_t cy_0 = 0;
+uint16_t cy_x = 0;
+float cycle_carry = 0;	//	carry floating point parts of cycles we have not yet drawn on the VIC for
+bool ldr = false;
+void logDraw() {
+	ldr = true;
+}
+
+void stepPPU(uint8_t cycles) {
+
+	SCREEN_POS scr_pos = SCREEN_POS::NO_RENDER;
+
+	//	calc how many pixels we will be able to run with the currently processed cycles
+	uint16_t pixels_to_process = 0;
+	float sum_cycles = ((float)cycles) + cycle_carry;
+	pixels_to_process = sum_cycles / 0.125;
+	cycle_carry = sum_cycles - (pixels_to_process * 0.125);
+
+	while (pixels_to_process) {
+		pixels_to_process--;
+
+		if (ldr == true && VIC_REGISTERS[0x20] == 1) {
+			printf("^-- this draws at cx: %d and scanline %d\n", cy_x, current_scanline);
+		}
+
+		if (current_scanline >= 0 && current_scanline < 16) {			//	VBlank Top
+			scr_pos = SCREEN_POS::NO_RENDER;
+		}
+		else if (current_scanline >= 16 && current_scanline < 51) {		//	Top Border
+			if ( (cy_x >= 0 && cy_x < 24) ||
+				 (cy_x >= 480 && cy_x < 504) ||
+				 (cy_x >= 343 && cy_x < 380)) {
+				scr_pos = SCREEN_POS::BORDER_LR;
+			}
+			else if (cy_x >= 24 && cy_x < 343) {
+				scr_pos = SCREEN_POS::BORDER_TB;
+			}
+			else {
+				scr_pos = SCREEN_POS::NO_RENDER;
+			}
+		}
+		else if (current_scanline >= 51 && current_scanline < 55) {		//	Top, 38-row-area
+			if ((cy_x >= 0 && cy_x < 24) ||
+				(cy_x >= 480 && cy_x < 504) ||
+				(cy_x >= 343 && cy_x < 380)) {
+				scr_pos = SCREEN_POS::BORDER_LR;
+			}
+			else if (cy_x >= 24 && cy_x <= 343) {
+				scr_pos = SCREEN_POS::ROW_38_AREA;
+			}
+			else {
+				scr_pos = SCREEN_POS::NO_RENDER;
+			}
+		}
+		else if (current_scanline >= 55 && current_scanline < 246) {	//	Screen
+			if ((cy_x >= 0 && cy_x < 24) ||
+				(cy_x >= 480 && cy_x < 504)) {
+				scr_pos = SCREEN_POS::BORDER_LR;
+			}
+			else if (cy_x >= 24 && cy_x < 31) {
+				scr_pos = SCREEN_POS::COL_38_AREA;
+			}
+			else if (cy_x >= 31 && cy_x <= 334) {
+				scr_pos = SCREEN_POS::SCREEN;
+			}
+			else if (cy_x >= 334 && cy_x < 343) {
+				scr_pos = SCREEN_POS::COL_38_AREA;
+			}
+			else if (cy_x >= 343 && cy_x < 380) {
+				scr_pos = SCREEN_POS::BORDER_LR;
+			}
+			else {
+				scr_pos = SCREEN_POS::NO_RENDER;
+			}
+
+		}
+		else if (current_scanline >= 246 && current_scanline < 251) {	//	Bottom, 38-row-are
+			if ((cy_x >= 0 && cy_x < 24) ||
+				(cy_x >= 480 && cy_x < 504) ||
+				(cy_x >= 343 && cy_x < 380)) {
+				scr_pos = SCREEN_POS::BORDER_LR;
+			}
+			else if (cy_x >= 24 && cy_x <= 343) {
+				scr_pos = SCREEN_POS::ROW_38_AREA;
+			}
+			else {
+				scr_pos = SCREEN_POS::NO_RENDER;
+			}
+		}
+		else if (current_scanline >= 251 && current_scanline < 299) {	//	Bottom Border
+			if ((cy_x >= 0 && cy_x < 24) ||
+				(cy_x >= 480 && cy_x < 504) ||
+				(cy_x >= 343 && cy_x < 380)) {
+				scr_pos = SCREEN_POS::BORDER_LR;
+			}
+			else if (cy_x >= 24 && cy_x < 343) {
+				scr_pos = SCREEN_POS::BORDER_TB;
+			}
+			else {
+				scr_pos = SCREEN_POS::NO_RENDER;
+			}
+		}
+		else if (current_scanline >= 299 && current_scanline < 312) {	//	VBlank, bottom
+			scr_pos = SCREEN_POS::NO_RENDER;
+		}
+
+		//	offset, according to which pixels need to be our 0/0 point in our actual window
+		int16_t draw_x = cy_x + 24;
+		draw_x %= 504;
+		renderByPixels(current_scanline - 16, draw_x, scr_pos);
+
+		cy_x++;
+		if (cy_x == 504) {
+			cy_x = 0;
+		}
+		if (cy_x == 404) {
+			current_scanline++;
+			if (current_scanline == 312) {
+				current_scanline = 0;
+				printf("Drawing\n");
+				drawFrame();
+			}
+			if (((current_scanline - 55) >= 0) && ((current_scanline - 55) % 8 == 0)) {
+				//pixels_to_process += 40 / 0.125;
+			}
+		}
+
+		cy_0 = cy_x / 8;
+
+		//	Rasterzeileninterrupt
+		if (irq_mask.irq_can_be_cause_by_rasterline && cy_x == 434) {	//	enabled?
+			if (current_scanline == raster_irq_row) {
+				irq_status.setFlags(0b10000001);		//	set "IRQ FROM VIC", and as reason set "IRQ FROM RASTERLINE"
+				//printf("Raster IRQ on line %d\n", current_scanline);
+				//printf("[RasterIRQ occured at scanline: %d]\n", current_scanline);
+				//cycle_carry += pixels_to_process * 0.125;
+				setIRQ(true);
+				return;
+			}
+		}
+
+	}
+	ldr = false;
 }
 
 void writeVICregister(uint16_t adr, uint8_t val) {
@@ -433,6 +600,11 @@ void writeVICregister(uint16_t adr, uint8_t val) {
 		default:
 			break;
 	}
+	if (adr == 0xd020) {
+		//printf("[RasterIRQ set to %d] setting Bordercolor %x at scanline: %d at cycle %d\n", raster_irq_row, val, current_scanline, cy_0);
+		//if (val == 0)
+			//printf("\n");
+	}
 	VIC_REGISTERS[adr % 0xd000] = val;
 }
 
@@ -446,6 +618,7 @@ uint8_t readVICregister(uint16_t adr) {
 			break;
 		}
 		case 0xd012:			//	Current Scanline
+			printf(" [Scanline: %d] ", current_scanline);
 			return (uint8_t)(current_scanline & 0xff);
 			break;
 		case 0xd019:			//	IRQ flags, (active IRQs)

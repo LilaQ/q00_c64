@@ -1,10 +1,6 @@
 #pragma once
 #include <string>
 using namespace std;
-void stepPPU(uint8_t cpu_cycles);
-void initPPU(string name);
-void writeVICregister(uint16_t adr, uint8_t val);
-uint8_t readVICregister(uint16_t adr);
 
 struct IRQ_STATUS {
 	/*
@@ -96,9 +92,28 @@ enum class SCREEN_POS {
 	SCREEN,
 	BORDER_LR,
 	BORDER_TB,
+	NO_RENDER,
+	ROW_38_AREA,
+	COL_38_AREA
 };
 
 enum class COL_MODE {
 	COL_38,
 	COL_40
 };
+
+enum class UI_SCREEN_SIZE {
+	ORIG,
+	X2
+};
+
+void stepPPU(uint8_t cpu_cycles);
+void initPPU(string name);
+void writeVICregister(uint16_t adr, uint8_t val);
+uint8_t readVICregister(uint16_t adr);
+void setScreenSize(UI_SCREEN_SIZE scr_s);
+
+
+//	DEBUG
+void logDraw();
+uint8_t readVICregister(uint16_t adr);

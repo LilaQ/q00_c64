@@ -35,13 +35,17 @@ void initWindow(SDL_Window* win, string filename) {
 	HWND hwnd = wmInfo.info.win.window;
 	HMENU hMenuBar = CreateMenu();
 	HMENU hFile = CreateMenu();
+	HMENU hScreen = CreateMenu();
 	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hFile, "[ main ]");
 	AppendMenu(hMenuBar, MF_STRING, 11, "[ ||> un/pause ]");
 	AppendMenu(hMenuBar, MF_STRING, 2, "[ memory ]");
+	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hScreen, "[ screen ]");
 	AppendMenu(hMenuBar, MF_STRING, 3, "[ log now ]");
 	AppendMenu(hFile, MF_STRING, 9, "» load rom");
 	AppendMenu(hFile, MF_STRING, 7, "» reset");
 	AppendMenu(hFile, MF_STRING, 1, "» exit");
+	AppendMenu(hScreen, MF_STRING, 12, "» orig size");
+	AppendMenu(hScreen, MF_STRING, 13, "» 2x size");
 	SetMenu(hwnd, hMenuBar);
 
 	//	Enable WM events for SDL Window
@@ -152,6 +156,14 @@ void handleWindowEvents(SDL_Event event) {
 			//	pause / unpause
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 11) {
 				togglePause();
+			}
+			//	screen size : orig
+			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 12) {
+				setScreenSize(UI_SCREEN_SIZE::ORIG);
+			}
+			//	screen size : 2x
+			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 13) {
+				setScreenSize(UI_SCREEN_SIZE::X2);
 			}
 		}
 		//	close a window

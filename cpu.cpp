@@ -1,6 +1,8 @@
+#pragma once
 #include "cpu.h"
 #include "mmu.h"
 #include "main.h"
+#include "ppu.h"
 #include <map>
 
 //	set up vars
@@ -267,7 +269,7 @@ void setIRQ(bool v) {
 }
 
 uint8_t IRQorBRK() {
-	//printf("IRQ \n");
+	printf("IRQ \n");
 	writeToMem(SP_ + 0x100, PC >> 8);
 	SP_--;
 	writeToMem(SP_ + 0x100, PC & 0xff);
@@ -309,8 +311,11 @@ uint8_t stepCPU() {
 		return IRQorBRK();
 	}
 
-	if(logNow)
-		printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d Keyboard: %x\n", PC, readFromMem(PC), readFromMem(PC+1), readFromMem(PC+2), registers.A, registers.X, registers.Y, status.status, SP_, c, readFromMem(0xdc01));
+	if (PC >= 0x0c00 && PC <= 0x0c70) {
+		//printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d Keyboard: %x\n", PC, readFromMem(PC), readFromMem(PC+1), readFromMem(PC+2), registers.A, registers.X, registers.Y, status.status, SP_, c, readFromMem(0xdc01));
+		printf("%04x $%02x %d ", PC, readFromMem(PC), readVICregister(0xd012));
+		logCycles();
+	}
 	switch (readFromMem(PC)) {
 	case 0x00: { status.setBrk(1); irq = true; printf("BREAK "); return 7; break; }
 	case 0x01: { PC++; return ORA(getIndirectXIndex(PC++, registers.X), 6); break; }
@@ -370,7 +375,7 @@ uint8_t stepCPU() {
 	case 0x3d: { PC++; r = AND(getAbsoluteXIndex(PC, registers.X), 4); PC += 2; return r; break; }		//	TODO +1 cyc if page boundary is crossed
 	case 0x3e: { PC++; r = ROL(getAbsoluteXIndex(PC, registers.X), 7); PC += 2; return r; break; }
 	case 0x3f: { PC++; r = RLA(getAbsoluteXIndex(PC, registers.X), 7); PC += 2; return r; break; } // RLA abx 3,7
-	case 0x40: { SP_++; status.setStatus(readFromMem(SP_ + 0x100)); SP_++; PC = readFromMem(SP_ + 0x100); SP_++; PC |= (readFromMem(SP_ + 0x100) << 8); return 6; break; }
+	case 0x40: { SP_++; status.setStatus(readFromMem(SP_ + 0x100)); SP_++; PC = readFromMem(SP_ + 0x100); SP_++; PC |= (readFromMem(SP_ + 0x100) << 8); printf("[RTI]\n"); return 6; break; }
 	case 0x41: { PC++; return EOR(getIndirectXIndex(PC++, registers.X), 6); break; }
 	case 0x43: { PC++; return SRE(getIndirectXIndex(PC++, registers.X), 8); break; } // SRE inx 2,8
 	case 0x44: { PC += 2; return 3; break; }
