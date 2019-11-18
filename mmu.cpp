@@ -48,7 +48,7 @@ void resetMMU() {
 	loadFirmware("./fw.bin.ptc");
 
 	//	load char ROM
-	loadCHRROM("char.bin");
+	loadCHRROM("./char.bin");
 
 	memory[0x0001] = 0x37;		//	Zeropage for PLA
 }

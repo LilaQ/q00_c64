@@ -1,6 +1,8 @@
+#pragma once
 #include "cpu.h"
 #include "mmu.h"
 #include "main.h"
+#include "ppu.h"
 #include <map>
 
 //	set up vars
@@ -267,7 +269,7 @@ void setIRQ(bool v) {
 }
 
 uint8_t IRQorBRK() {
-	//printf("IRQ \n");
+	printf("IRQ \n");
 	writeToMem(SP_ + 0x100, PC >> 8);
 	SP_--;
 	writeToMem(SP_ + 0x100, PC & 0xff);
@@ -285,7 +287,6 @@ Registers getCPURegs() {
 
 int c = 0;
 uint8_t r = 0; //	don't delete, return val holder
-uint16_t ff = 1;
 
 void printLog() {
 	printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d Keyboard: %x\n", PC, readFromMem(PC), readFromMem(PC + 1), readFromMem(PC + 2), registers.A, registers.X, registers.Y, status.status, SP_, c, readFromMem(0xdc01));
@@ -296,8 +297,7 @@ void setLog(bool v) {
 	logNow = v;
 }
 
-uint8_t stepCPU() {
-	c += getLastCyc();
+uint8_t CPU_executeInstruction() {
 
 	if (nmi) {
 		nmi = false;
@@ -309,8 +309,16 @@ uint8_t stepCPU() {
 		return IRQorBRK();
 	}
 
-	if(logNow)
-		printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d Keyboard: %x\n", PC, readFromMem(PC), readFromMem(PC+1), readFromMem(PC+2), registers.A, registers.X, registers.Y, status.status, SP_, c, readFromMem(0xdc01));
+	//if (PC >= 0x0900 && PC <= 0x0970) {
+	if(PC == 0x0c36) {
+		printf("[PC - %x] IRQ occured, at Cycle %d of Scanline %d\n", PC, currentCycle(), currentScanline());
+	}
+
+	if (PC >= 0x0c00 && PC <= 0x0c70) {
+		//printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d Keyboard: %x\n", PC, readFromMem(PC), readFromMem(PC+1), readFromMem(PC+2), registers.A, registers.X, registers.Y, status.status, SP_, c, readFromMem(0xdc01));
+		//printf("%04x $%02x %d ", PC, readFromMem(PC), readVICregister(0xd012));
+		//logCycles();
+	}
 	switch (readFromMem(PC)) {
 	case 0x00: { status.setBrk(1); irq = true; printf("BREAK "); return 7; break; }
 	case 0x01: { PC++; return ORA(getIndirectXIndex(PC++, registers.X), 6); break; }
@@ -326,7 +334,7 @@ uint8_t stepCPU() {
 	case 0x0d: { PC++; r = ORA(getAbsolute(PC), 4); PC += 2; return r; break; }
 	case 0x0e: { PC++; r = ASL(getAbsolute(PC), 6); PC += 2; return r; break; }
 	case 0x0f: { PC++; r = SLO(getAbsolute(PC), 6); PC += 2; return r; break; } // SLO abs 3,6
-	case 0x10: { if (!status.negative) { PC += 2 + (int8_t)readFromMem(PC + 1); return 3; } else { PC += 2; return 2; } break; }		//	TODO +1 cyc if page boundary is crossed
+	case 0x10: { if (!status.negative) { PC += 2 + (int8_t)readFromMem(PC + 1); return 3 + pageBoundaryCrossed(); } else { PC += 2; return 2 + pageBoundaryCrossed(); } break; }		//	TODO +1 cyc if page boundary is crossed
 	case 0x11: { PC++; r = ORA(getIndirectYIndex(PC++, registers.Y), 5); r += pageBoundaryCrossed(); return r; break; }
 	case 0x13: { PC++; return SLO(getIndirectYIndex(PC++, registers.Y), 8); break; } // SLO iny 2,8
 	case 0x14: { PC += 2; return 4; break; }
@@ -334,11 +342,11 @@ uint8_t stepCPU() {
 	case 0x16: { PC++; return ASL(getZeropageXIndex(PC++, registers.X), 6); break; }
 	case 0x17: { PC++; return SLO(getZeropageXIndex(PC++, registers.X), 6); break; } // SLO zpx 2,6
 	case 0x18: { PC++; status.setCarry(0); return 2; break; }
-	case 0x19: { PC++; r = ORA(getAbsoluteYIndex(PC, registers.Y), 4); PC += 2; return r; break; }		//	TODO +1 cyc if page boundary is crossed
+	case 0x19: { PC++; r = ORA(getAbsoluteYIndex(PC, registers.Y), 4); PC += 2; r += pageBoundaryCrossed(); return r; break; }		//	TODO +1 cyc if page boundary is crossed
 	case 0x1a: { PC++; return 2; break; }
 	case 0x1b: { PC++; r = SLO(getAbsoluteYIndex(PC, registers.Y), 7); PC += 2; return r; break; } // SLO aby 3,7
 	case 0x1c: { PC++; getAbsoluteXIndex(PC++, registers.X); PC++; return 4 + pageBoundaryCrossed(); break; }
-	case 0x1d: { PC++; r = ORA(getAbsoluteXIndex(PC, registers.X), 4); PC += 2; return r; break; }		//	TODO +1 cyc if page boundary is crossed
+	case 0x1d: { PC++; r = ORA(getAbsoluteXIndex(PC, registers.X), 4); PC += 2; r += pageBoundaryCrossed(); return r; break; }		//	TODO +1 cyc if page boundary is crossed
 	case 0x1e: { PC++; r = ASL(getAbsoluteXIndex(PC, registers.X), 7); PC += 2; return r; break; }
 	case 0x1f: { PC++; r = SLO(getAbsoluteXIndex(PC, registers.X), 7); PC += 2; return r; break; } // SLO abx 3,7
 	case 0x20: { writeToMem(SP_ + 0x100, (PC + 2) >> 8); SP_--; writeToMem(SP_ + 0x100, (PC + 2) & 0xff); SP_--; PC = getAbsolute(PC + 1); return 6; break; }
@@ -355,7 +363,7 @@ uint8_t stepCPU() {
 	case 0x2d: { PC++; r = AND(getAbsolute(PC), 4); PC += 2; return r; break; }
 	case 0x2e: { PC++; r = ROL(getAbsolute(PC), 6); PC += 2; return r; break; }
 	case 0x2f: { PC++; r = RLA(getAbsolute(PC), 6); PC += 2; return r; break; } // RLA abs 3,6
-	case 0x30: { if (status.negative) { PC += 2 + (int8_t)readFromMem(PC + 1); return 3; } else { PC += 2; return 2; } break; }		//	TODO +1 cyc if page boundary is crossed
+	case 0x30: { if (status.negative) { PC += 2 + (int8_t)readFromMem(PC + 1); return 3 + pageBoundaryCrossed(); } else { PC += 2; return 2 + pageBoundaryCrossed(); } break; }		//	TODO +1 cyc if page boundary is crossed
 	case 0x31: { PC++; return AND(getIndirectYIndex(PC++, registers.Y), 5); break; }		//	TODO +1 cyc if page boundary is crossed
 	case 0x33: { PC++; return RLA(getIndirectYIndex(PC++, registers.Y), 8); break; } // RLA iny 2,8
 	case 0x34: { PC += 2; return 4; break; }
@@ -384,7 +392,7 @@ uint8_t stepCPU() {
 	case 0x4d: { PC++; r = EOR(getAbsolute(PC), 4); PC += 2; return r; break; }
 	case 0x4e: { PC++; r = LSR(getAbsolute(PC), 6); PC += 2; return r; break; }
 	case 0x4f: { PC++; r = SRE(getAbsolute(PC), 6); PC += 2; return r; break; } // SRE abs 3,6
-	case 0x50: { if (!status.overflow) { PC += 2 + (int8_t)readFromMem(PC + 1); return 3; } else { PC += 2; return 2; } break; }		//	TODO +1 cyc if page boundary is crossed
+	case 0x50: { if (!status.overflow) { PC += 2 + (int8_t)readFromMem(PC + 1); return 3 + pageBoundaryCrossed(); } else { PC += 2; return 2 + pageBoundaryCrossed(); } break; }		//	TODO +1 cyc if page boundary is crossed
 	case 0x51: { PC++; return EOR(getIndirectYIndex(PC++, registers.Y), 5); break; }		//	TODO +1 cyc if page boundary is crossed
 	case 0x53: { PC++; return SRE(getIndirectYIndex(PC++, registers.Y), 8); break; } // SRE iny 2,8
 	case 0x54: { PC += 2; return 4; break; }
@@ -413,7 +421,7 @@ uint8_t stepCPU() {
 	case 0x6d: { PC++; r = ADC(getAbsolute(PC), 4); PC += 2; return r; break; }
 	case 0x6e: { PC++; r = ROR(getAbsolute(PC), 6); PC += 2; return r; break; }
 	case 0x6f: { PC++; r = RRA(getAbsolute(PC), 6); PC += 2; return r; break; } //	RRA abs 3,6
-	case 0x70: { if (status.overflow) { PC += 2 + (int8_t)readFromMem(PC + 1); return 3; } else { PC += 2; return 2; } break; }		//	TODO +1 cyc if page boundary is crossed
+	case 0x70: { if (status.overflow) { PC += 2 + (int8_t)readFromMem(PC + 1); return 3 + pageBoundaryCrossed(); } else { PC += 2; return 2 + pageBoundaryCrossed(); } break; }		//	TODO +1 cyc if page boundary is crossed
 	case 0x71: { PC++; return ADC(getIndirectYIndex(PC++, registers.Y), 5); break; }		//	TODO +1 cyc if page boundary is crossed
 	case 0x73: { PC++; return RRA(getIndirectYIndex(PC++, registers.Y), 8); break; } //	RRA iny 2,8
 	case 0x74: { PC += 2; return 4; break; }
@@ -443,7 +451,7 @@ uint8_t stepCPU() {
 	case 0x8d: { PC++; r = STX(getAbsolute(PC), registers.A, 4); PC += 2; return r; break; }
 	case 0x8e: { PC++; r = STX(getAbsolute(PC), registers.X, 4); PC += 2; return r; break; }
 	case 0x8f: { PC++; r = AAX(getAbsolute(PC), 4); PC += 2; return r; break; }	//	AAX abs 3/4
-	case 0x90: { if (!status.carry) { PC += 2 + (int8_t)readFromMem(PC + 1); return 3; } else { PC += 2; return 2; } break; }		//	TODO +1 cyc if page boundary is crossed
+	case 0x90: { if (!status.carry) { PC += 2 + (int8_t)readFromMem(PC + 1); return 3 + pageBoundaryCrossed(); } else { PC += 2; return 2 + pageBoundaryCrossed(); } break; }		//	TODO +1 cyc if page boundary is crossed
 	case 0x91: { PC++; return STX(getIndirectYIndex(PC++, registers.Y), registers.A, 6); break; }
 	case 0x94: { PC++; return STX(getZeropageXIndex(PC++, registers.X), registers.Y, 4); break; }
 	case 0x95: { PC++; return STX(getZeropageXIndex(PC++, registers.X), registers.A, 4); break; }
@@ -468,7 +476,7 @@ uint8_t stepCPU() {
 	case 0xad: { PC++; r = LDX(registers.A, getAbsolute(PC), 4); PC += 2; return r; break; }
 	case 0xae: { PC++; r = LDX(registers.X, getAbsolute(PC), 4); PC += 2; return r; break; }
 	case 0xaf: { PC++; r = LAX(getAbsolute(PC), 4); PC += 2; return r; break; }	//	LAX zp 3/4
-	case 0xb0: { if (status.carry) { PC += 2 + (int8_t)readFromMem(PC + 1); return 3; } else { PC += 2; return 2; } break; }		//	TODO +1 cyc if page boundary is crossed
+	case 0xb0: { if (status.carry) { PC += 2 + (int8_t)readFromMem(PC + 1); return 3 + pageBoundaryCrossed(); } else { PC += 2; return 2 + pageBoundaryCrossed(); } break; }		//	TODO +1 cyc if page boundary is crossed
 	case 0xb1: { PC++; r = LDX(registers.A, getIndirectYIndex(PC++, registers.Y), 5); r += pageBoundaryCrossed(); return r; break; }
 	case 0xb3: { PC++; r = LAX(getIndirectYIndex(PC++, registers.Y), 5); r += pageBoundaryCrossed(); return r; break; }	//	LAX zp 2/5+
 	case 0xb4: { PC++; return LDX(registers.Y, getZeropageXIndex(PC++, registers.X), 4); break; }
@@ -497,7 +505,7 @@ uint8_t stepCPU() {
 	case 0xcd: { PC++; r = CMP(registers.A, getAbsolute(PC), 4); PC += 2; return r; break; }
 	case 0xce: { PC++; r = DEC(getAbsolute(PC), 6); PC += 2; return r; break; }
 	case 0xcf: { PC++; r = DCP(getAbsolute(PC), 6); PC += 2; return r; break; } // DCP abs 3/6
-	case 0xd0: { if (!status.zero) { PC += 2 + (int8_t)readFromMem(PC + 1); return 3; } else { PC += 2; return 2; } break; }		//	TODO +1 cyc if page boundary is crossed
+	case 0xd0: { if (!status.zero) { PC += 2 + (int8_t)readFromMem(PC + 1); return 3 + pageBoundaryCrossed(); } else { PC += 2; return 2 + pageBoundaryCrossed(); } break; }		//	TODO +1 cyc if page boundary is crossed
 	case 0xd1: { PC++; return CMP(registers.A, getIndirectYIndex(PC++, registers.Y), 5); break; }	//	TODO +1 cyc if page boundary is crossed
 	case 0xd3: { PC++; return DCP(getIndirectYIndex(PC++, registers.Y), 8); break; } // DCP iny 2/8
 	case 0xd4: { PC += 2; return 4; break; }
@@ -536,7 +544,7 @@ uint8_t stepCPU() {
 		}
 		else {
 			PC += 2;
-			return 2;
+			return 2 + pageBoundaryCrossed();
 		}
 		break;
 	}		//	TODO +1 cyc if page boundary is crossed
