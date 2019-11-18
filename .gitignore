@@ -123,3 +123,14 @@ Release/Emu/fw.bin.ptc
 Release/Emu/internat. karate.prg
 Release/Emu/SDL2.dll
 Release/vcasan.pdb
+Release/char.bin
+Release/output_5.log
+Release/SDL2.dll
+Release/SDL2.lib
+Release/SDL2main.lib
+Release/vcasan.pdb
+.vs/C64Emulator/v16/Preview/ipch/AutoPCH/c1f0a449dc4bca53/CIA.ipch
+.vs/C64Emulator/v16/Preview/ipch/AutoPCH/75417598be5972f3/MAIN.ipch
+DEMO_Rasterbars.d64
+Release/vcasan.pdb
+.vs/C64Emulator/v16/Preview/ipch/AutoPCH/75417598be5972f3/MAIN.ipch

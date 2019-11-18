@@ -1,6 +1,7 @@
 #pragma once
-int getLastCyc();
 void togglePause();
 void setPause();
 void resetPause();
-void logCycles();
+
+//	debug
+uint8_t currentCycle();

@@ -117,3 +117,13 @@ void setScreenSize(UI_SCREEN_SIZE scr_s);
 //	DEBUG
 void logDraw();
 uint8_t readVICregister(uint16_t adr);
+uint8_t currentScanline();
+
+
+//	REWRITE
+bool VIC_isBadline();
+void VIC_dataRefresh();
+void VIC_nextScanline();
+void VIC_fetchGraphicsData(uint8_t cycle);
+void VIC_fetchSpritePointer(uint8_t sprite_nr);
+bool VIC_checkRasterIRQ();

@@ -7,10 +7,6 @@ void clearCarry();		//	Only for hooking C64 LOAD routines for filechecking
 void setIRQ(bool v);
 void setNMI(bool v);
 
-
-//	DELETE
-void setGO();
-
 struct Registers
 {
 	unsigned char A;
@@ -77,7 +73,7 @@ struct Status
 
 };
 
-uint8_t stepCPU();
+uint8_t CPU_executeInstruction();
 void resetCPU();
 Registers getCPURegs();
 void setLog(bool v);

@@ -141,7 +141,7 @@ void handleWindowEvents(SDL_Event event) {
 				ofn.lpstrFile = f;
 				ofn.nMaxFile = MAX_PATH;
 				ofn.lpstrTitle = "[ rom selection ]";
-				ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
+				ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
 
 				if (GetOpenFileNameA(&ofn)) {
 					string s(f);
