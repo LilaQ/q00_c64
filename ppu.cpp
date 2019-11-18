@@ -485,20 +485,6 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 
 			}
 		}
-
-		//	sprites
-		//renderSprites(i, _current_scanline, ADR);
-
-		//	border
-		uint8_t border_color = VIC_REGISTERS[0x20] & 0xf;
-		if (((SCREENPOS == SCREEN_POS::BORDER_LR || SCREENPOS == SCREEN_POS::BORDER_TB) && DRAW_BORDER) ||
-			((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {
-			if (ADR > 340797 || ADR < 0)
-				printf("ASSERTION! Mem addressed out of range! %d\n", ADR);
-			VRAM[(_current_scanline * 400 * 3) + (i * 3)] = COLORS[border_color][0];
-			VRAM[(_current_scanline * 400 * 3) + (i * 3) + 1] = COLORS[border_color][1];
-			VRAM[(_current_scanline * 400 * 3) + (i * 3) + 2] = COLORS[border_color][2];
-				
 	}
 }
 
@@ -632,17 +618,6 @@ void VIC_fetchGraphicsData(uint8_t cycle) {
 			VIC_scr_pos = SCREEN_POS::NO_RENDER;
 		}
 
-		//	Rasterzeileninterrupt
-		if (irq_mask.irq_can_be_cause_by_rasterline && cycles_on_current_scanline == 0) {	//	enabled?
-			if (current_scanline == raster_irq_row) {
-				irq_status.setFlags(0b10000001);		//	set "IRQ FROM VIC", and as reason set "IRQ FROM RASTERLINE"
-				//printf("Raster IRQ on line %d\n", current_scanline);
-				setIRQ(true);
-				cycles_carry = cpu_cyc;
-				return;
-			}
-		}
-
 		//	render pixel
 		//	offset, according to which pixels need to be our 0/0 point in our actual window
 		renderByPixels(VIC_scanline - 16, (VIC_scr_x + 24) % 504, VIC_scr_pos);
@@ -650,7 +625,6 @@ void VIC_fetchGraphicsData(uint8_t cycle) {
 		//	increase X-Position & draw actual frame after it's beend rendered completely
 		VIC_scr_x++;
 		if (VIC_scr_x == 504) {
-			//printf("line break at %d \n", cycle);
 			VIC_scr_x = 0;
 		}
 		if (VIC_scr_x == 404 && VIC_scanline == 0) {
@@ -669,7 +643,6 @@ void VIC_dataRefresh() {
 }
 
 void VIC_nextScanline() {
-	//printf("63 cycles over - official linebreak\n");
 	VIC_scanline++;
 	if (VIC_scanline == 312) {
 		VIC_scanline = 0;
