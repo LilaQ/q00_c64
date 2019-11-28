@@ -501,7 +501,7 @@ void logDraw() {
 
 /*	REWRITE FROM HERE ON		*/
 uint16_t VIC_scanline = 0;
-uint16_t VIC_scr_x = 404;
+uint16_t VIC_scr_x = 0;
 SCREEN_POS VIC_scr_pos = SCREEN_POS::NO_RENDER;
 
 //	DEBUG

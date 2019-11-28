@@ -16,7 +16,7 @@ SDL_Event event;
 bool unpaused = true;
 bool isBadline = false;
 bool rasterIRQ = false;
-uint8_t c = 1;
+uint8_t c = 13;
 uint8_t cycles_left = 0;
 
 int main()
