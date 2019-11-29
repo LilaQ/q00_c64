@@ -120,7 +120,7 @@ int main()
 				/*
 					VIC Stub
 				*/
-				VIC_fetchGraphicsData(c);
+				VIC_fetchGraphicsData(1);
 				if (c == 1) {
 					isBadline = VIC_isBadline();
 					rasterIRQ = VIC_checkRasterIRQ();

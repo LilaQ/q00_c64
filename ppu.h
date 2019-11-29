@@ -124,6 +124,6 @@ uint8_t currentScanline();
 bool VIC_isBadline();
 void VIC_dataRefresh();
 void VIC_nextScanline();
-void VIC_fetchGraphicsData(uint8_t cycle);
+void VIC_fetchGraphicsData(uint8_t amount);
 void VIC_fetchSpritePointer(uint8_t sprite_nr);
 bool VIC_checkRasterIRQ();

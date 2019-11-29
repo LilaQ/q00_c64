@@ -533,105 +533,108 @@ bool VIC_checkRasterIRQ() {
 	return false;
 }
 
-void VIC_fetchGraphicsData(uint8_t cycle) {
+void VIC_fetchGraphicsData(uint8_t amount) {
 
-	for(uint8_t i = 0; i < 8; i++) {
+	while (amount--)
+	{
+		for (uint8_t i = 0; i < 8; i++) {
 
-		if (VIC_scanline >= 0 && VIC_scanline < 16) {			//	VBlank Top
-			VIC_scr_pos = SCREEN_POS::NO_RENDER;
-		}
-		else if (VIC_scanline >= 16 && VIC_scanline < 51) {		//	Top Border
-			if ((VIC_scr_x >= 0 && VIC_scr_x < 24) ||
-				(VIC_scr_x >= 480 && VIC_scr_x < 504) ||
-				(VIC_scr_x >= 343 && VIC_scr_x < 380)) {
-				VIC_scr_pos = SCREEN_POS::BORDER_LR;
-			}
-			else if (VIC_scr_x >= 24 && VIC_scr_x < 343) {
-				VIC_scr_pos = SCREEN_POS::BORDER_TB;
-			}
-			else {
+			if (VIC_scanline >= 0 && VIC_scanline < 16) {			//	VBlank Top
 				VIC_scr_pos = SCREEN_POS::NO_RENDER;
 			}
-		}
-		else if (VIC_scanline >= 51 && VIC_scanline < 55) {		//	Top, 38-row-area
-			if ((VIC_scr_x >= 0 && VIC_scr_x < 24) ||
-				(VIC_scr_x >= 480 && VIC_scr_x < 504) ||
-				(VIC_scr_x >= 343 && VIC_scr_x < 380)) {
-				VIC_scr_pos = SCREEN_POS::BORDER_LR;
+			else if (VIC_scanline >= 16 && VIC_scanline < 51) {		//	Top Border
+				if ((VIC_scr_x >= 0 && VIC_scr_x < 24) ||
+					(VIC_scr_x >= 480 && VIC_scr_x < 504) ||
+					(VIC_scr_x >= 343 && VIC_scr_x < 380)) {
+					VIC_scr_pos = SCREEN_POS::BORDER_LR;
+				}
+				else if (VIC_scr_x >= 24 && VIC_scr_x < 343) {
+					VIC_scr_pos = SCREEN_POS::BORDER_TB;
+				}
+				else {
+					VIC_scr_pos = SCREEN_POS::NO_RENDER;
+				}
 			}
-			else if (VIC_scr_x >= 24 && VIC_scr_x <= 343) {
-				VIC_scr_pos = SCREEN_POS::ROW_38_AREA;
+			else if (VIC_scanline >= 51 && VIC_scanline < 55) {		//	Top, 38-row-area
+				if ((VIC_scr_x >= 0 && VIC_scr_x < 24) ||
+					(VIC_scr_x >= 480 && VIC_scr_x < 504) ||
+					(VIC_scr_x >= 343 && VIC_scr_x < 380)) {
+					VIC_scr_pos = SCREEN_POS::BORDER_LR;
+				}
+				else if (VIC_scr_x >= 24 && VIC_scr_x <= 343) {
+					VIC_scr_pos = SCREEN_POS::ROW_38_AREA;
+				}
+				else {
+					VIC_scr_pos = SCREEN_POS::NO_RENDER;
+				}
 			}
-			else {
-				VIC_scr_pos = SCREEN_POS::NO_RENDER;
+			else if (VIC_scanline >= 55 && VIC_scanline < 246) {	//	Screen
+				if ((VIC_scr_x >= 0 && VIC_scr_x < 24) ||
+					(VIC_scr_x >= 480 && VIC_scr_x < 504)) {
+					VIC_scr_pos = SCREEN_POS::BORDER_LR;
+				}
+				else if (VIC_scr_x >= 24 && VIC_scr_x < 31) {
+					VIC_scr_pos = SCREEN_POS::COL_38_AREA;
+				}
+				else if (VIC_scr_x >= 31 && VIC_scr_x <= 334) {
+					VIC_scr_pos = SCREEN_POS::SCREEN;
+				}
+				else if (VIC_scr_x >= 334 && VIC_scr_x < 343) {
+					VIC_scr_pos = SCREEN_POS::COL_38_AREA;
+				}
+				else if (VIC_scr_x >= 343 && VIC_scr_x < 380) {
+					VIC_scr_pos = SCREEN_POS::BORDER_LR;
+				}
+				else {
+					VIC_scr_pos = SCREEN_POS::NO_RENDER;
+				}
+
 			}
-		}
-		else if (VIC_scanline >= 55 && VIC_scanline < 246) {	//	Screen
-			if ((VIC_scr_x >= 0 && VIC_scr_x < 24) ||
-				(VIC_scr_x >= 480 && VIC_scr_x < 504)) {
-				VIC_scr_pos = SCREEN_POS::BORDER_LR;
+			else if (VIC_scanline >= 246 && VIC_scanline < 251) {	//	Bottom, 38-row-are
+				if ((VIC_scr_x >= 0 && VIC_scr_x < 24) ||
+					(VIC_scr_x >= 480 && VIC_scr_x < 504) ||
+					(VIC_scr_x >= 343 && VIC_scr_x < 380)) {
+					VIC_scr_pos = SCREEN_POS::BORDER_LR;
+				}
+				else if (VIC_scr_x >= 24 && VIC_scr_x <= 343) {
+					VIC_scr_pos = SCREEN_POS::ROW_38_AREA;
+				}
+				else {
+					VIC_scr_pos = SCREEN_POS::NO_RENDER;
+				}
 			}
-			else if (VIC_scr_x >= 24 && VIC_scr_x < 31) {
-				VIC_scr_pos = SCREEN_POS::COL_38_AREA;
+			else if (VIC_scanline >= 251 && VIC_scanline < 299) {	//	Bottom Border
+				if ((VIC_scr_x >= 0 && VIC_scr_x < 24) ||
+					(VIC_scr_x >= 480 && VIC_scr_x < 504) ||
+					(VIC_scr_x >= 343 && VIC_scr_x < 380)) {
+					VIC_scr_pos = SCREEN_POS::BORDER_LR;
+				}
+				else if (VIC_scr_x >= 24 && VIC_scr_x < 343) {
+					VIC_scr_pos = SCREEN_POS::BORDER_TB;
+				}
+				else {
+					VIC_scr_pos = SCREEN_POS::NO_RENDER;
+				}
 			}
-			else if (VIC_scr_x >= 31 && VIC_scr_x <= 334) {
-				VIC_scr_pos = SCREEN_POS::SCREEN;
-			}
-			else if (VIC_scr_x >= 334 && VIC_scr_x < 343) {
-				VIC_scr_pos = SCREEN_POS::COL_38_AREA;
-			}
-			else if (VIC_scr_x >= 343 && VIC_scr_x < 380) {
-				VIC_scr_pos = SCREEN_POS::BORDER_LR;
-			}
-			else {
+			else if (VIC_scanline >= 299 && VIC_scanline < 312) {	//	VBlank, bottom
 				VIC_scr_pos = SCREEN_POS::NO_RENDER;
 			}
 
-		}
-		else if (VIC_scanline >= 246 && VIC_scanline < 251) {	//	Bottom, 38-row-are
-			if ((VIC_scr_x >= 0 && VIC_scr_x < 24) ||
-				(VIC_scr_x >= 480 && VIC_scr_x < 504) ||
-				(VIC_scr_x >= 343 && VIC_scr_x < 380)) {
-				VIC_scr_pos = SCREEN_POS::BORDER_LR;
-			}
-			else if (VIC_scr_x >= 24 && VIC_scr_x <= 343) {
-				VIC_scr_pos = SCREEN_POS::ROW_38_AREA;
-			}
-			else {
-				VIC_scr_pos = SCREEN_POS::NO_RENDER;
-			}
-		}
-		else if (VIC_scanline >= 251 && VIC_scanline < 299) {	//	Bottom Border
-			if ((VIC_scr_x >= 0 && VIC_scr_x < 24) ||
-				(VIC_scr_x >= 480 && VIC_scr_x < 504) ||
-				(VIC_scr_x >= 343 && VIC_scr_x < 380)) {
-				VIC_scr_pos = SCREEN_POS::BORDER_LR;
-			}
-			else if (VIC_scr_x >= 24 && VIC_scr_x < 343) {
-				VIC_scr_pos = SCREEN_POS::BORDER_TB;
-			}
-			else {
-				VIC_scr_pos = SCREEN_POS::NO_RENDER;
-			}
-		}
-		else if (VIC_scanline >= 299 && VIC_scanline < 312) {	//	VBlank, bottom
-			VIC_scr_pos = SCREEN_POS::NO_RENDER;
-		}
+			//	render pixel
+			//	offset, according to which pixels need to be our 0/0 point in our actual window
+			renderByPixels(VIC_scanline - 16, (VIC_scr_x + 24) % 504, VIC_scr_pos);
 
-		//	render pixel
-		//	offset, according to which pixels need to be our 0/0 point in our actual window
-		renderByPixels(VIC_scanline - 16, (VIC_scr_x + 24) % 504, VIC_scr_pos);
-
-		//	increase X-Position & draw actual frame after it's beend rendered completely
-		VIC_scr_x++;
-		if (VIC_scr_x == 504) {
-			VIC_scr_x = 0;
+			//	increase X-Position & draw actual frame after it's beend rendered completely
+			VIC_scr_x++;
+			if (VIC_scr_x == 504) {
+				VIC_scr_x = 0;
+			}
+			if (VIC_scr_x == 404 && VIC_scanline == 0) {
+				drawFrame();
+				//drawDebug();
+			}
 		}
-		if (VIC_scr_x == 404 && VIC_scanline == 0) {
-			drawFrame();
-			//drawDebug();
-		}
-	}	
+	}
 }
 
 void VIC_fetchSpritePointer(uint8_t sprite_no) {
