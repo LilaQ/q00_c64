@@ -297,6 +297,7 @@ void setLog(bool v) {
 	logNow = v;
 }
 
+uint8_t fr = 0;
 uint8_t CPU_executeInstruction() {
 
 	if (nmi) {
@@ -532,7 +533,9 @@ uint8_t CPU_executeInstruction() {
 	case 0xe9: { PC++; return SBC(getImmediate(PC++), 2); break; }
 	case 0xea: { PC++; return 2; break; }
 	case 0xeb: { PC++; return SBC(getImmediate(PC++), 2); break; }	//	SBC imm 2/2
-	case 0xec: { PC++; r = CMP(registers.X, getAbsolute(PC), 4); PC += 2; return r; break; }
+	//case 0xec: { PC++; r = CMP(registers.X, getAbsolute(PC), 4); PC += 2; return r; break; }
+	case 0xec: if (fr == 3) { fr = 0; PC++; r = CMP(registers.X, getAbsolute(PC), 4); PC += 2; return r; break; }
+			 else { fr++; return 1; }
 	case 0xed: { PC++; r = SBC(getAbsolute(PC), 4); PC += 2; return r; break; }
 	case 0xee: { PC++; r = INC(getAbsolute(PC), 6); PC += 2; return r; break; }
 	case 0xef: { PC++; r = ISC(getAbsolute(PC), 6); PC += 2; return r; break; } //	ISC abs 3/6
@@ -569,4 +572,6 @@ uint8_t CPU_executeInstruction() {
 		std::exit(1);
 		break;
 	}
+	fr++;
+	return 1;
 }
