@@ -652,8 +652,51 @@ void VIC_nextScanline() {
 	}
 }
 
+bool VIC_rasterIRQ = false;
+uint8_t VIC_cycle = 13;
+uint8_t VIC_getCycle() {
+	return VIC_cycle;
+}
 
-
+void VIC_tick() {
+	VIC_fetchGraphicsData(1);
+	if (VIC_cycle == 1) {
+		VIC_rasterIRQ = VIC_checkRasterIRQ();
+		VIC_fetchSpritePointer(3);
+	}
+	else if (VIC_cycle == 3) {
+		if (VIC_rasterIRQ) {
+			setIRQ(true);
+		}
+		VIC_fetchSpritePointer(4);
+	}
+	else if (VIC_cycle == 5) {
+		VIC_fetchSpritePointer(5);
+	}
+	else if (VIC_cycle == 7) {
+		VIC_fetchSpritePointer(6);
+	}
+	else if (VIC_cycle == 9) {
+		VIC_fetchSpritePointer(7);
+	}
+	else if (VIC_cycle >= 11 && VIC_cycle <= 15) {
+		VIC_dataRefresh();
+	}
+	else if (VIC_cycle == 58) {
+		VIC_fetchSpritePointer(0);
+	}
+	else if (VIC_cycle == 60) {
+		VIC_fetchSpritePointer(1);
+	}
+	else if (VIC_cycle == 62) {
+		VIC_fetchSpritePointer(2);
+	}
+	VIC_cycle++;
+	if (VIC_cycle == 64) {
+		VIC_cycle = 1;
+		VIC_nextScanline();
+	}
+}
 
 
 

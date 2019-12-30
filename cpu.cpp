@@ -184,6 +184,8 @@ uint8_t ROR(uint16_t adr, uint8_t cycles) {
 	return cycles;
 }
 uint8_t CMP(uint8_t tar, uint16_t adr, uint8_t cycles) {
+	if(PC >= 0xc00 && PC <= 0xcff)
+		printf("%x - %x\n", tar, readFromMem(adr));
 	status.setCarry(tar >= readFromMem(adr));
 	status.setZero(readFromMem(adr) == tar);
 	status.setNegative(((tar - readFromMem(adr)) & 0xff) >> 7);
@@ -269,7 +271,7 @@ void setIRQ(bool v) {
 }
 
 uint8_t IRQorBRK() {
-	printf("IRQ \n");
+	//printf("IRQ \n");
 	writeToMem(SP_ + 0x100, PC >> 8);
 	SP_--;
 	writeToMem(SP_ + 0x100, PC & 0xff);
@@ -315,10 +317,10 @@ uint8_t CPU_executeInstruction() {
 		printf("[PC - %x] IRQ occured, at Cycle %d of Scanline %d\n", PC, currentCycle(), currentScanline());
 	}
 
-	if (PC >= 0x0c00 && PC <= 0x0c70) {
+	//if (PC >= 0x0c00 && PC <= 0x0c70) {
+	if(PC == 0xc00) {
 		//printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d Keyboard: %x\n", PC, readFromMem(PC), readFromMem(PC+1), readFromMem(PC+2), registers.A, registers.X, registers.Y, status.status, SP_, c, readFromMem(0xdc01));
-		//printf("%04x $%02x %d ", PC, readFromMem(PC), readVICregister(0xd012));
-		//logCycles();
+		printf("%04x $%02x Scanline: %x Cycle: %x \n", PC, readFromMem(PC), readVICregister(0xd012), currentCycle(), currentScanline());
 	}
 	switch (readFromMem(PC)) {
 	case 0x00: { status.setBrk(1); irq = true; printf("BREAK "); return 7; break; }
@@ -534,8 +536,7 @@ uint8_t CPU_executeInstruction() {
 	case 0xea: { PC++; return 2; break; }
 	case 0xeb: { PC++; return SBC(getImmediate(PC++), 2); break; }	//	SBC imm 2/2
 	//case 0xec: { PC++; r = CMP(registers.X, getAbsolute(PC), 4); PC += 2; return r; break; }
-	case 0xec: if (fr == 3) { fr = 0; PC++; r = CMP(registers.X, getAbsolute(PC), 4); PC += 2; return r; break; }
-			 else { fr++; return 1; }
+	case 0xec: if (fr == 3) { fr = 0; PC++; r = CMP(registers.X, getAbsolute(PC), 4); PC += 2; return 1; } break;
 	case 0xed: { PC++; r = SBC(getAbsolute(PC), 4); PC += 2; return r; break; }
 	case 0xee: { PC++; r = INC(getAbsolute(PC), 6); PC += 2; return r; break; }
 	case 0xef: { PC++; r = ISC(getAbsolute(PC), 6); PC += 2; return r; break; } //	ISC abs 3/6

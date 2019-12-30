@@ -14,9 +14,7 @@ using namespace::std;
 
 SDL_Event event;					
 bool unpaused = true;
-bool isBadline = false;
-bool rasterIRQ = false;
-uint8_t c = 13;
+uint8_t c = 0;
 uint8_t cycles_left = 0;
 
 int main()
@@ -112,51 +110,12 @@ int main()
 				
 				Cycle 47 - Cycle 62	: 6510 compute instruction (only if there are at least 3 free cycles between sprite data fetches)
 			*/
-
-			/*
-				High-Phi Phase
-			*/
-
-				/*
-					VIC Stub
-				*/
-				VIC_fetchGraphicsData(1);
-				if (c == 1) {
-					isBadline = VIC_isBadline();
-					rasterIRQ = VIC_checkRasterIRQ();
-					VIC_fetchSpritePointer(3);
-				}
-				else if (c == 3) {
-					if (rasterIRQ) {
-						setIRQ(true);
-					}
-					VIC_fetchSpritePointer(4);
-				}
-				else if (c == 5) {
-					VIC_fetchSpritePointer(5);
-				}
-				else if (c == 7) {
-					VIC_fetchSpritePointer(6);
-				}
-				else if (c == 9) {
-					VIC_fetchSpritePointer(7);
-				}
-				else if (c >= 11 && c <= 15) {
-					VIC_dataRefresh();
-				}
-				else if (c == 58) {
-					VIC_fetchSpritePointer(0);
-				}
-				else if (c == 60) {
-					VIC_fetchSpritePointer(1);
-				}
-				else if (c == 62) {
-					VIC_fetchSpritePointer(2);
-				}
  
 			/*
 				Low-Phi Phase
 			*/
+				c = VIC_getCycle();
+				VIC_tick();
 
 				/*
 					6510
@@ -168,7 +127,7 @@ int main()
 					cycles_left--;
 				}
 				else if (c >= 12 && c <= 54) {
-					if (!isBadline) {
+					if (!VIC_isBadline()) {
 						if (cycles_left == 0) {
 							cycles_left = CPU_executeInstruction();
 						}
@@ -182,13 +141,6 @@ int main()
 					cycles_left--;
 				}
 				
-
-				c++;
-				if (c == 64) {
-					c = 1;
-					VIC_nextScanline();
-				}
-
 				tickAllTimers(1);
 
 

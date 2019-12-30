@@ -127,3 +127,5 @@ void VIC_nextScanline();
 void VIC_fetchGraphicsData(uint8_t amount);
 void VIC_fetchSpritePointer(uint8_t sprite_nr);
 bool VIC_checkRasterIRQ();
+uint8_t VIC_getCycle();
+void VIC_tick();
