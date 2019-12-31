@@ -77,3 +77,4 @@ uint8_t CPU_executeInstruction();
 void resetCPU();
 Registers getCPURegs();
 void setLog(bool v);
+bool pendingIRQ();

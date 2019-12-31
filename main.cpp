@@ -14,7 +14,11 @@ using namespace::std;
 
 SDL_Event event;					
 bool unpaused = true;
-uint8_t c = 0;
+bool isBadline = false;
+bool rasterIRQ = false;
+bool flaggedAfterNextInstr = false;
+bool flaggedForIRQ = false;
+uint8_t c = 13;
 uint8_t cycles_left = 0;
 
 int main()
@@ -110,24 +114,77 @@ int main()
 				
 				Cycle 47 - Cycle 62	: 6510 compute instruction (only if there are at least 3 free cycles between sprite data fetches)
 			*/
+
+			/*
+				High-Phi Phase
+			*/
+
+				/*
+					VIC Stub
+				*/
+				VIC_fetchGraphicsData(1);
+				if (c == 1) {
+					isBadline = VIC_isBadline();
+					VIC_fetchSpritePointer(3);
+				}
+				else if (c == 3) {
+					VIC_fetchSpritePointer(4);
+				}
+				else if (c == 5) {
+					VIC_fetchSpritePointer(5);
+				}
+				else if (c == 7) {
+					VIC_fetchSpritePointer(6);
+				}
+				else if (c == 9) {
+					VIC_fetchSpritePointer(7);
+				}
+				else if (c >= 11 && c <= 15) {
+					VIC_dataRefresh();
+				}
+				else if (c == 58) {
+					VIC_fetchSpritePointer(0);
+				}
+				else if (c == 60) {
+					VIC_fetchSpritePointer(1);
+				}
+				else if (c == 62) {
+					VIC_fetchSpritePointer(2);
+				}
  
 			/*
 				Low-Phi Phase
 			*/
-				c = VIC_getCycle();
-				VIC_tick();
 
 				/*
 					6510
 				*/
 				if (c >= 1 && c <= 11) {
 					if (cycles_left == 0) {
+						if (flaggedForIRQ) {
+							setIRQ(true);
+							flaggedForIRQ = false;
+						}
+						if (flaggedAfterNextInstr) {
+							flaggedForIRQ = true;
+							flaggedAfterNextInstr = false;
+						}
 						cycles_left = CPU_executeInstruction();
+					}
+					if (c == 1) {
+						if (VIC_checkRasterIRQ()) {
+							if (cycles_left == 1) {
+								flaggedAfterNextInstr = true;
+							}
+							else {
+								flaggedForIRQ = true;
+							}
+						}
 					}
 					cycles_left--;
 				}
 				else if (c >= 12 && c <= 54) {
-					if (!VIC_isBadline()) {
+					if (!isBadline) {
 						if (cycles_left == 0) {
 							cycles_left = CPU_executeInstruction();
 						}
@@ -141,6 +198,13 @@ int main()
 					cycles_left--;
 				}
 				
+
+				c++;
+				if (c == 64) {
+					c = 1;
+					VIC_nextScanline();
+				}
+
 				tickAllTimers(1);
 
 

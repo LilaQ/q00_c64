@@ -271,7 +271,6 @@ void setIRQ(bool v) {
 }
 
 uint8_t IRQorBRK() {
-	//printf("IRQ \n");
 	writeToMem(SP_ + 0x100, PC >> 8);
 	SP_--;
 	writeToMem(SP_ + 0x100, PC & 0xff);
@@ -299,6 +298,10 @@ void setLog(bool v) {
 	logNow = v;
 }
 
+bool pendingIRQ() {
+	return irq;
+}
+
 uint8_t fr = 0;
 uint8_t CPU_executeInstruction() {
 
@@ -318,7 +321,7 @@ uint8_t CPU_executeInstruction() {
 	}
 
 	//if (PC >= 0x0c00 && PC <= 0x0c70) {
-	if(PC == 0xc00) {
+	if(PC == 0xc00 || PC == 0xff48 || PC == 0xc39) {
 		//printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%d Keyboard: %x\n", PC, readFromMem(PC), readFromMem(PC+1), readFromMem(PC+2), registers.A, registers.X, registers.Y, status.status, SP_, c, readFromMem(0xdc01));
 		printf("%04x $%02x Scanline: %x Cycle: %x \n", PC, readFromMem(PC), readVICregister(0xd012), currentCycle(), currentScanline());
 	}
