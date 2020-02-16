@@ -526,7 +526,7 @@ bool VIC_isBadline() {
 }
 
 bool VIC_checkRasterIRQ() {
-	if (VIC_scanline == raster_irq_row) {
+	if (VIC_scanline == raster_irq_row && irq_mask.irq_can_be_cause_by_rasterline == true) {
 		irq_status.setFlags(0b10000001);		//	set "IRQ FROM VIC", and as reason set "IRQ FROM RASTERLINE"
 		return true;
 	}
@@ -658,6 +658,7 @@ uint8_t VIC_getCycle() {
 	return VIC_cycle;
 }
 
+/*
 void VIC_tick() {
 	VIC_fetchGraphicsData(1);
 	if (VIC_cycle == 1) {
@@ -698,7 +699,7 @@ void VIC_tick() {
 	}
 }
 
-
+*/
 
 
 

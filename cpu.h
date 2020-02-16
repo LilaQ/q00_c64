@@ -73,6 +73,20 @@ struct Status
 
 };
 
+enum class ADDR_MODE {
+	ACCUMULATOR,
+	ABSOLUT,
+	ABSOLUT_X,
+	ABSOLUT_Y,
+	INDIRECT,
+	INDIRECT_Y,
+	INDIRECT_X,
+	ZEROPAGE,
+	ZEROPAGE_X,
+	ZEROPAGE_Y,
+	IMMEDIATE
+};
+
 uint8_t CPU_executeInstruction();
 void resetCPU();
 Registers getCPURegs();

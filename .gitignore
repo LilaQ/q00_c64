@@ -135,3 +135,11 @@ DEMO_Rasterbars.d64
 Release/vcasan.pdb
 .vs/C64Emulator/v16/Preview/ipch/AutoPCH/75417598be5972f3/MAIN.ipch
 enc_temp_folder/e18e296ff7f45e82ff870db6d5946/main.cpp
+Debug/comp.log
+Debug/out_debug.log
+New Project/New Project.c64
+New Project/NMI.asm
+New Project/NMI.prg
+Release/AHOY.log
+Release/Screen.log
+Release/With.log

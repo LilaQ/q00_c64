@@ -159,20 +159,23 @@ int main()
 				/*
 					6510
 				*/
+				if (flaggedForIRQ) {
+					setIRQ(true);
+					flaggedForIRQ = false;
+				}
+				if (flaggedAfterNextInstr) {
+					flaggedForIRQ = true;
+					flaggedAfterNextInstr = false;
+				}
 				if (c >= 1 && c <= 11) {
 					if (cycles_left == 0) {
-						if (flaggedForIRQ) {
-							setIRQ(true);
-							flaggedForIRQ = false;
-						}
-						if (flaggedAfterNextInstr) {
-							flaggedForIRQ = true;
-							flaggedAfterNextInstr = false;
-						}
+						//if (pendingIRQ())
+							//printf("Running IRQ Routine on cycle %d\n", c);
 						cycles_left = CPU_executeInstruction();
 					}
 					if (c == 1) {
 						if (VIC_checkRasterIRQ()) {
+							printf("Found RasterIRQ\n");
 							if (cycles_left == 1) {
 								flaggedAfterNextInstr = true;
 							}

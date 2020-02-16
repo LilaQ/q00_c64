@@ -5,6 +5,8 @@
 #include "cpu.h"
 
 //	CIA 1
+uint8_t readCIA1TimerAControl();
+uint8_t readCIA1TimerBControl();
 uint8_t readCIA1DataPortA();
 uint8_t readCIA1DataPortB();
 void writeCIA1DataPortA(uint8_t val);
@@ -25,6 +27,8 @@ void setCIA1TimerBControl(uint8_t val);
 void setCIA1IRQcontrol(uint8_t val);
 
 //	CIA 2
+uint8_t readCIA2TimerAControl();
+uint8_t readCIA2TimerBControl();
 uint8_t readCIA2DataPortA();
 uint8_t readCIA2DataPortB();
 void writeCIA2DataPortA(uint8_t val);
@@ -151,7 +155,7 @@ struct CIA2_NMI_STATUS {
 struct TIMER {
 	bool timer_running = false;
 	bool timer_underflow_port_b_bit_6_invert = false;
-	bool timer_stop_timer_after_underflow = false;
+	bool timer_stop_timer_after_underflow = true;
 	bool timer_counts_cnt_slopes = false;	//	false = count system cycles instead
 	bool timer_rtc_50hz = false;			//	false = 60hz;
 	uint16_t timer_latch = 0;
@@ -183,6 +187,14 @@ struct TIMER {
 		timer_rtc_50hz = ((val & 0x80) == 0x80);
 	}
 
+	uint8_t get() {
+		uint8_t res = 0x00;
+		res |= (timer_running) ? 1 : 0;
+		res |= ((timer_underflow_port_b_bit_6_invert) ? 1 : 0) << 2;
+		res |= ((timer_stop_timer_after_underflow) ? 1 : 0) << 3;
+		return res;
+	}
+
 	bool tick(uint8_t cycles) {
 		while (cycles--) {
 			if (timer_running) {
@@ -198,6 +210,9 @@ struct TIMER {
 						}
 						return true;
 					}
+				}
+				else if (timer_value == 0 && timer_stop_timer_after_underflow == false) {
+					timer_value = timer_latch;
 				}
 			}
 		}

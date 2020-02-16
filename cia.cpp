@@ -23,6 +23,14 @@ void setKeyboardInput(uint8_t* _KEYS) {
 
 //	CIA 1
 
+uint8_t readCIA1TimerAControl() {
+	return cia1_timerA.get();
+}
+
+uint8_t readCIA1TimerBControl() {
+	return cia1_timerB.get();
+}
+
 void writeCIA1DataPortA(uint8_t val) {
 	cia1_data_port_A = val;
 }
@@ -138,6 +146,15 @@ void setCIA1TimerBControl(uint8_t val) {
 }
 
 //	CIA 2
+
+uint8_t readCIA2TimerAControl() {
+	return cia2_timerA.get();
+}
+
+uint8_t readCIA2TimerBControl() {
+	return cia2_timerB.get();
+}
+
 void writeCIA2DataPortA(uint8_t val) {
 	/*
 		Bit 0..1: Auswahl der Position des VIC - Speichers
