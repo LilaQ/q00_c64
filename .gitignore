@@ -143,3 +143,5 @@ New Project/NMI.prg
 Release/AHOY.log
 Release/Screen.log
 Release/With.log
+BCDTest/BCDTest.c64
+BCDTest/BCDTest.s64

@@ -224,7 +224,7 @@ void _LDX(uint8_t state, uint8_t& tar, ADDR_MODE mode) {
 	case 5: if		(mode == ADDR_MODE::ABSOLUT_X)	{ _mLDX(tar, getAbsoluteXIndex(PC, registers.X)); PC += 3; fr = 0; } 
 			else if (mode == ADDR_MODE::ABSOLUT_Y)	{ _mLDX(tar, getAbsoluteYIndex(PC, registers.Y)); PC += 3; fr = 0; }
 			else if (mode == ADDR_MODE::INDIRECT_Y) {
-				uint16_t _t = ((readFromMem((readFromMem(PC) + 1) % 0x100) << 8) | (readFromMem(readFromMem(PC))));
+				uint16_t _t = ((readFromMem((readFromMem(PC + 1) + 1) % 0x100) << 8) | (readFromMem(readFromMem(PC + 1))));
 				if ((_t & 0xff00) == ((_t + registers.Y) & 0xff00)) {
 					_mLDX(tar, getIndirectYIndex(PC, registers.Y));
 					PC += 2;
@@ -252,7 +252,7 @@ void _EOR(uint8_t state, ADDR_MODE mode) {
 	case 4: if		(mode == ADDR_MODE::ABSOLUT)	{ _mEOR(getAbsolute(PC)); PC += 3; fr = 0; } 
 			else if (mode == ADDR_MODE::ZEROPAGE_X) { _mEOR(getZeropageXIndex(PC, registers.X)); PC += 2; fr = 0; }
 			else if (mode == ADDR_MODE::ABSOLUT_X)	{
-				uint16_t _t = ((readFromMem(PC + 1) << 8) | readFromMem(PC));
+				uint16_t _t = ((readFromMem(PC + 2) << 8) | readFromMem(PC + 1));
 				if ((_t & 0xff00) == ((_t + registers.X) & 0xff00)) {	//	PB not crossed
 					_mEOR(getAbsoluteXIndex(PC, registers.X));
 					PC += 3;
@@ -260,7 +260,7 @@ void _EOR(uint8_t state, ADDR_MODE mode) {
 				}
 			}
 			else if (mode == ADDR_MODE::ABSOLUT_Y)	{
-				uint16_t _t = ((readFromMem(PC + 1) << 8) | readFromMem(PC));
+				uint16_t _t = ((readFromMem(PC + 2) << 8) | readFromMem(PC + 1));
 				if ((_t & 0xff00) == ((_t + registers.Y) & 0xff00)) {	//	PB not crossen
 					_mEOR(getAbsoluteYIndex(PC, registers.Y));
 					PC += 3;
@@ -270,7 +270,7 @@ void _EOR(uint8_t state, ADDR_MODE mode) {
 	case 5: if		(mode == ADDR_MODE::ABSOLUT_X)	{ _mEOR(getAbsoluteXIndex(PC, registers.X)); PC += 3; fr = 0; } 
 			else if (mode == ADDR_MODE::ABSOLUT_Y)	{ _mEOR(getAbsoluteYIndex(PC, registers.Y)); PC += 3; fr = 0; }
 			else if (mode == ADDR_MODE::INDIRECT_Y) {
-				uint16_t _t = ((readFromMem((readFromMem(PC) + 1) % 0x100) << 8) | (readFromMem(readFromMem(PC))));
+				uint16_t _t = ((readFromMem((readFromMem(PC + 1) + 1) % 0x100) << 8) | (readFromMem(readFromMem(PC + 1))));
 				if ((_t & 0xff00) == ((_t + registers.Y) & 0xff00)) {
 					_mEOR(getIndirectYIndex(PC, registers.Y));
 					PC += 2;
@@ -298,7 +298,7 @@ void _AND(uint8_t state, ADDR_MODE mode) {
 	case 4: if		(mode == ADDR_MODE::ABSOLUT)	{ _mAND(getAbsolute(PC)); PC += 3; fr = 0; } 
 			else if (mode == ADDR_MODE::ZEROPAGE_X) { _mAND(getZeropageXIndex(PC, registers.X)); PC += 2; fr = 0; }
 			else if (mode == ADDR_MODE::ABSOLUT_X)	{
-				uint16_t _t = ((readFromMem(PC + 1) << 8) | readFromMem(PC));
+				uint16_t _t = ((readFromMem(PC + 2) << 8) | readFromMem(PC + 1));
 				if ((_t & 0xff00) == ((_t + registers.X) & 0xff00)) {	//	PB not crossed
 					_mAND(getAbsoluteXIndex(PC, registers.X));
 					PC += 3;
@@ -306,7 +306,7 @@ void _AND(uint8_t state, ADDR_MODE mode) {
 				}
 			}
 			else if (mode == ADDR_MODE::ABSOLUT_Y)	{
-				uint16_t _t = ((readFromMem(PC + 1) << 8) | readFromMem(PC));
+				uint16_t _t = ((readFromMem(PC + 2) << 8) | readFromMem(PC + 1));
 				if ((_t & 0xff00) == ((_t + registers.Y) & 0xff00)) {	//	PB not crossen
 					_mAND(getAbsoluteYIndex(PC, registers.Y));
 					PC += 3;
@@ -316,7 +316,7 @@ void _AND(uint8_t state, ADDR_MODE mode) {
 	case 5: if		(mode == ADDR_MODE::ABSOLUT_X)	{ _mAND(getAbsoluteXIndex(PC, registers.X)); PC += 3; fr = 0; }
 			else if (mode == ADDR_MODE::ABSOLUT_Y)	{ _mAND(getAbsoluteYIndex(PC, registers.Y)); PC += 3; fr = 0; }
 			else if (mode == ADDR_MODE::INDIRECT_Y) {
-				uint16_t _t = ((readFromMem((readFromMem(PC) + 1) % 0x100) << 8) | (readFromMem(readFromMem(PC))));
+				uint16_t _t = ((readFromMem((readFromMem(PC + 1) + 1) % 0x100) << 8) | (readFromMem(readFromMem(PC + 1))));
 				if ((_t & 0xff00) == ((_t + registers.Y) & 0xff00)) {
 					_mAND(getIndirectYIndex(PC, registers.Y));
 					PC += 2;
@@ -344,7 +344,7 @@ void _ORA(uint8_t state, ADDR_MODE mode) {
 	case 4: if		(mode == ADDR_MODE::ABSOLUT)	{ _mORA(getAbsolute(PC)); PC += 3; fr = 0; } 
 			else if (mode == ADDR_MODE::ZEROPAGE_X) { _mORA(getZeropageXIndex(PC, registers.X)); PC += 2; fr = 0; }
 			else if (mode == ADDR_MODE::ABSOLUT_X)	{
-				uint16_t _t = ((readFromMem(PC + 1) << 8) | readFromMem(PC));
+				uint16_t _t = ((readFromMem(PC + 2) << 8) | readFromMem(PC + 1));
 				if ((_t & 0xff00) == ((_t + registers.X) & 0xff00)) {	//	PB not crossed
 					_mORA(getAbsoluteXIndex(PC, registers.X));
 					PC += 3;
@@ -352,7 +352,7 @@ void _ORA(uint8_t state, ADDR_MODE mode) {
 				}
 			}
 			else if (mode == ADDR_MODE::ABSOLUT_Y)	{
-				uint16_t _t = ((readFromMem(PC + 1) << 8) | readFromMem(PC));
+				uint16_t _t = ((readFromMem(PC + 2) << 8) | readFromMem(PC + 1));
 				if ((_t & 0xff00) == ((_t + registers.Y) & 0xff00)) {	//	PB not crossen
 					_mORA(getAbsoluteYIndex(PC, registers.Y));
 					PC += 3;
@@ -362,7 +362,7 @@ void _ORA(uint8_t state, ADDR_MODE mode) {
 	case 5: if		(mode == ADDR_MODE::ABSOLUT_X)	{ _mORA(getAbsoluteXIndex(PC, registers.X)); PC += 3; fr = 0; } 
 			else if (mode == ADDR_MODE::ABSOLUT_Y)	{ _mORA(getAbsoluteYIndex(PC, registers.Y)); PC += 3; fr = 0; }
 			else if (mode == ADDR_MODE::INDIRECT_Y) {
-				uint16_t _t = ((readFromMem((readFromMem(PC) + 1) % 0x100) << 8) | (readFromMem(readFromMem(PC))));
+				uint16_t _t = ((readFromMem((readFromMem(PC + 1) + 1) % 0x100) << 8) | (readFromMem(readFromMem(PC + 1))));
 				if ((_t & 0xff00) == ((_t + registers.Y) & 0xff00)) {
 					_mORA(getIndirectYIndex(PC, registers.Y));
 					PC += 2;
@@ -404,7 +404,7 @@ void _ADC(uint8_t state, ADDR_MODE mode) {
 	case 4: if		(mode == ADDR_MODE::ABSOLUT)	{ _mADD(readFromMem(getAbsolute(PC))); PC += 3;	fr = 0; } 
 			else if (mode == ADDR_MODE::ZEROPAGE_X) { _mADD(readFromMem(getZeropageXIndex(PC, registers.X))); PC += 2; fr = 0; }
 			else if (mode == ADDR_MODE::ABSOLUT_X)	{
-				uint16_t _t = ((readFromMem(PC + 1) << 8) | readFromMem(PC));
+				uint16_t _t = ((readFromMem(PC + 2) << 8) | readFromMem(PC + 1));
 				if ((_t & 0xff00) == ((_t + registers.X) & 0xff00)) {	//	PB not crossed
 					_mADD(readFromMem(getAbsoluteXIndex(PC, registers.X)));
 					PC += 3;
@@ -412,7 +412,7 @@ void _ADC(uint8_t state, ADDR_MODE mode) {
 				}
 			}
 			else if (mode == ADDR_MODE::ABSOLUT_Y)	{
-				uint16_t _t = ((readFromMem(PC + 1) << 8) | readFromMem(PC));
+				uint16_t _t = ((readFromMem(PC + 2) << 8) | readFromMem(PC + 1));
 				if ((_t & 0xff00) == ((_t + registers.Y) & 0xff00)) {	//	PB not crossen
 					_mADD(readFromMem(getAbsoluteYIndex(PC, registers.Y)));
 					PC += 3;
@@ -422,7 +422,7 @@ void _ADC(uint8_t state, ADDR_MODE mode) {
 	case 5: if		(mode == ADDR_MODE::ABSOLUT_X)	{ _mADD(readFromMem(getAbsoluteXIndex(PC, registers.X))); PC += 3; fr = 0; }
 			else if (mode == ADDR_MODE::ABSOLUT_Y)	{ _mADD(readFromMem(getAbsoluteYIndex(PC, registers.Y))); PC += 3; fr = 0; }
 			else if (mode == ADDR_MODE::INDIRECT_Y) {
-				uint16_t _t = ((readFromMem((readFromMem(PC) + 1) % 0x100) << 8) | (readFromMem(readFromMem(PC))));
+				uint16_t _t = ((readFromMem((readFromMem(PC + 1) + 1) % 0x100) << 8) | (readFromMem(readFromMem(PC + 1))));
 				if ((_t & 0xff00) == ((_t + registers.Y) & 0xff00)) {
 					_mADD(readFromMem(getIndirectYIndex(PC, registers.Y)));
 					PC += 2;
@@ -444,7 +444,7 @@ void _SBC(uint8_t state, ADDR_MODE mode) {
 	case 4: if		(mode == ADDR_MODE::ABSOLUT)	{ _mADD(~readFromMem(getAbsolute(PC)));	PC += 3; fr = 0; }
 			else if (mode == ADDR_MODE::ZEROPAGE_X) { _mADD(~readFromMem(getZeropageXIndex(PC, registers.X))); PC += 2;	fr = 0;	} 
 			else if (mode == ADDR_MODE::ABSOLUT_X)	{
-				uint16_t _t = ((readFromMem(PC + 1) << 8) | readFromMem(PC));
+				uint16_t _t = ((readFromMem(PC + 2) << 8) | readFromMem(PC + 1));
 				if ((_t & 0xff00) == ((_t + registers.X) & 0xff00)) {	//	PB not crossed
 					_mADD(~readFromMem(getAbsoluteXIndex(PC, registers.X)));
 					PC += 3;
@@ -452,7 +452,7 @@ void _SBC(uint8_t state, ADDR_MODE mode) {
 				}
 			}
 			else if (mode == ADDR_MODE::ABSOLUT_Y)	{
-				uint16_t _t = ((readFromMem(PC + 1) << 8) | readFromMem(PC));
+				uint16_t _t = ((readFromMem(PC + 2) << 8) | readFromMem(PC + 1));
 				if ((_t & 0xff00) == ((_t + registers.Y) & 0xff00)) {	//	PB not crossen
 					_mADD(~readFromMem(getAbsoluteYIndex(PC, registers.Y)));
 					PC += 3;
@@ -462,7 +462,7 @@ void _SBC(uint8_t state, ADDR_MODE mode) {
 	case 5: if		(mode == ADDR_MODE::ABSOLUT_X)	{ _mADD(~readFromMem(getAbsoluteXIndex(PC, registers.X))); PC += 3;	fr = 0;	}
 			else if (mode == ADDR_MODE::ABSOLUT_Y)	{ _mADD(~readFromMem(getAbsoluteYIndex(PC, registers.Y))); PC += 3;	fr = 0;	} 
 			else if (mode == ADDR_MODE::INDIRECT_Y) {
-				uint16_t _t = ((readFromMem((readFromMem(PC) + 1) % 0x100) << 8) | (readFromMem(readFromMem(PC))));
+				uint16_t _t = ((readFromMem((readFromMem(PC + 1) + 1) % 0x100) << 8) | (readFromMem(readFromMem(PC + 1))));
 				if ((_t & 0xff00) == ((_t + registers.Y) & 0xff00)) {
 					_mADD(~readFromMem(getIndirectYIndex(PC, registers.Y)));
 					PC += 2;
@@ -490,7 +490,7 @@ void _CMP(uint8_t state, uint8_t &tar, ADDR_MODE mode) {
 	case 4: if		(mode == ADDR_MODE::ABSOLUT)	{ _mCMP(tar, getAbsolute(PC)); PC += 3;	fr = 0; }
 			else if (mode == ADDR_MODE::ZEROPAGE_X) { _mCMP(tar, getZeropageXIndex(PC, registers.X)); PC += 2; fr = 0; } 
 			else if (mode == ADDR_MODE::ABSOLUT_X)	{
-				uint16_t _t = ((readFromMem(PC + 1) << 8) | readFromMem(PC));
+				uint16_t _t = ((readFromMem(PC + 2) << 8) | readFromMem(PC + 1));
 				if ((_t & 0xff00) == ((_t + registers.X) & 0xff00)) {	//	PB not crossed
 					_mCMP(tar, getAbsoluteXIndex(PC, registers.X));
 					PC += 3;
@@ -498,7 +498,7 @@ void _CMP(uint8_t state, uint8_t &tar, ADDR_MODE mode) {
 				}
 			}
 			else if (mode == ADDR_MODE::ABSOLUT_Y)	{
-				uint16_t _t = ((readFromMem(PC + 1) << 8) | readFromMem(PC));
+				uint16_t _t = ((readFromMem(PC + 2) << 8) | readFromMem(PC + 1));
 				if ((_t & 0xff00) == ((_t + registers.Y) & 0xff00)) {	//	PB not crossen
 					_mCMP(tar, getAbsoluteYIndex(PC, registers.Y));
 					PC += 3;
@@ -508,7 +508,7 @@ void _CMP(uint8_t state, uint8_t &tar, ADDR_MODE mode) {
 	case 5: if		(mode == ADDR_MODE::ABSOLUT_X)	{ _mCMP(tar, getAbsoluteXIndex(PC, registers.X)); PC += 3; fr = 0; }
 			else if (mode == ADDR_MODE::ABSOLUT_Y)	{ _mCMP(tar, getAbsoluteYIndex(PC, registers.Y)); PC += 3; fr = 0; } 
 			else if (mode == ADDR_MODE::INDIRECT_Y) {
-				uint16_t _t = ((readFromMem((readFromMem(PC) + 1) % 0x100) << 8) | (readFromMem(readFromMem(PC))));
+				uint16_t _t = ((readFromMem((readFromMem(PC + 1) + 1) % 0x100) << 8) | (readFromMem(readFromMem(PC + 1))));
 				if ((_t & 0xff00) == ((_t + registers.Y) & 0xff00)) {
 					_mCMP(tar, getIndirectYIndex(PC, registers.Y));
 					PC += 2;
@@ -554,7 +554,7 @@ void _LAX(uint8_t state, ADDR_MODE mode) {
 	case 4: if		(mode == ADDR_MODE::ABSOLUT)	{ _mLAX(getAbsolute(PC)); PC += 2; fr = 0; }
 			else if (mode == ADDR_MODE::ZEROPAGE_Y) { _mLAX(getZeropageYIndex(PC, registers.Y)); PC += 2; fr = 0; } 
 			else if (mode == ADDR_MODE::ABSOLUT_Y)	{ 
-				uint16_t _t = ((readFromMem(PC + 1) << 8) | readFromMem(PC));
+				uint16_t _t = ((readFromMem(PC + 2) << 8) | readFromMem(PC + 1));
 				if ((_t & 0xff00) == ((_t + registers.Y) & 0xff00)) {	//	PB not crossed
 					_mLAX(getAbsoluteYIndex(PC, registers.Y));
 					PC += 2;
@@ -1143,8 +1143,10 @@ void NMI(uint8_t state) {
 void setIRQ(bool v) {
 	irq = v;
 }
-
+bool tmpgo = false;
 void IRQorBRK(uint8_t state) {
+	if (tmpgo)
+		printf("IRQ Cycle %d\n", state);
 	switch (state) {
 		case 1: break;
 		case 2: break;
@@ -1153,6 +1155,8 @@ void IRQorBRK(uint8_t state) {
 		case 5: break;
 		case 6: break;
 		case 7: {
+			if (tmpgo)
+				printf("IRQ Last Cycle\n");
 			writeToMem(SP_ + 0x100, PC >> 8);
 			SP_--;
 			writeToMem(SP_ + 0x100, PC & 0xff);
@@ -1186,9 +1190,9 @@ bool pendingIRQ() {
 	return irq;
 }
 
-bool tmpgo = false;
-uint8_t CPU_executeInstruction() {
 
+uint8_t CPU_executeInstruction() {
+	
 	//	Check interrupt hijacking (NMI hijacking IRQ)
 	if (fr == 1 && nmi == true && nmi_running == false) {
 		nmi_running = true;
@@ -1207,10 +1211,10 @@ uint8_t CPU_executeInstruction() {
 		return 1;
 	}
 
-	if (tmpgo && 0)
-		printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x \n", PC, readFromMem(PC), readFromMem(PC+1), readFromMem(PC+2), registers.A, registers.X, registers.Y, status.status, SP_);
-	if (PC == 0xff4d)
+	if (PC == 0x0c00)
 		tmpgo = true;
+	if (tmpgo && 0)
+		printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x - VIC_Y:%03d(%02x) VIC_X:%03d(%02x) CycNo:%03d(%02x) - P:%02x SP:%02x \n", PC, readFromMem(PC), readFromMem(PC + 1), readFromMem(PC + 2), registers.A, registers.X, registers.Y, currentScanline(), currentScanline(), currentPixel(), currentPixel(), currentCycle(), currentCycle(), status.status, SP_);
 
 	switch (readFromMem(PC)) {
 

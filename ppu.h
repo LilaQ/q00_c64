@@ -117,7 +117,8 @@ void setScreenSize(UI_SCREEN_SIZE scr_s);
 //	DEBUG
 void logDraw();
 uint8_t readVICregister(uint16_t adr);
-uint8_t currentScanline();
+uint16_t currentScanline();
+uint16_t currentPixel();
 
 
 //	REWRITE

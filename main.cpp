@@ -167,26 +167,28 @@ int main()
 					flaggedForIRQ = true;
 					flaggedAfterNextInstr = false;
 				}
-				if (c >= 1 && c <= 11) {
+				if (c >= 0 && c <= 10) {
 					if (cycles_left == 0) {
 						//if (pendingIRQ())
 							//printf("Running IRQ Routine on cycle %d\n", c);
 						cycles_left = CPU_executeInstruction();
 					}
-					if (c == 1) {
+					if (c == 0) {
 						if (VIC_checkRasterIRQ()) {
 							printf("Found RasterIRQ\n");
 							if (cycles_left == 1) {
+								printf("Only once cycle left on current instruction - running next instruction as well before handling IRQ\n");
 								flaggedAfterNextInstr = true;
 							}
 							else {
+								printf("At least 2 cycles left on current instruction - IRQ will be handled right after this\n");
 								flaggedForIRQ = true;
 							}
 						}
 					}
 					cycles_left--;
 				}
-				else if (c >= 12 && c <= 54) {
+				else if (c >= 11 && c <= 53) {
 					if (!isBadline) {
 						if (cycles_left == 0) {
 							cycles_left = CPU_executeInstruction();
@@ -194,7 +196,7 @@ int main()
 						cycles_left--;
 					}
 				}
-				else if (c >= 55 && c <= 63) {
+				else if (c >= 54 && c <= 62) {
 					if (cycles_left == 0) {
 						cycles_left = CPU_executeInstruction();
 					}
@@ -203,15 +205,12 @@ int main()
 				
 
 				c++;
-				if (c == 64) {
-					c = 1;
+				if (c == 63) {
+					c = 0;
 					VIC_nextScanline();
 				}
 
 				tickAllTimers(1);
-
-
-
 
 		}
 		handleWindowEvents(event);

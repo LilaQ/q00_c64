@@ -8,6 +8,7 @@
 #include "cpu.h"
 #include "wmu.h"
 #include "cia.h"
+#include "main.h"
 #include "SDL2/include/SDL.h"
 #include <array>
 #include <vector>
@@ -501,12 +502,14 @@ void logDraw() {
 
 /*	REWRITE FROM HERE ON		*/
 uint16_t VIC_scanline = 0;
-uint16_t VIC_scr_x = 0;
 SCREEN_POS VIC_scr_pos = SCREEN_POS::NO_RENDER;
 
 //	DEBUG
-uint8_t currentScanline() {
+uint16_t currentScanline() {
 	return VIC_scanline;
+}
+uint16_t currentPixel() {
+	return currentCycle() * 8;
 }
 
 bool VIC_isBadline() {
@@ -538,17 +541,17 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 	while (amount--)
 	{
 		for (uint8_t i = 0; i < 8; i++) {
-
+			uint16_t x_pos = currentCycle() * 8 + i;
 			if (VIC_scanline >= 0 && VIC_scanline < 16) {			//	VBlank Top
 				VIC_scr_pos = SCREEN_POS::NO_RENDER;
 			}
 			else if (VIC_scanline >= 16 && VIC_scanline < 51) {		//	Top Border
-				if ((VIC_scr_x >= 0 && VIC_scr_x < 24) ||
-					(VIC_scr_x >= 480 && VIC_scr_x < 504) ||
-					(VIC_scr_x >= 343 && VIC_scr_x < 380)) {
+				if ((x_pos >= 0		&& x_pos < 24) ||
+					(x_pos >= 480	&& x_pos < 504) ||
+					(x_pos >= 343	&& x_pos < 380)) {
 					VIC_scr_pos = SCREEN_POS::BORDER_LR;
 				}
-				else if (VIC_scr_x >= 24 && VIC_scr_x < 343) {
+				else if (x_pos >= 24 && x_pos < 343) {
 					VIC_scr_pos = SCREEN_POS::BORDER_TB;
 				}
 				else {
@@ -556,12 +559,12 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 				}
 			}
 			else if (VIC_scanline >= 51 && VIC_scanline < 55) {		//	Top, 38-row-area
-				if ((VIC_scr_x >= 0 && VIC_scr_x < 24) ||
-					(VIC_scr_x >= 480 && VIC_scr_x < 504) ||
-					(VIC_scr_x >= 343 && VIC_scr_x < 380)) {
+				if ((x_pos >= 0		&& x_pos < 24) ||
+					(x_pos >= 480	&& x_pos < 504) ||
+					(x_pos >= 343	&& x_pos < 380)) {
 					VIC_scr_pos = SCREEN_POS::BORDER_LR;
 				}
-				else if (VIC_scr_x >= 24 && VIC_scr_x <= 343) {
+				else if (x_pos >= 24 && x_pos <= 343) {
 					VIC_scr_pos = SCREEN_POS::ROW_38_AREA;
 				}
 				else {
@@ -569,20 +572,20 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 				}
 			}
 			else if (VIC_scanline >= 55 && VIC_scanline < 246) {	//	Screen
-				if ((VIC_scr_x >= 0 && VIC_scr_x < 24) ||
-					(VIC_scr_x >= 480 && VIC_scr_x < 504)) {
+				if ((x_pos >= 0		&& x_pos < 24) ||
+					(x_pos >= 480	&& x_pos < 504)) {
 					VIC_scr_pos = SCREEN_POS::BORDER_LR;
 				}
-				else if (VIC_scr_x >= 24 && VIC_scr_x < 31) {
+				else if (x_pos >= 24 && x_pos < 31) {
 					VIC_scr_pos = SCREEN_POS::COL_38_AREA;
 				}
-				else if (VIC_scr_x >= 31 && VIC_scr_x <= 334) {
+				else if (x_pos >= 31 && x_pos <= 334) {
 					VIC_scr_pos = SCREEN_POS::SCREEN;
 				}
-				else if (VIC_scr_x >= 334 && VIC_scr_x < 343) {
+				else if (x_pos >= 334 && x_pos < 343) {
 					VIC_scr_pos = SCREEN_POS::COL_38_AREA;
 				}
-				else if (VIC_scr_x >= 343 && VIC_scr_x < 380) {
+				else if (x_pos >= 343 && x_pos < 380) {
 					VIC_scr_pos = SCREEN_POS::BORDER_LR;
 				}
 				else {
@@ -591,12 +594,12 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 
 			}
 			else if (VIC_scanline >= 246 && VIC_scanline < 251) {	//	Bottom, 38-row-are
-				if ((VIC_scr_x >= 0 && VIC_scr_x < 24) ||
-					(VIC_scr_x >= 480 && VIC_scr_x < 504) ||
-					(VIC_scr_x >= 343 && VIC_scr_x < 380)) {
+				if ((x_pos >= 0		&& x_pos < 24) ||
+					(x_pos >= 480	&& x_pos < 504) ||
+					(x_pos >= 343	&& x_pos < 380)) {
 					VIC_scr_pos = SCREEN_POS::BORDER_LR;
 				}
-				else if (VIC_scr_x >= 24 && VIC_scr_x <= 343) {
+				else if (x_pos >= 24 && x_pos <= 343) {
 					VIC_scr_pos = SCREEN_POS::ROW_38_AREA;
 				}
 				else {
@@ -604,12 +607,12 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 				}
 			}
 			else if (VIC_scanline >= 251 && VIC_scanline < 299) {	//	Bottom Border
-				if ((VIC_scr_x >= 0 && VIC_scr_x < 24) ||
-					(VIC_scr_x >= 480 && VIC_scr_x < 504) ||
-					(VIC_scr_x >= 343 && VIC_scr_x < 380)) {
+				if ((x_pos >= 0		&& x_pos < 24) ||
+					(x_pos >= 480	&& x_pos < 504) ||
+					(x_pos >= 343	&& x_pos < 380)) {
 					VIC_scr_pos = SCREEN_POS::BORDER_LR;
 				}
-				else if (VIC_scr_x >= 24 && VIC_scr_x < 343) {
+				else if (x_pos >= 24 && x_pos < 343) {
 					VIC_scr_pos = SCREEN_POS::BORDER_TB;
 				}
 				else {
@@ -622,14 +625,10 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 
 			//	render pixel
 			//	offset, according to which pixels need to be our 0/0 point in our actual window
-			renderByPixels(VIC_scanline - 16, (VIC_scr_x + 24) % 504, VIC_scr_pos);
+			renderByPixels(VIC_scanline - 16, (x_pos + 24) % 504, VIC_scr_pos);
 
 			//	increase X-Position & draw actual frame after it's beend rendered completely
-			VIC_scr_x++;
-			if (VIC_scr_x == 504) {
-				VIC_scr_x = 0;
-			}
-			if (VIC_scr_x == 404 && VIC_scanline == 0) {
+			if (x_pos == 404 && VIC_scanline == 0) {
 				drawFrame();
 				//drawDebug();
 			}
@@ -651,65 +650,6 @@ void VIC_nextScanline() {
 		VIC_scanline = 0;
 	}
 }
-
-bool VIC_rasterIRQ = false;
-uint8_t VIC_cycle = 13;
-uint8_t VIC_getCycle() {
-	return VIC_cycle;
-}
-
-/*
-void VIC_tick() {
-	VIC_fetchGraphicsData(1);
-	if (VIC_cycle == 1) {
-		VIC_rasterIRQ = VIC_checkRasterIRQ();
-		VIC_fetchSpritePointer(3);
-	}
-	else if (VIC_cycle == 3) {
-		if (VIC_rasterIRQ) {
-			setIRQ(true);
-		}
-		VIC_fetchSpritePointer(4);
-	}
-	else if (VIC_cycle == 5) {
-		VIC_fetchSpritePointer(5);
-	}
-	else if (VIC_cycle == 7) {
-		VIC_fetchSpritePointer(6);
-	}
-	else if (VIC_cycle == 9) {
-		VIC_fetchSpritePointer(7);
-	}
-	else if (VIC_cycle >= 11 && VIC_cycle <= 15) {
-		VIC_dataRefresh();
-	}
-	else if (VIC_cycle == 58) {
-		VIC_fetchSpritePointer(0);
-	}
-	else if (VIC_cycle == 60) {
-		VIC_fetchSpritePointer(1);
-	}
-	else if (VIC_cycle == 62) {
-		VIC_fetchSpritePointer(2);
-	}
-	VIC_cycle++;
-	if (VIC_cycle == 64) {
-		VIC_cycle = 1;
-		VIC_nextScanline();
-	}
-}
-
-*/
-
-
-
-
-
-
-
-
-
-
 
 void writeVICregister(uint16_t adr, uint8_t val) {
 	switch (adr)
