@@ -1,3 +1,4 @@
+#pragma once
 #include <string>
 #include <iostream>
 #include <cstdint>
@@ -9,7 +10,6 @@
 #include "SDL2/include/SDL_syswm.h"
 #include "SDL2/include/SDL.h"
 #undef main
-using namespace::std;
 //	[q00.c64]
 
 SDL_Event event;					
