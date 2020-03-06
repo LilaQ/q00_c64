@@ -27,7 +27,7 @@ SDL_Renderer* renderer, *debug_renderer;
 SDL_Window* window, *debug_window;
 SDL_Texture* texture, *debug_texture;
 
-vector<uint8_t> VRAM(400 * 284 * 3);	//	RGB - 320 * 200 pixel inside, with border 402 * 284
+vector<uint8_t> VRAM(504 * 284 * 3);	//	RGB - 320 * 200 pixel inside, with border 402 * 284
 vector<uint8_t> SPRITES(24 * 21 * 3);	//	RGB - 320 * 200 pixel inside, with border 402 * 284
 
 const unsigned char COLORS[16][3] = {
@@ -50,7 +50,7 @@ const unsigned char COLORS[16][3] = {
 };
 
 void drawFrame() {
-	SDL_UpdateTexture(texture, NULL, (uint8_t*)VRAM.data(), 400 * sizeof(unsigned char) * 3);
+	SDL_UpdateTexture(texture, NULL, (uint8_t*)VRAM.data(), 504 * sizeof(unsigned char) * 3);
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
 }
@@ -76,13 +76,13 @@ void initPPU(string filename) {
 	//	init and create window and renderer
 	SDL_Init(SDL_INIT_VIDEO);
 	//SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-	SDL_CreateWindowAndRenderer(400, 284, 0, &window, &renderer);
-	SDL_SetWindowSize(window, 800, 588);
+	SDL_CreateWindowAndRenderer(524, 284, 0, &window, &renderer);
+	SDL_SetWindowSize(window, 1028, 588);
 	//SDL_RenderSetLogicalSize(renderer, 512, 480);
 	SDL_SetWindowResizable(window, SDL_TRUE);
 
 	//	for fast rendering, create a texture
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 400, 284);
+	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 504, 284);
 	initWindow(window, filename);
 
 	VIC_REGISTERS.fill(0x00);
@@ -302,10 +302,8 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 
 		if (SCREENPOS != SCREEN_POS::NO_RENDER) {
 			//	Basic VRAM start address and OFFSET of the pixel we want to write to in this iteration
-			ADR = (scanline * 400 * 3) + ((x + offset_x) * 3);
-			uint16_t OFFSET = (uint16_t)(((scanline - 35) / 8) * 40 + (x - 48) / 8);
-			//OFFSET = (uint16_t)(((scanline - 35) / 8) * 40) + x;
-			//OFFSET = 0;
+			ADR = (scanline * 504 * 3) + ((x + offset_x) * 3);
+			uint16_t OFFSET = (uint16_t)(((scanline - 35) / 8) * 40 + (x - 24) / 8);
 
 			//	TEXTMODE
 			if (((SCREENPOS == SCREEN_POS::SCREEN) ||
@@ -330,9 +328,9 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 
 				//	NORMAL MODE
 				if ((VIC_REGISTERS[0x16] & 0b10000) == 0) {
-					VRAM[ADR] = ((chr & (1 << (7 - (x - 48) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
-					VRAM[ADR + 1] = ((chr & (1 << (7 - (x - 48) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
-					VRAM[ADR + 2] = ((chr & (1 << (7 - (x - 48) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
+					VRAM[ADR] = ((chr & (1 << (7 - (x) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
+					VRAM[ADR + 1] = ((chr & (1 << (7 - (x) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
+					VRAM[ADR + 2] = ((chr & (1 << (7 - (x) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
 				}
 
 				//	MULTICOLOR MODE
@@ -383,9 +381,9 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 					//	...else it's still going to be hires single color mode
 					else {
 						color &= 0xf;
-						VRAM[ADR] = ((chr & (1 << (7 - (x - 48) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
-						VRAM[ADR + 1] = ((chr & (1 << (7 - (x - 48) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
-						VRAM[ADR + 2] = ((chr & (1 << (7 - (x - 48) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
+						VRAM[ADR] = ((chr & (1 << (7 - (x ) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
+						VRAM[ADR + 1] = ((chr & (1 << (7 - (x ) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
+						VRAM[ADR + 2] = ((chr & (1 << (7 - (x ) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
 					}
 				}
 			}
@@ -445,13 +443,11 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 			uint8_t border_color = VIC_REGISTERS[0x20] & 0xf;
 			if (((SCREENPOS == SCREEN_POS::BORDER_LR || SCREENPOS == SCREEN_POS::BORDER_TB) && DRAW_BORDER) ||
 				((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {
-				if (ADR > 340797 || ADR < 0)
-					printf("ASSERTION! Mem addressed out of range! %d\n", ADR);
-				VRAM[(scanline * 400 * 3) + (x * 3)] = COLORS[border_color][0];
-				VRAM[(scanline * 400 * 3) + (x * 3) + 1] = COLORS[border_color][1];
-				VRAM[(scanline * 400 * 3) + (x * 3) + 2] = COLORS[border_color][2];
-
+				VRAM[(scanline * 504 * 3) + (x * 3)]		= COLORS[border_color][0];
+				VRAM[(scanline * 504 * 3) + (x * 3) + 1]	= COLORS[border_color][1];
+				VRAM[(scanline * 504 * 3) + (x * 3) + 2]	 = COLORS[border_color][2];
 			}
+
 		}
 	}
 }
@@ -476,7 +472,7 @@ uint16_t currentScanline() {
 	return VIC_scanline;
 }
 uint16_t currentPixel() {
-	return currentCycle() * 8;
+	return (currentCycle()) * 8;
 }
 
 bool VIC_isBadline() {
@@ -508,7 +504,7 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 	while (amount--)
 	{
 		for (uint8_t i = 0; i < 8; i++) {
-			uint16_t x_pos = currentCycle() * 8 + i;
+			uint16_t x_pos = (currentPixel() + i);
 			if (VIC_scanline >= 0 && VIC_scanline < 16) {			//	VBlank Top
 				VIC_scr_pos = SCREEN_POS::NO_RENDER;
 			}
@@ -522,7 +518,8 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 					VIC_scr_pos = SCREEN_POS::BORDER_TB;
 				}
 				else {
-					VIC_scr_pos = SCREEN_POS::NO_RENDER;
+					//VIC_scr_pos = SCREEN_POS::NO_RENDER;
+					VIC_scr_pos = SCREEN_POS::BORDER_LR;
 				}
 			}
 			else if (VIC_scanline >= 51 && VIC_scanline < 55) {		//	Top, 38-row-area
@@ -535,7 +532,8 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 					VIC_scr_pos = SCREEN_POS::ROW_38_AREA;
 				}
 				else {
-					VIC_scr_pos = SCREEN_POS::NO_RENDER;
+					//VIC_scr_pos = SCREEN_POS::NO_RENDER;
+					VIC_scr_pos = SCREEN_POS::BORDER_LR;
 				}
 			}
 			else if (VIC_scanline >= 55 && VIC_scanline < 246) {	//	Screen
@@ -556,7 +554,8 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 					VIC_scr_pos = SCREEN_POS::BORDER_LR;
 				}
 				else {
-					VIC_scr_pos = SCREEN_POS::NO_RENDER;
+					//VIC_scr_pos = SCREEN_POS::NO_RENDER;
+					VIC_scr_pos = SCREEN_POS::BORDER_LR;
 				}
 
 			}
@@ -570,7 +569,8 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 					VIC_scr_pos = SCREEN_POS::ROW_38_AREA;
 				}
 				else {
-					VIC_scr_pos = SCREEN_POS::NO_RENDER;
+					//VIC_scr_pos = SCREEN_POS::NO_RENDER;
+					VIC_scr_pos = SCREEN_POS::BORDER_LR;
 				}
 			}
 			else if (VIC_scanline >= 251 && VIC_scanline < 299) {	//	Bottom Border
@@ -583,7 +583,8 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 					VIC_scr_pos = SCREEN_POS::BORDER_TB;
 				}
 				else {
-					VIC_scr_pos = SCREEN_POS::NO_RENDER;
+					//VIC_scr_pos = SCREEN_POS::NO_RENDER;
+					VIC_scr_pos = SCREEN_POS::BORDER_LR;
 				}
 			}
 			else if (VIC_scanline >= 299 && VIC_scanline < 312) {	//	VBlank, bottom
@@ -592,7 +593,8 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 
 			//	render pixel
 			//	offset, according to which pixels need to be our 0/0 point in our actual window
-			renderByPixels(VIC_scanline - 16, (x_pos + 24) % 504, VIC_scr_pos);
+			//printf("Xpos: %d XinArray: %d\n", x_pos, (x_pos + 100) % 504);
+			renderByPixels(VIC_scanline - 16, x_pos, VIC_scr_pos);
 
 			//	increase X-Position & draw actual frame after it's beend rendered completely
 			if (x_pos == 404 && VIC_scanline == 0) {
