@@ -148,7 +148,7 @@ struct SPRITE {
 	uint16_t pos_x;
 	uint16_t pos_y;
 
-	void reinit(uint8_t i, uint8_t x, array<uint8_t, 0x31> &VIC_REGISTERS) {
+	void reinit(uint8_t i, array<uint8_t, 0x31> &VIC_REGISTERS) {
 		//	actual sprite data
 		screen_start = 0x40 * (VIC_REGISTERS[0x18] & 0b11110000);
 
@@ -162,8 +162,7 @@ struct SPRITE {
 		pos_x = (VIC_REGISTERS[0x00 + (i * 2)]) | (((VIC_REGISTERS[0x10] & (1 << i)) > 0) << 8);
 		pos_y = VIC_REGISTERS[0x01 + (i * 2)];
 
-		if (x == pos_x)
-			sprite_data = (readFromMemByVIC(screen_start + 0x03f8 + i) * 64);
+		sprite_data = (readFromMemByVIC(screen_start + 0x03f8 + i) * 64);
 	}
 };
 

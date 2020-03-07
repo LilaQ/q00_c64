@@ -16,16 +16,16 @@ using namespace std;
 uint16_t cycles_on_current_scanline = 0;
 uint16_t current_scanline = 0;
 uint16_t raster_irq_row = 0;
-bool DRAW_BORDER = true;
+bool DRAW_TOP_BOTTOM_BORDER = false;
 int32_t ADR = 0;
 vector<SPRITE> SPRITES_VEC(8);
 array<uint8_t, 0x31> VIC_REGISTERS;
 
 IRQ_STATUS irq_status;
 IRQ_MASK irq_mask;
-SDL_Renderer* renderer, *debug_renderer;
-SDL_Window* window, *debug_window;
-SDL_Texture* texture, *debug_texture;
+SDL_Renderer* renderer;
+SDL_Window* window;
+SDL_Texture* texture;
 
 vector<uint8_t> VRAM(504 * 284 * 3);	//	RGB - 320 * 200 pixel inside, with border 402 * 284
 vector<uint8_t> SPRITES(24 * 21 * 3);	//	RGB - 320 * 200 pixel inside, with border 402 * 284
@@ -54,22 +54,6 @@ void drawFrame() {
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
 }
-void debugSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR);
-void drawDebug() {
-
-	for (int i = 0; i < 21; i++) {
-		for (int j = 0; j < 24; j++) {
-			SPRITES[(i * 24 * 3) + (j * 3)] = 0x00;
-			SPRITES[(i * 24 * 3) + (j * 3) + 1] = 0x00;
-			SPRITES[(i * 24 * 3) + (j * 3) + 2] = 0x00;
-			debugSprites(j, i, (i * 24 * 3) + (j * 3));
-		}
-	}
-
-	SDL_UpdateTexture(debug_texture, NULL, (uint8_t*)SPRITES.data(), 24 * sizeof(unsigned char) * 3);
-	SDL_RenderCopy(debug_renderer, debug_texture, NULL, NULL);
-	SDL_RenderPresent(debug_renderer);
-}
 
 void initPPU(string filename) {
 
@@ -86,13 +70,6 @@ void initPPU(string filename) {
 	initWindow(window, filename);
 
 	VIC_REGISTERS.fill(0x00);
-
-
-	SDL_CreateWindowAndRenderer(24, 21, 0, &debug_window, &debug_renderer);
-	debug_texture = SDL_CreateTexture(debug_renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 24, 21);
-	SDL_SetWindowSize(debug_window, 240, 210);
-
-
 	drawFrame();
 }
 
@@ -110,97 +87,10 @@ void setScreenSize(UI_SCREEN_SIZE scr_s) {
 	}
 }
 
-void debugSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR) {
-
-	//	adjust x and y to accomodate to the sprite-raster that sprites can be drawn to
-	int16_t x = pixel_on_scanline;
-	int16_t y = scanline;
-	uint16_t screen_start = 0x40 * (VIC_REGISTERS[0x18] & 0b11110000);
-
-
-	//	check if sprite is enabled first
-	if (VIC_REGISTERS[0x15] & (1 << 1)) {
-
-		//	actual sprite data
-		uint16_t sprite_data = (readFromMemByVIC(screen_start + 0x03f8 + 1) * 64);
-
-		//	24x21 is the normal size of a sprite
-		bool width_doubled = (VIC_REGISTERS[0x1d] & (1 << 1)) > 0;
-		bool height_doubled = (VIC_REGISTERS[0x17] & (1 << 1)) > 0;
-		bool prio_background = (VIC_REGISTERS[0x1b] & (1 << 1)) > 0;
-		bool multicolor = (VIC_REGISTERS[0x1c] & (1 << 1)) > 0;
-		uint8_t width = 24 * (1 + width_doubled);
-		uint8_t height = 21 * (1 + height_doubled);
-
-		//	check if sprite potentially covers the current pixel
-		if ((x >= 0 && x < (width)) &&
-			(y >= 0 && y < (height))) {
-
-			//	3 byte per line, 21 lines
-			uint8_t spr_x = x;
-			uint8_t spr_y = y;
-			uint8_t color_bit_h = readFromMemByVIC(sprite_data + (spr_y * 3) + (spr_x / 8)) & (1 << (7 - (spr_x % 8)));
-			uint8_t color_bit_l = 0x00;
-			uint8_t color_bits = 0x00;
-			if (multicolor) {
-				//	looking at high bit
-				if (spr_x % 2 == 0) {
-					color_bit_h = readFromMemByVIC(sprite_data + (spr_y * 3) + (spr_x / 8)) & (1 << (7 - (spr_x % 8)));
-					color_bit_l = readFromMemByVIC(sprite_data + (spr_y * 3) + (spr_x / 8)) & (1 << (7 - ((spr_x + 1) % 8)));
-				}
-				else if (spr_x % 2 == 1) {
-					color_bit_l = readFromMemByVIC(sprite_data + (spr_y * 3) + (spr_x / 8)) & (1 << (7 - (spr_x % 8)));
-					color_bit_h = readFromMemByVIC(sprite_data + (spr_y * 3) + ((spr_x - 1) / 8)) & (1 << (7 - ((spr_x - 1) % 8)));
-				}
-			}
-			color_bit_h = color_bit_h > 0;
-			color_bit_l = color_bit_l > 0;
-			color_bits = (color_bit_h << 1) | color_bit_l;
-			uint8_t color = 0x00;
-			//	single color (hires)
-			if (!multicolor) {
-				if (color_bit_h) {
-					color = VIC_REGISTERS[0x27 + 1];
-					SPRITES[ADR] = COLORS[color][0];
-					SPRITES[ADR + 1] = COLORS[color][1];
-					SPRITES[ADR + 2] = COLORS[color][2];
-				}
-			}
-			//	multicolor
-			else {
-				if (color_bits) {
-					switch (color_bits)
-					{
-					case 0b00:
-						printf("This shouldn't be happening\n");
-						break;
-					case 0b01:
-						color = VIC_REGISTERS[0x25];
-						break;
-					case 0b10:
-						color = VIC_REGISTERS[0x27 + 1];						
-						break;
-					case 0b11:
-						color = VIC_REGISTERS[0x26];
-						break;
-					}
-					SPRITES[ADR] = COLORS[color][0];
-					SPRITES[ADR + 1] = COLORS[color][1];
-					SPRITES[ADR + 2] = COLORS[color][2];
-				}
-			}
-
-		}
-
-	}
-
-}
-
-
 void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR) {
 
 	//	adjust x and y to accomodate to the sprite-raster that sprites can be drawn to
-	int16_t x = pixel_on_scanline - 24;
+	int16_t x = pixel_on_scanline - 112;
 	int16_t y = scanline + 15;
 	uint16_t screen_start = 0x40 * (VIC_REGISTERS[0x18] & 0b11110000);
 
@@ -270,9 +160,9 @@ void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR) 
 				}
 				//	DEBUG green dot upper left corner
 				if (spr_x == 0 && spr_y == 0) {
-					VRAM[ADR] = COLORS[color][0];
-					VRAM[ADR + 1] = COLORS[color][1];
-					VRAM[ADR + 2] = COLORS[color][2];
+					VRAM[ADR] = 0xff;
+					VRAM[ADR + 1] = 0x00;
+					VRAM[ADR + 2] = 0x00;
 				}
 			}
 
@@ -441,11 +331,11 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 
 			//	border
 			uint8_t border_color = VIC_REGISTERS[0x20] & 0xf;
-			if (((SCREENPOS == SCREEN_POS::BORDER_LR || SCREENPOS == SCREEN_POS::BORDER_TB) && DRAW_BORDER) ||
+			if (((SCREENPOS == SCREEN_POS::BORDER_LR && 1) || (SCREENPOS == SCREEN_POS::BORDER_TB && DRAW_TOP_BOTTOM_BORDER)) ||
 				((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {
 				VRAM[(scanline * 504 * 3) + (x * 3)]		= COLORS[border_color][0];
 				VRAM[(scanline * 504 * 3) + (x * 3) + 1]	= COLORS[border_color][1];
-				VRAM[(scanline * 504 * 3) + (x * 3) + 2]	 = COLORS[border_color][2];
+				VRAM[(scanline * 504 * 3) + (x * 3) + 2]	= COLORS[border_color][2];
 			}
 
 		}
@@ -458,10 +348,6 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 	-------------------------------------------------------
 	6569      PAL      312       63      284       403
 */
-bool ldr = false;
-void logDraw() {
-	ldr = true;
-}
 
 /*	REWRITE FROM HERE ON		*/
 uint16_t VIC_scanline = 0;
@@ -584,12 +470,16 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 				VIC_scr_pos = SCREEN_POS::NO_RENDER;
 			}
 
-			//	render pixel
-			//	offset, according to which pixels need to be our 0/0 point in our actual window
-			//printf("Xpos: %d XinArray: %d\n", x_pos, (x_pos + 100) % 504);
-			renderByPixels(VIC_scanline - 16, x_pos, VIC_scr_pos);
+			//	open border Top/Bottom hack
+			/*
+				If 25 lines open, in line 25 back to 24, end of 25 check is set to false
+			*/
+			if (1) {
 
-			//	increase X-Position & draw actual frame after it's beend rendered completely
+			}
+
+			//	render pixel
+			renderByPixels(VIC_scanline - 16, x_pos, VIC_scr_pos);
 			if (x_pos == 503 && VIC_scanline == 0) {
 				drawFrame();
 				//drawDebug();
@@ -599,7 +489,7 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 }
 
 void VIC_fetchSpritePointer(uint8_t sprite_no) {
-
+	SPRITES_VEC.at(sprite_no).reinit(sprite_no, VIC_REGISTERS);
 }
 
 void VIC_dataRefresh() {
