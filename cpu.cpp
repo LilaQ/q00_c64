@@ -1211,9 +1211,9 @@ uint8_t CPU_executeInstruction() {
 		return 1;
 	}
 
-	if (PC == 0x0c00)
+	if (PC == 0x098f)
 		tmpgo = true;
-	if (tmpgo && 0)
+	if (tmpgo && 1)
 		printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x - VIC_Y:%03d(%02x) VIC_X:%03d(%02x) CycNo:%03d(%02x) - P:%02x SP:%02x - D012/11: 0x%04x \n", PC, readFromMem(PC), readFromMem(PC + 1), readFromMem(PC + 2), registers.A, registers.X, registers.Y, currentScanline(), currentScanline(), currentPixel(), currentPixel(), currentCycle(), currentCycle(), status.status, SP_, (readVICregister(0xd011) << 8) | readVICregister(0xd012));
 
 	switch (readFromMem(PC)) {

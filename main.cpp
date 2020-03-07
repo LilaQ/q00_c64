@@ -18,7 +18,7 @@ bool isBadline = false;
 bool rasterIRQ = false;
 bool flaggedAfterNextInstr = false;
 bool flaggedForIRQ = false;
-uint8_t c = 13;
+uint8_t c = 0;
 uint8_t cycles_left = 0;
 
 int main()
