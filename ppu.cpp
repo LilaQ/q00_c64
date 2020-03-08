@@ -16,7 +16,7 @@ using namespace std;
 uint16_t cycles_on_current_scanline = 0;
 uint16_t current_scanline = 0;
 uint16_t raster_irq_row = 0;
-bool DRAW_TOP_BOTTOM_BORDER = false;
+bool DRAW_TOP_BOTTOM_BORDER = true;
 int32_t ADR = 0;
 vector<SPRITE> SPRITES_VEC(8);
 array<uint8_t, 0x31> VIC_REGISTERS;
@@ -197,7 +197,7 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 
 			//	TEXTMODE
 			if (((SCREENPOS == SCREEN_POS::SCREEN) ||
-				(SCREENPOS == SCREEN_POS::ROW_38_AREA) ||
+				(SCREENPOS == SCREEN_POS::ROW_25_AREA) ||
 				(SCREENPOS == SCREEN_POS::COL_38_AREA)) &&
 				((VIC_REGISTERS[0x11] & 0b100000) == 0)
 				) {
@@ -271,16 +271,16 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 					//	...else it's still going to be hires single color mode
 					else {
 						color &= 0xf;
-						VRAM[ADR] = ((chr & (1 << (7 - (x - 112) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
-						VRAM[ADR + 1] = ((chr & (1 << (7 - (x - 112) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
-						VRAM[ADR + 2] = ((chr & (1 << (7 - (x - 112) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
+						VRAM[ADR]		= ((chr & (1 << (7 - (x - 112) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
+						VRAM[ADR + 1]	= ((chr & (1 << (7 - (x - 112) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
+						VRAM[ADR + 2]	= ((chr & (1 << (7 - (x - 112) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
 					}
 				}
 			}
 			//	BITMAP MODE
 			else if ((SCREENPOS == SCREEN_POS::SCREEN) ||
 				(SCREENPOS == SCREEN_POS::COL_38_AREA) ||
-				(SCREENPOS == SCREEN_POS::ROW_38_AREA)
+				(SCREENPOS == SCREEN_POS::ROW_25_AREA)
 				) {
 				uint16_t BMP_OFFSET = (OFFSET / 40) * 320 + (OFFSET % 40) * 8 + ((scanline - 35) % 8);
 				uint8_t bit = readFromMemByVIC(bmp_start_address + BMP_OFFSET) & (0b10000000 >> ((x - 112) % 8));
@@ -326,18 +326,30 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 				VRAM[ADR + 2] = COLORS[color_index][2];
 			}
 
-			//	sprites
-			renderSprites(x, scanline, ADR);
-
 			//	border
-			uint8_t border_color = VIC_REGISTERS[0x20] & 0xf;
-			if (((SCREENPOS == SCREEN_POS::BORDER_LR && 1) || (SCREENPOS == SCREEN_POS::BORDER_TB && DRAW_TOP_BOTTOM_BORDER)) ||
+			//uint8_t border_color = VIC_REGISTERS[0x20] & 0xf;
+			/*if (((SCREENPOS == SCREEN_POS::BORDER_LR && 1) ||  ||
 				((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {
-				VRAM[(scanline * 504 * 3) + (x * 3)]		= COLORS[border_color][0];
-				VRAM[(scanline * 504 * 3) + (x * 3) + 1]	= COLORS[border_color][1];
-				VRAM[(scanline * 504 * 3) + (x * 3) + 2]	= COLORS[border_color][2];
+				VRAM[(scanline * 504 * 3) + (x * 3)] = COLORS[border_color][0];
+				VRAM[(scanline * 504 * 3) + (x * 3) + 1] = COLORS[border_color][1];
+				VRAM[(scanline * 504 * 3) + (x * 3) + 2] = COLORS[border_color][2];
+			}*/
+			//	Top / Bottom border - account border opening
+			if (SCREENPOS == SCREEN_POS::BORDER_TB) {
+				uint8_t border_color	= VIC_REGISTERS[0x20] & 0xf;
+				uint8_t bg_color		= VIC_REGISTERS[0x21] & 0xf;
+				uint8_t col				= border_color;
+				if (!DRAW_TOP_BOTTOM_BORDER) {
+					col	= (readFromMem(0x3fff)& (1 << (x % 8))) ? border_color : bg_color;
+				}
+				VRAM[(scanline * 504 * 3) + (x * 3)]		= COLORS[col][0];
+				VRAM[(scanline * 504 * 3) + (x * 3) + 1]	= COLORS[col][1];
+				VRAM[(scanline * 504 * 3) + (x * 3) + 2]	= COLORS[col][2];
 			}
 
+			//	TODO : We need a proper timing in which Sprites / BG are being drawn (especially when borders are disabled)
+			//	sprites
+			renderSprites(x, scanline, ADR);
 		}
 	}
 }
@@ -413,7 +425,7 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 					VIC_scr_pos = SCREEN_POS::BORDER_LR;
 				}
 				else if (x_pos >= 136 && x_pos < 456) {
-					VIC_scr_pos = SCREEN_POS::ROW_38_AREA;
+					VIC_scr_pos = SCREEN_POS::ROW_25_AREA;
 				}
 				else {
 					//VIC_scr_pos = SCREEN_POS::NO_RENDER;
@@ -446,7 +458,7 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 					VIC_scr_pos = SCREEN_POS::BORDER_LR;
 				}
 				else if (x_pos >= 136 && x_pos < 456) {
-					VIC_scr_pos = SCREEN_POS::ROW_38_AREA;
+					VIC_scr_pos = SCREEN_POS::ROW_25_AREA;
 				}
 				else {
 					//VIC_scr_pos = SCREEN_POS::NO_RENDER;
@@ -474,8 +486,19 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 			/*
 				If 25 lines open, in line 25 back to 24, end of 25 check is set to false
 			*/
-			if (1) {
-
+			//	reset border-drawing
+			if (VIC_scanline == 50 && x_pos == 503) {
+				DRAW_TOP_BOTTOM_BORDER = false;
+			}
+			//	24 Lines, check border-drawing
+			if (VIC_scanline == 241 && x_pos == 503) {
+				if ((VIC_REGISTERS[0x11] & 0b1000) == 0)
+					DRAW_TOP_BOTTOM_BORDER = true;
+			}
+			//	25 Lines, check border-drawing
+			if (VIC_scanline == 249 && x_pos == 503) {
+				if (VIC_REGISTERS[0x11] & 0b1000)
+					DRAW_TOP_BOTTOM_BORDER = true;
 			}
 
 			//	render pixel
