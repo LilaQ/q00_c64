@@ -109,7 +109,6 @@ enum class UI_SCREEN_SIZE {
 	X2
 };
 
-void stepPPU(uint8_t cpu_cycles);
 void initPPU(string name);
 void writeVICregister(uint16_t adr, uint8_t val);
 uint8_t readVICregister(uint16_t adr);
@@ -117,7 +116,6 @@ void setScreenSize(UI_SCREEN_SIZE scr_s);
 
 
 //	DEBUG
-void logDraw();
 uint8_t readVICregister(uint16_t adr);
 uint16_t currentScanline();
 uint16_t currentPixel();
@@ -129,14 +127,17 @@ void VIC_dataRefresh();
 void VIC_nextScanline();
 void VIC_fetchGraphicsData(uint8_t amount);
 void VIC_fetchSpritePointer(uint8_t sprite_nr);
+void VIC_fetchSpriteAttributes(uint8_t sprite_no);
+void VIC_fetchSpriteDataBytes(uint8_t sprite_no);
+bool VIC_isSpriteEnabled(uint8_t sprite_no);
+bool VIC_isSpriteInLine(uint8_t sprite_no, uint16_t y);
 bool VIC_checkRasterIRQ();
-uint8_t VIC_getCycle();
-void VIC_tick();
 
 struct SPRITE {
 	//	actual sprite data
 	uint16_t screen_start;
-	uint16_t sprite_data;
+	uint16_t sprite_pointer;
+	uint8_t data[3];
 
 	//	24x21 is the normal size of a sprite
 	bool width_doubled;
@@ -149,20 +150,30 @@ struct SPRITE {
 	uint16_t pos_y;
 
 	void reinit(uint8_t i, array<uint8_t, 0x31> &VIC_REGISTERS) {
-		//	actual sprite data
-		screen_start = 0x40 * (VIC_REGISTERS[0x18] & 0b11110000);
-
 		//	24x21 is the normal size of a sprite
-		width_doubled = (VIC_REGISTERS[0x1d] & (1 << i)) > 0;
-		height_doubled = (VIC_REGISTERS[0x17] & (1 << i)) > 0;
+		width_doubled	= (VIC_REGISTERS[0x1d] & (1 << i)) > 0;
+		height_doubled	= (VIC_REGISTERS[0x17] & (1 << i)) > 0;
 		prio_background = (VIC_REGISTERS[0x1b] & (1 << i)) > 0;
-		multicolor = (VIC_REGISTERS[0x1c] & (1 << i)) > 0;
-		width = 24 * (1 + width_doubled);
-		height = 21 * (1 + height_doubled);
-		pos_x = (VIC_REGISTERS[0x00 + (i * 2)]) | (((VIC_REGISTERS[0x10] & (1 << i)) > 0) << 8);
-		pos_y = VIC_REGISTERS[0x01 + (i * 2)];
+		multicolor		= (VIC_REGISTERS[0x1c] & (1 << i)) > 0;
+		width			= 24 * (1 + width_doubled);
+		height			= 21 * (1 + height_doubled);
+		pos_x			= (VIC_REGISTERS[0x00 + (i * 2)]) | (((VIC_REGISTERS[0x10] & (1 << i)) > 0) << 8);
+		pos_y			= VIC_REGISTERS[0x01 + (i * 2)];
+	}
 
-		sprite_data = (readFromMemByVIC(screen_start + 0x03f8 + i) * 64);
+	//	Fetch Sprite Pointer
+	void fetchSpritePointer(uint8_t id, array<uint8_t, 0x31>& VIC_REGISTERS) {
+		//	screen RAM
+		screen_start	= 0x40 * (VIC_REGISTERS[0x18] & 0b11110000);
+		sprite_pointer	= (readFromMemByVIC(screen_start + 0x03f8 + id) * 64);
+	}
+
+	//	Fetch the 3 bytes for this sprite, for this row
+	void fetchSpriteDataBytes(uint8_t id, uint16_t y) {
+		data[0] = readFromMemByVIC(sprite_pointer + ((y - pos_y) * 3));
+		data[1] = readFromMemByVIC(sprite_pointer + ((y - pos_y) * 3) + 1);
+		data[2] = readFromMemByVIC(sprite_pointer + ((y - pos_y) * 3) + 2);
+		printf("ID: %d y: %d - %d %d %d\n", id, y, data[0], data[1], data[2]);
 	}
 };
 

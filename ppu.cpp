@@ -90,6 +90,7 @@ void setScreenSize(UI_SCREEN_SIZE scr_s) {
 void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR) {
 
 	//	adjust x and y to accomodate to the sprite-raster that sprites can be drawn to
+	uint8_t sprite_fix = 0;
 	int16_t x = pixel_on_scanline - 112;
 	int16_t y = scanline + 15;
 	uint16_t screen_start = 0x40 * (VIC_REGISTERS[0x18] & 0b11110000);
@@ -97,77 +98,73 @@ void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR) 
 	//	iterate through all 8 available sprites
 	for (int8_t i = 7; i >= 0; i--) {
 
-		//	check if sprite is enabled first
-		if (VIC_REGISTERS[0x15] & (1 << i)) {
+		if (VIC_isSpriteEnabled(i) && VIC_isSpriteInLine(i, y) &&
+			(SPRITES_VEC[i].pos_x <= x && (SPRITES_VEC[i].pos_x + SPRITES_VEC[i].width) > x)) {
 
-			//	check if sprite potentially covers the current pixel
-			if ((x >= SPRITES_VEC[i].pos_x && x < (SPRITES_VEC[i].pos_x + SPRITES_VEC[i].width)) &&
-				(y >= SPRITES_VEC[i].pos_y && y < (SPRITES_VEC[i].pos_y + SPRITES_VEC[i].height))) {
+			//	3 byte per line, 21 lines
+			uint8_t spr_x = x - SPRITES_VEC[i].pos_x;
 
-				//	3 byte per line, 21 lines
-				uint8_t spr_x = x - SPRITES_VEC[i].pos_x;
-				uint8_t spr_y = y - SPRITES_VEC[i].pos_y;
-
-				uint8_t color_bit_h = readFromMemByVIC(SPRITES_VEC[i].sprite_data + (spr_y * 3) + (spr_x / 8)) & (1 << (7 - (spr_x % 8)));
-				uint8_t color_bit_l = 0x00;
-				uint8_t color_bits = 0x00;
-				if (SPRITES_VEC[i].multicolor) {
-					//	looking at high bit
-					if (spr_x % 2 == 0) {
-						color_bit_h = readFromMemByVIC(SPRITES_VEC[i].sprite_data + (spr_y * 3) + (spr_x / 8)) & (1 << (7 - (spr_x % 8)));
-						color_bit_l = readFromMemByVIC(SPRITES_VEC[i].sprite_data + (spr_y * 3) + (spr_x / 8)) & (1 << (7 - ((spr_x + 1) % 8)));
-					}
-					else if (spr_x % 2 == 1) {
-						color_bit_l = readFromMemByVIC(SPRITES_VEC[i].sprite_data + (spr_y * 3) + (spr_x / 8)) & (1 << (7 - (spr_x % 8)));
-						color_bit_h = readFromMemByVIC(SPRITES_VEC[i].sprite_data + (spr_y * 3) + ((spr_x - 1) / 8)) & (1 << (7 - ((spr_x - 1) % 8)));
-					}
+			uint8_t color_byte	= SPRITES_VEC[i].data[spr_x / 8];
+			uint8_t color_bit_h = color_byte & (1 << (7 - (spr_x % 8)));
+			uint8_t color_bit_l = 0x00;
+			uint8_t color_bits = 0x00;
+			if (SPRITES_VEC[i].multicolor) {
+				//	looking at high bit
+				if (spr_x % 2 == 0) {
+					color_bit_h = color_byte & (1 << (7 - (spr_x % 8)));
+					color_bit_l = color_byte & (1 << (7 - ((spr_x + 1) % 8)));
+					//color_bit_l = readFromMemByVIC(SPRITES_VEC[i].sprite_pointer + (spr_y * 3) + (spr_x / 8)) & (1 << (7 - ((spr_x + 1) % 8)));
 				}
-				color_bit_h = color_bit_h > 0;
-				color_bit_l = color_bit_l > 0;
-				color_bits = (color_bit_h << 1) | color_bit_l;
-				uint8_t color = 0x00;
-				//	single color (hires)
-				if (!SPRITES_VEC[i].multicolor) {
-					if (color_bit_h) {
-						color = VIC_REGISTERS[0x27 + i];
-						VRAM[ADR] = COLORS[color][0];
-						VRAM[ADR + 1] = COLORS[color][1];
-						VRAM[ADR + 2] = COLORS[color][2];
-					}
-				}
-				//	multicolor
-				else {
-					if (color_bits) {
-						switch (color_bits)
-						{
-							case 0b00:
-								printf("This shouldn't be happening\n");
-								break;
-							case 0b01:
-								color = VIC_REGISTERS[0x25];
-								break;
-							case 0b10:
-								color = VIC_REGISTERS[0x27 + i];
-								break;
-							case 0b11:
-								color = VIC_REGISTERS[0x26];
-								break;	
-						}
-						VRAM[ADR] = COLORS[color][0];
-						VRAM[ADR + 1] = COLORS[color][1];
-						VRAM[ADR + 2] = COLORS[color][2];
-					}
-				}
-				//	DEBUG green dot upper left corner
-				if (spr_x == 0 && spr_y == 0) {
-					VRAM[ADR] = 0xff;
-					VRAM[ADR + 1] = 0x00;
-					VRAM[ADR + 2] = 0x00;
+				else if (spr_x % 2 == 1) {
+					color_bit_l = color_byte & (1 << (7 - (spr_x % 8))) ;
+					color_bit_h = color_byte & (1 << (7 - ((spr_x - 1) % 8)));
+					//color_bit_l = readFromMemByVIC(SPRITES_VEC[i].sprite_pointer + (spr_y * 3) + (spr_x / 8)) & (1 << (7 - (spr_x % 8)));
+					//color_bit_h = readFromMemByVIC(SPRITES_VEC[i].sprite_pointer + (spr_y * 3) + ((spr_x - 1) / 8)) & (1 << (7 - ((spr_x - 1) % 8)));
 				}
 			}
-
+			color_bit_h = color_bit_h > 0;
+			color_bit_l = color_bit_l > 0;
+			color_bits = (color_bit_h << 1) | color_bit_l;
+			uint8_t color = 0x00;
+			//	single color (hires)
+			if (!SPRITES_VEC[i].multicolor) {
+				if (color_bit_h) {
+					color = VIC_REGISTERS[0x27 + i];
+					VRAM[ADR] = COLORS[color][0];
+					VRAM[ADR + 1] = COLORS[color][1];
+					VRAM[ADR + 2] = COLORS[color][2];
+				}
+			}
+			//	multicolor
+			else {
+				if (color_bits) {
+					switch (color_bits)
+					{
+					case 0b00:
+						printf("This shouldn't be happening\n");
+						break;
+					case 0b01:
+						color = VIC_REGISTERS[0x25];
+						break;
+					case 0b10:
+						color = VIC_REGISTERS[0x27 + i];
+						break;
+					case 0b11:
+						color = VIC_REGISTERS[0x26];
+						break;
+					}
+					VRAM[ADR] = COLORS[color][0];
+					VRAM[ADR + 1] = COLORS[color][1];
+					VRAM[ADR + 2] = COLORS[color][2];
+				}
+			}
+			//	DEBUG green dot upper left corner
+			if (spr_x == 0 && (y - SPRITES_VEC[i].pos_y) == 0) {
+				VRAM[ADR] = 0xff;
+				VRAM[ADR + 1] = 0x00;
+				VRAM[ADR + 2] = 0x00;
+			}
 		}
-
 	}
 }
 
@@ -511,8 +508,35 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 	}
 }
 
-void VIC_fetchSpritePointer(uint8_t sprite_no) {
+void VIC_fetchSpriteAttributes(uint8_t sprite_no) {
 	SPRITES_VEC.at(sprite_no).reinit(sprite_no, VIC_REGISTERS);
+}
+
+void VIC_fetchSpritePointer(uint8_t sprite_no) {
+	SPRITES_VEC.at(sprite_no).fetchSpritePointer(sprite_no, VIC_REGISTERS);
+}
+
+bool VIC_isSpriteInLine(uint8_t sprite_no, uint16_t y) {
+	//	check if this sprite is part of the current line
+	if (y >= SPRITES_VEC[sprite_no].pos_y && y < (SPRITES_VEC[sprite_no].pos_y + SPRITES_VEC[sprite_no].height)) {
+		return true;
+	}
+	return false;
+}
+
+void VIC_fetchSpriteDataBytes(uint8_t sprite_no) {
+	uint8_t sprite_fix = (sprite_no >= 0 && sprite_no <= 2) ? 1 : 0;
+	if (VIC_isSpriteInLine(sprite_no, VIC_scanline - 16 + 15 + sprite_fix)) {
+		SPRITES_VEC[sprite_no].fetchSpriteDataBytes(sprite_no, VIC_scanline - 16 + 15 + sprite_fix);
+	}
+}
+
+bool VIC_isSpriteEnabled(uint8_t sprite_no) {
+	//	check if sprite is enabled first
+	if (VIC_REGISTERS[0x15] & (1 << sprite_no)) {
+		return true;
+	}
+	return false;
 }
 
 void VIC_dataRefresh() {
@@ -545,11 +569,6 @@ void writeVICregister(uint16_t adr, uint8_t val) {
 			break;
 		default:
 			break;
-	}
-	if (adr == 0xd020) {
-		//printf("[RasterIRQ set to %d] setting Bordercolor %x at scanline: %d at cycle %d\n", raster_irq_row, val, current_scanline, cy_0);
-		//if (val == 0)
-			//printf("\n");
 	}
 	VIC_REGISTERS[adr % 0xd000] = val;
 }

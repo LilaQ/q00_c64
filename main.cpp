@@ -18,6 +18,14 @@ bool isBadline = false;
 bool rasterIRQ = false;
 bool flaggedAfterNextInstr = false;
 bool flaggedForIRQ = false;
+bool s0_read = false;
+bool s1_read = false;
+bool s2_read = false;
+bool s3_read = false;
+bool s4_read = false;
+bool s5_read = false;
+bool s6_read = false;
+bool s7_read = false;
 uint8_t c = 0;
 uint8_t cycles_left = 0;
 
@@ -122,35 +130,75 @@ int main()
 				/*
 					VIC Stub
 				*/
-				VIC_fetchGraphicsData(1);
 				if (c == 1) {
 					isBadline = VIC_isBadline();
 					VIC_fetchSpritePointer(3);
+					s3_read = VIC_isSpriteEnabled(3);
+					if (s3_read) {
+						VIC_fetchSpriteDataBytes(3);
+					}
 				}
 				else if (c == 3) {
 					VIC_fetchSpritePointer(4);
+					s4_read = VIC_isSpriteEnabled(4);
+					if (s4_read) {
+						VIC_fetchSpriteDataBytes(4);
+					}
 				}
 				else if (c == 5) {
 					VIC_fetchSpritePointer(5);
+					s5_read = VIC_isSpriteEnabled(5);
+					if (s5_read) {
+						VIC_fetchSpriteDataBytes(5);
+					}
 				}
 				else if (c == 7) {
 					VIC_fetchSpritePointer(6);
+					s6_read = VIC_isSpriteEnabled(6);
+					if (s6_read) {
+						VIC_fetchSpriteDataBytes(6);
+					}
 				}
 				else if (c == 9) {
 					VIC_fetchSpritePointer(7);
+					s7_read = VIC_isSpriteEnabled(7);
+					if (s7_read) {
+						VIC_fetchSpriteDataBytes(7);
+					}
 				}
 				else if (c >= 11 && c <= 15) {
-					VIC_dataRefresh();
+					//VIC_dataRefresh();
+					VIC_fetchSpriteAttributes(0);
+					VIC_fetchSpriteAttributes(1);
+					VIC_fetchSpriteAttributes(2);
+					VIC_fetchSpriteAttributes(3);
+					VIC_fetchSpriteAttributes(4);
+					VIC_fetchSpriteAttributes(5);
+					VIC_fetchSpriteAttributes(6);
+					VIC_fetchSpriteAttributes(7);
 				}
 				else if (c == 58) {
 					VIC_fetchSpritePointer(0);
+					s0_read = VIC_isSpriteEnabled(0);
+					if (s0_read) {
+						VIC_fetchSpriteDataBytes(0);
+					}
 				}
 				else if (c == 60) {
 					VIC_fetchSpritePointer(1);
+					s1_read = VIC_isSpriteEnabled(1);
+					if (s1_read) {
+						VIC_fetchSpriteDataBytes(1);
+					}
 				}
 				else if (c == 62) {
 					VIC_fetchSpritePointer(2);
+					s2_read = VIC_isSpriteEnabled(2);
+					if (s2_read) {
+						VIC_fetchSpriteDataBytes(2);
+					}
 				}
+				VIC_fetchGraphicsData(1);
  
 			/*
 				Low-Phi Phase
@@ -175,13 +223,13 @@ int main()
 					}
 					if (c == 0) {
 						if (VIC_checkRasterIRQ()) {
-							printf("Found RasterIRQ\n");
+							//printf("Found RasterIRQ\n");
 							if (cycles_left == 1) {
-								printf("Only once cycle left on current instruction - running next instruction as well before handling IRQ\n");
+								//printf("Only once cycle left on current instruction - running next instruction as well before handling IRQ\n");
 								flaggedAfterNextInstr = true;
 							}
 							else {
-								printf("At least 2 cycles left on current instruction - IRQ will be handled right after this\n");
+								//printf("At least 2 cycles left on current instruction - IRQ will be handled right after this\n");
 								flaggedForIRQ = true;
 							}
 						}
