@@ -18,16 +18,24 @@ bool isBadline = false;
 bool rasterIRQ = false;
 bool flaggedAfterNextInstr = false;
 bool flaggedForIRQ = false;
-bool s0_read = false;
-bool s1_read = false;
-bool s2_read = false;
-bool s3_read = false;
-bool s4_read = false;
-bool s5_read = false;
-bool s6_read = false;
-bool s7_read = false;
 uint8_t c = 0;
-uint8_t cycles_left = 0;
+uint8_t _c[63];								//	1 = cycle blocked by VIC; 0 = cycle free for 6510
+uint8_t _s[8] = { 1,0,1,0,0,1,0,0 };		//	1 = Sprite enabled; 0 = Sprite disabled;
+uint8_t _t[8] = { 57,59,61,0,2,4,6,8 };		//	cycle no.s for each Sprite
+
+bool checkBusTransfer(uint8_t i) {
+	if ((_s[(i + 7) % 8] == 0) && (_s[(i + 6) % 8] == 0)) {
+		return true;
+	}
+	return false;
+}
+
+bool checkSpriteGap(uint8_t i) {
+	if ((_s[(i + 7) % 8] == 0) && (_s[(i + 6) % 8] == 1)) {
+		return true;
+	}
+	return false;
+}
 
 int main()
 {
@@ -133,41 +141,41 @@ int main()
 				if (c == 1) {
 					isBadline = VIC_isBadline();
 					VIC_fetchSpritePointer(3);
-					s3_read = VIC_isSpriteEnabled(3);
-					if (s3_read) {
+					_s[3] = VIC_isSpriteEnabled(3);
+					if (_s[3]) {
 						VIC_fetchSpriteDataBytes(3);
 					}
 				}
 				else if (c == 3) {
 					VIC_fetchSpritePointer(4);
-					s4_read = VIC_isSpriteEnabled(4);
-					if (s4_read) {
+					_s[4] = VIC_isSpriteEnabled(4);
+					if (_s[4]) {
 						VIC_fetchSpriteDataBytes(4);
 					}
 				}
 				else if (c == 5) {
 					VIC_fetchSpritePointer(5);
-					s5_read = VIC_isSpriteEnabled(5);
-					if (s5_read) {
+					_s[5] = VIC_isSpriteEnabled(5);
+					if (_s[5]) {
 						VIC_fetchSpriteDataBytes(5);
 					}
 				}
 				else if (c == 7) {
 					VIC_fetchSpritePointer(6);
-					s6_read = VIC_isSpriteEnabled(6);
-					if (s6_read) {
+					_s[6] = VIC_isSpriteEnabled(6);
+					if (_s[6]) {
 						VIC_fetchSpriteDataBytes(6);
 					}
 				}
 				else if (c == 9) {
 					VIC_fetchSpritePointer(7);
-					s7_read = VIC_isSpriteEnabled(7);
-					if (s7_read) {
+					_s[7] = VIC_isSpriteEnabled(7);
+					if (_s[7]) {
 						VIC_fetchSpriteDataBytes(7);
 					}
 				}
 				else if (c >= 11 && c <= 15) {
-					//VIC_dataRefresh();
+					//	Fetch attributes for Sprites (height, width, position etc.)
 					VIC_fetchSpriteAttributes(0);
 					VIC_fetchSpriteAttributes(1);
 					VIC_fetchSpriteAttributes(2);
@@ -176,37 +184,62 @@ int main()
 					VIC_fetchSpriteAttributes(5);
 					VIC_fetchSpriteAttributes(6);
 					VIC_fetchSpriteAttributes(7);
+					//	Reset Cycle-Array, that stores VIC-busy cycles
+					memset(_c, 0x00, sizeof(_c));
+					//	Check for each sprite, that is visible for this line, if it needs a sprite-skip (2cy) or bus-transfer (3cy)
+					for (uint8_t i = 0; i < 8; i++) {
+						if (_s[i] && VIC_isSpriteInLine(i)) {
+							_c[_t[i]] = 1;
+							_c[_t[i] + 1] = 1;
+							if (checkBusTransfer(i)) {
+								_c[_t[i] - 1] = 1;
+								_c[_t[i] - 2] = 1;
+								_c[_t[i] - 3] = 1;
+							}
+							if (checkSpriteGap(i)) {
+								_c[_t[i] - 1] = 1;
+								_c[_t[i] - 2] = 1;
+							}
+						}
+					}
+					/*if (_s[0]) {
+						for (int i = 0; i < 63; i++) {
+							printf("%02d ", i);
+						}
+						printf("\n");
+						for (int i = 0; i < 63; i++) {
+							printf("%02d ", _c[i]);
+						}
+					}*/
 				}
 				else if (c == 58) {
 					VIC_fetchSpritePointer(0);
-					s0_read = VIC_isSpriteEnabled(0);
-					if (s0_read) {
+					_s[0] = VIC_isSpriteEnabled(0);
+					if (_s[0]) {
 						VIC_fetchSpriteDataBytes(0);
 					}
 				}
 				else if (c == 60) {
 					VIC_fetchSpritePointer(1);
-					s1_read = VIC_isSpriteEnabled(1);
-					if (s1_read) {
+					_s[1] = VIC_isSpriteEnabled(1);
+					if (_s[1]) {
 						VIC_fetchSpriteDataBytes(1);
 					}
 				}
 				else if (c == 62) {
 					VIC_fetchSpritePointer(2);
-					s2_read = VIC_isSpriteEnabled(2);
-					if (s2_read) {
+					_s[2] = VIC_isSpriteEnabled(2);
+					if (_s[2]) {
 						VIC_fetchSpriteDataBytes(2);
 					}
 				}
 				VIC_fetchGraphicsData(1);
  
 			/*
-				Low-Phi Phase
+				Low-Phi Phase / 6510 [VIC on steals]
+				- only execute CPU instruction, if the VIC didn't block the cycle in _c-array
 			*/
 
-				/*
-					6510
-				*/
 				if (flaggedForIRQ) {
 					setIRQ(true);
 					flaggedForIRQ = false;
@@ -215,40 +248,24 @@ int main()
 					flaggedForIRQ = true;
 					flaggedAfterNextInstr = false;
 				}
-				if (c >= 0 && c <= 10) {
-					if (cycles_left == 0) {
-						//if (pendingIRQ())
-							//printf("Running IRQ Routine on cycle %d\n", c);
-						cycles_left = CPU_executeInstruction();
-					}
+				else if (c >= 0 && c <= 10) {
+					if (_c[c] == 0)
+						CPU_executeInstruction();
 					if (c == 0) {
 						if (VIC_checkRasterIRQ()) {
-							//printf("Found RasterIRQ\n");
-							if (cycles_left == 1) {
-								//printf("Only once cycle left on current instruction - running next instruction as well before handling IRQ\n");
-								flaggedAfterNextInstr = true;
-							}
-							else {
-								//printf("At least 2 cycles left on current instruction - IRQ will be handled right after this\n");
-								flaggedForIRQ = true;
-							}
+							flaggedAfterNextInstr = true;
 						}
 					}
-					cycles_left--;
 				}
+				//	Graphics Fetch
 				else if (c >= 11 && c <= 53) {
 					if (!isBadline) {
-						if (cycles_left == 0) {
-							cycles_left = CPU_executeInstruction();
-						}
-						cycles_left--;
+						CPU_executeInstruction();
 					}
 				}
 				else if (c >= 54 && c <= 62) {
-					if (cycles_left == 0) {
-						cycles_left = CPU_executeInstruction();
-					}
-					cycles_left--;
+					if (_c[c] == 0)
+						CPU_executeInstruction();
 				}
 				
 

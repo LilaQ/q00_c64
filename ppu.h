@@ -130,6 +130,7 @@ void VIC_fetchSpritePointer(uint8_t sprite_nr);
 void VIC_fetchSpriteAttributes(uint8_t sprite_no);
 void VIC_fetchSpriteDataBytes(uint8_t sprite_no);
 bool VIC_isSpriteEnabled(uint8_t sprite_no);
+bool VIC_isSpriteInLine(uint8_t sprite_no);
 bool VIC_isSpriteInLine(uint8_t sprite_no, uint16_t y);
 bool VIC_checkRasterIRQ();
 

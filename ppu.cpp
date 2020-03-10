@@ -130,9 +130,9 @@ void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR) 
 			if (!SPRITES_VEC[i].multicolor) {
 				if (color_bit_h) {
 					color = VIC_REGISTERS[0x27 + i];
-					VRAM[ADR] = COLORS[color][0];
-					VRAM[ADR + 1] = COLORS[color][1];
-					VRAM[ADR + 2] = COLORS[color][2];
+					VRAM[ADR]		= COLORS[color][0];
+					VRAM[ADR + 1]	= COLORS[color][1];
+					VRAM[ADR + 2]	= COLORS[color][2];
 				}
 			}
 			//	multicolor
@@ -153,9 +153,9 @@ void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR) 
 						color = VIC_REGISTERS[0x26];
 						break;
 					}
-					VRAM[ADR] = COLORS[color][0];
-					VRAM[ADR + 1] = COLORS[color][1];
-					VRAM[ADR + 2] = COLORS[color][2];
+					VRAM[ADR]		= COLORS[color][0];
+					VRAM[ADR + 1]	= COLORS[color][1];
+					VRAM[ADR + 2]	= COLORS[color][2];
 				}
 			}
 			//	DEBUG green dot upper left corner
@@ -324,13 +324,12 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 			}
 
 			//	border
-			//uint8_t border_color = VIC_REGISTERS[0x20] & 0xf;
-			/*if (((SCREENPOS == SCREEN_POS::BORDER_LR && 1) ||  ||
-				((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {
+			uint8_t border_color = VIC_REGISTERS[0x20] & 0xf;
+			if ((SCREENPOS == SCREEN_POS::BORDER_LR ) || ((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {
 				VRAM[(scanline * 504 * 3) + (x * 3)] = COLORS[border_color][0];
 				VRAM[(scanline * 504 * 3) + (x * 3) + 1] = COLORS[border_color][1];
 				VRAM[(scanline * 504 * 3) + (x * 3) + 2] = COLORS[border_color][2];
-			}*/
+			}
 			//	Top / Bottom border - account border opening
 			if (SCREENPOS == SCREEN_POS::BORDER_TB) {
 				uint8_t border_color	= VIC_REGISTERS[0x20] & 0xf;
@@ -522,6 +521,11 @@ bool VIC_isSpriteInLine(uint8_t sprite_no, uint16_t y) {
 		return true;
 	}
 	return false;
+}
+
+bool VIC_isSpriteInLine(uint8_t sprite_no) {
+	uint8_t sprite_fix = (sprite_no >= 0 && sprite_no <= 2) ? 1 : 0;
+	return VIC_isSpriteInLine(sprite_no, VIC_scanline - 16 + 15 + sprite_fix);
 }
 
 void VIC_fetchSpriteDataBytes(uint8_t sprite_no) {
