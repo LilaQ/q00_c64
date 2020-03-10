@@ -10,8 +10,6 @@
 #include "cia.h"
 #include "main.h"
 #include "SDL2/include/SDL.h"
-using namespace std;
-
 
 uint16_t cycles_on_current_scanline = 0;
 uint16_t current_scanline = 0;

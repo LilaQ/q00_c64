@@ -273,12 +273,12 @@ int main()
 				if (c == 63) {
 					c = 0;
 					VIC_nextScanline();
+					handleWindowEvents(event);
 				}
 
 				tickAllTimers(1);
 
 		}
-		handleWindowEvents(event);
 	}
 
 	return 1;
