@@ -130,7 +130,8 @@ void VIC_fetchSpritePointer(uint8_t sprite_nr);
 void VIC_fetchSpriteAttributes(uint8_t sprite_no);
 void VIC_fetchSpriteDataBytes(uint8_t sprite_no);
 bool VIC_isSpriteEnabled(uint8_t sprite_no);
-bool VIC_isSpriteInLine(uint8_t sprite_no);
+bool VIC_isSpriteInCurrentLine(uint8_t sprite_no);
+bool VIC_isSpriteInNextLine(uint8_t sprite_no);
 bool VIC_isSpriteInLine(uint8_t sprite_no, uint16_t y);
 bool VIC_checkRasterIRQ();
 
@@ -174,7 +175,7 @@ struct SPRITE {
 		data[0] = readFromMemByVIC(sprite_pointer + ((y - pos_y) * 3));
 		data[1] = readFromMemByVIC(sprite_pointer + ((y - pos_y) * 3) + 1);
 		data[2] = readFromMemByVIC(sprite_pointer + ((y - pos_y) * 3) + 2);
-		printf("ID: %d y: %d - %d %d %d\n", id, y, data[0], data[1], data[2]);
+		//printf("ID: %d y: %d - %d %d %d\n", id, y, data[0], data[1], data[2]);
 	}
 };
 

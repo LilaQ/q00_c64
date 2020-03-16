@@ -256,7 +256,7 @@ int main()
 					_c[c] = 1;
 				}
 				if (c == 62 && _s[4] && VIC_isSpriteInNextLine(4)) {
-					_c[c] = 1;
+					//_c[c] = 1;
 				}
 				if ((c >= 0 && c <= 3) && _s[4] && VIC_isSpriteInCurrentLine(4)) {
 					_c[c] = 1;

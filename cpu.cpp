@@ -1145,7 +1145,7 @@ void setIRQ(bool v) {
 }
 bool tmpgo = false;
 void IRQorBRK(uint8_t state) {
-	if (tmpgo)
+	if (tmpgo && 0)
 		printf("IRQ Cycle %d\n", state);
 	switch (state) {
 		case 1: break;
@@ -1155,7 +1155,7 @@ void IRQorBRK(uint8_t state) {
 		case 5: break;
 		case 6: break;
 		case 7: {
-			if (tmpgo)
+			if (tmpgo && 0)
 				printf("IRQ Last Cycle\n");
 			writeToMem(SP_ + 0x100, PC >> 8);
 			SP_--;
@@ -1211,9 +1211,9 @@ uint8_t CPU_executeInstruction() {
 		return 1;
 	}
 
-	if (PC == 0x098f)
+	if (PC == 0x0c40)
 		tmpgo = true;
-	if (tmpgo && 0)
+	if (tmpgo && 1)
 		printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x - VIC_Y:%03d(%02x) VIC_X:%03d(%02x) CycNo:%03d(%02x) - P:%02x SP:%02x - D012/11: 0x%04x \n", PC, readFromMem(PC), readFromMem(PC + 1), readFromMem(PC + 2), registers.A, registers.X, registers.Y, currentScanline(), currentScanline(), currentPixel(), currentPixel(), currentCycle(), currentCycle(), status.status, SP_, (readVICregister(0xd011) << 8) | readVICregister(0xd012));
 
 	switch (readFromMem(PC)) {

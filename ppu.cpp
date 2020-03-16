@@ -515,15 +515,15 @@ void VIC_fetchSpritePointer(uint8_t sprite_no) {
 
 bool VIC_isSpriteInLine(uint8_t sprite_no, uint16_t y) {
 	//	check if this sprite is part of the current line
-	if (y >= SPRITES_VEC[sprite_no].pos_y && y < (SPRITES_VEC[sprite_no].pos_y + SPRITES_VEC[sprite_no].height)) {
-		return true;
-	}
-	return false;
+	return (y >= SPRITES_VEC[sprite_no].pos_y && y < (SPRITES_VEC[sprite_no].pos_y + SPRITES_VEC[sprite_no].height));
 }
 
-bool VIC_isSpriteInLine(uint8_t sprite_no) {
-	uint8_t sprite_fix = (sprite_no >= 0 && sprite_no <= 2) ? 1 : 0;
-	return VIC_isSpriteInLine(sprite_no, VIC_scanline - 16 + 15 + sprite_fix);
+bool VIC_isSpriteInCurrentLine(uint8_t sprite_no) {
+	return VIC_isSpriteInLine(sprite_no, VIC_scanline - 16 + 15);
+}
+
+bool VIC_isSpriteInNextLine(uint8_t sprite_no) {
+	return VIC_isSpriteInLine(sprite_no, VIC_scanline - 16 + 15 + 1);
 }
 
 void VIC_fetchSpriteDataBytes(uint8_t sprite_no) {
@@ -535,10 +535,7 @@ void VIC_fetchSpriteDataBytes(uint8_t sprite_no) {
 
 bool VIC_isSpriteEnabled(uint8_t sprite_no) {
 	//	check if sprite is enabled first
-	if (VIC_REGISTERS[0x15] & (1 << sprite_no)) {
-		return true;
-	}
-	return false;
+	return (VIC_REGISTERS[0x15] & (1 << sprite_no));
 }
 
 void VIC_dataRefresh() {
