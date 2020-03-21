@@ -122,7 +122,6 @@ void handleWindowEvents(SDL_Event event) {
 			}
 			//	Enable logging
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 3) {
-				setLog(true);
 			}
 			//	Reset
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 7) {

@@ -457,60 +457,6 @@ void writeToMem(uint16_t adr, uint8_t val) {
 	}
 }
 
-bool pageBoundaryCrossed() {
-	return pbc;
-}
-
-//	addressing modes
-uint16_t a;
-uint16_t getImmediate(uint16_t adr) {
-	adr++;
-	return adr;
-}
-uint16_t getAbsolute(uint16_t adr) {
-	adr++;
-	return (readFromMem(adr + 1) << 8) | readFromMem(adr);
-}
-uint16_t getAbsoluteXIndex(uint16_t adr, uint8_t X) {
-	adr++;
-	a = ((readFromMem(adr + 1) << 8) | readFromMem(adr));
-	pbc = (a & 0xff00) != ((a + X) & 0xff00);
-	return (a + X) % 0x10000;
-}
-uint16_t getAbsoluteYIndex(uint16_t adr, uint8_t Y) {
-	adr++;
-	a = ((readFromMem(adr + 1) << 8) | readFromMem(adr));
-	pbc = (a & 0xff00) != ((a + Y) & 0xff00);
-	return (a + Y) % 0x10000;
-}
-uint16_t getZeropage(uint16_t adr) {
-	adr++;
-	return readFromMem(adr);
-}
-uint16_t getZeropageXIndex(uint16_t adr, uint8_t X) {
-	adr++;
-	return (readFromMem(adr) + X) % 0x100;
-}
-uint16_t getZeropageYIndex(uint16_t adr, uint8_t Y) {
-	adr++;
-	return (readFromMem(adr) + Y) % 0x100;
-}
-uint16_t getIndirect(uint16_t adr) {
-	adr++;
-	return (readFromMem(readFromMem(adr + 1) << 8 | ((readFromMem(adr) + 1) % 0x100))) << 8 | readFromMem(readFromMem(adr + 1) << 8 | readFromMem(adr));
-}
-uint16_t getIndirectXIndex(uint16_t adr, uint8_t X) {
-	adr++;
-	a = (readFromMem((readFromMem(adr) + X + 1) % 0x100) << 8) | readFromMem((readFromMem(adr) + X) % 0x100);
-	return a % 0x10000;
-}
-uint16_t getIndirectYIndex(uint16_t adr, uint8_t Y) {
-	adr++;
-	a = ((readFromMem((readFromMem(adr) + 1) % 0x100) << 8) | (readFromMem(readFromMem(adr))));
-	pbc = (a & 0xff00) != ((a + Y) & 0xff00);
-	return (a + Y) % 0x10000;
-}
-
 void dumpMem() {
 	ofstream myfile("memdump_myemu.bin");
 	if (myfile.is_open())
@@ -520,4 +466,12 @@ void dumpMem() {
 		}
 		myfile.close();
 	}
+}
+
+uint8_t getByte(uint16_t adr) {
+	return readFromMem(adr);
+}
+
+void writeByte(uint16_t adr, uint8_t val) {
+	writeToMem(adr, val);
 }
