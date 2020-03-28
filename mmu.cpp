@@ -8,7 +8,7 @@
 #include "cpu.h"
 #include "ppu.h"
 #include "mmu.h"
-#include "main.h"
+#include "bus.h"
 #include "cia.h"
 #include <fstream>
 
@@ -469,6 +469,10 @@ void dumpMem() {
 }
 
 uint8_t getByte(uint16_t adr) {
+	//	READ occured in bus-takeover, stall CPU
+	if (BUS_takeoverActive()) {
+		BUS_haltCPU();
+	}
 	return readFromMem(adr);
 }
 

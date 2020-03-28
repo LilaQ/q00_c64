@@ -14,7 +14,7 @@
 #include "cpu.h"
 #include "mmu.h"
 #include "cia.h"
-#include "main.h"
+#include "bus.h"
 #undef main
 
 using namespace::std;

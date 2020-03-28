@@ -8,7 +8,7 @@
 #include "cpu.h"
 #include "wmu.h"
 #include "cia.h"
-#include "main.h"
+#include "bus.h"
 #include "SDL2/include/SDL.h"
 
 uint16_t cycles_on_current_scanline = 0;
