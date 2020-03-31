@@ -19,10 +19,15 @@ bool rasterIRQ = false;
 bool flaggedAfterNextInstr = false;
 bool flaggedForIRQ = false;
 bool cpuHalted = false;
+bool SHOW_BUS = false;
 uint8_t c = 0;
 uint8_t _c[63];								//	2 = bus-takeover; 1 = cycle blocked by VIC; 0 = cycle free for 6510
 uint8_t _s[8] = { 0,0,0,0,0,0,0,0 };		//	1 = Sprite enabled; 0 = Sprite disabled;
 uint8_t _t[8] = { 57,59,61,0,2,4,6,8 };		//	cycle no.s for each Sprite
+
+void BUS_showBus() {
+	SHOW_BUS = true;
+}
 
 bool checkBusTransfer(uint8_t i) {
 	if ((_s[(i + 7) % 8] == 0) && (_s[(i + 6) % 8] == 0)) {
@@ -41,7 +46,7 @@ bool checkSpriteGap(uint8_t i) {
 int main()
 {
 	resetMMU();
-	resetCPU();
+	CPU_reset();
 	initPPU("n/a");
 
 	while (1) {
@@ -121,6 +126,7 @@ int main()
 			/*
 				High-Phi Phase
 			*/
+			//	TODO SWITCH CASE ALL OF THIS
 
 			if (c == 1) {
 				isBadline = VIC_isBadline();
@@ -153,6 +159,13 @@ int main()
 				if (_s[7]) {
 					VIC_fetchSpriteDataBytes(7);
 				}
+			}
+			else if (c == 10 && SHOW_BUS) {
+				printf("Scanline %d (BL? %d) \t", currentScanline(), VIC_isBadline());
+				for (int i = 0; i <= 62; i++) {
+					printf("%d",_c[i]);
+				}
+				printf("\n");
 			}
 			else if (c >= 11 && c <= 15) {
 				//	TODO: Das hier wird 5 mal ausgeführt, in jedem Cycle -> unnötig und kostet performance
@@ -366,7 +379,7 @@ int main()
 				//	Regular CPU cycle
 				if (_c[c] == 0) {
 					if (cpuHalted) {
-						//printf("Resuming the CPU!\n");
+						//	Resume CPU
 						cpuHalted = false;
 					}
 					else {
@@ -374,11 +387,11 @@ int main()
 					}
 				}
 				else if (_c[c] == 2 && !cpuHalted) {
-					//printf("Running on Takeover cycle %d\n", c);
+					//	Execution on Takeover cycle
 					CPU_executeInstruction();
 				}
 				else {
-					//printf("skipping %d\n", c);
+					//	Skipping cycle
 				}
 				if (c == 0) {
 					if (VIC_checkRasterIRQ()) {
@@ -386,42 +399,6 @@ int main()
 					}
 				}
 			}
-			/*//	Graphics Fetch
-			else if (c >= 11 && c <= 13) {
-				//	Badline, bus-takeover 
-				if (isBadline && !cpuHalted) {
-					CPU_executeInstruction();
-				}
-			}
-			else if (c >= 14 && c <= 53) {
-				if (!isBadline) {
-					if (cpuHalted) {
-						printf("Resuming the CPU!\n");
-						cpuHalted = false;
-					}
-					else {
-						CPU_executeInstruction();
-					}
-				}
-			}
-			else if (c >= 54 && c <= 62) {
-				if (_c[c] == 0) {
-					if (cpuHalted) {
-						printf("Resuming the CPU!\n");
-						cpuHalted = false;
-					}
-					else {
-						CPU_executeInstruction();
-					}
-				}
-				else if (_c[c] == 1 && !cpuHalted) {
-					CPU_executeInstruction();
-				}
-				else {
-					printf("skipping %d\n", c);
-				}
-			}*/
-				
 
 			c++;
 			if (c == 63) {
@@ -456,12 +433,13 @@ void resetPause() {
 }
 
 //	DEBUG
-uint8_t currentCycle() {
+uint8_t BUS_currentCycle() {
 	return c;
 }
 
 void BUS_haltCPU() {
-	//printf("READ on bus-takeover - HALTing the CPU!\n");
+	printf("Halt on cycle %d \n", c);
+	//CPU_haltedFreezeInstruction();
 	cpuHalted = true;
 }
 

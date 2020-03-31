@@ -41,6 +41,7 @@ void initWindow(SDL_Window* win, string filename) {
 	AppendMenu(hMenuBar, MF_STRING, 2, "[ memory ]");
 	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hScreen, "[ screen ]");
 	AppendMenu(hMenuBar, MF_STRING, 3, "[ log now ]");
+	AppendMenu(hMenuBar, MF_STRING, 4, "[ print bus ]");
 	AppendMenu(hFile, MF_STRING, 9, "» load rom");
 	AppendMenu(hFile, MF_STRING, 7, "» reset");
 	AppendMenu(hFile, MF_STRING, 1, "» exit");
@@ -123,9 +124,13 @@ void handleWindowEvents(SDL_Event event) {
 			//	Enable logging
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 3) {
 			}
+			//	Print BUS
+			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 4) {
+				BUS_showBus();
+			}
 			//	Reset
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 7) {
-				resetCPU();
+				CPU_reset();
 			}
 			//	Load ROM
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 9) {

@@ -364,7 +364,7 @@ uint16_t currentScanline() {
 	return VIC_scanline;
 }
 uint16_t currentPixel() {
-	return (currentCycle()) * 8;
+	return (BUS_currentCycle()) * 8;
 }
 
 bool VIC_isBadline() {

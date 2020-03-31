@@ -88,7 +88,8 @@ enum class ADDR_MODE {
 };
 
 uint8_t CPU_executeInstruction();
-void resetCPU();
-Registers getCPURegs();
+void CPU_haltedFreezeInstruction();
+void CPU_reset();
+Registers CPU_getRegs();
 void setLog(bool v);
-bool pendingIRQ();
+bool CPU_pendingIRQ();

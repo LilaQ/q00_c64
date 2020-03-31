@@ -7,4 +7,5 @@ void BUS_haltCPU();
 bool BUS_takeoverActive();
 
 //	debug
-uint8_t currentCycle();
+uint8_t BUS_currentCycle();
+void BUS_showBus();

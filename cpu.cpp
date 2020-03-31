@@ -1,6 +1,8 @@
 #pragma once
 #include "cpu.h"
 #include "mmu.h"
+#include "bus.h"
+#include "ppu.h"
 #include <map>
 
 typedef uint8_t u8;
@@ -13,6 +15,7 @@ u16 PC = 0xc000;
 u8 SP_ = 0xfd;
 u8 SUB_CYC = 1;
 u8 CURRENT_OPCODE = 0x00;
+u16 CURRENT_PC = 0x0000;
 Registers registers;
 Status status;
 
@@ -692,7 +695,7 @@ void STACK_RTI() {
 	switch (SUB_CYC)
 	{
 	case 2:	getByte(PC); break;																								//	READ
-	case 3:	SP_++; break;																									//	READ
+	case 3:	getByte(PC); SP_++; break;																						//	READ
 	case 4:	status.setStatus(getByte(SP_ + 0x100));	SP_++; break;															//	READ
 	case 5:	PC_L = getByte(SP_ + 0x100); SP_++;	break;																		//	READ
 	case 6:	PC_H = getByte(SP_ + 0x100); PC = getAdr(); SUB_CYC = 0; break;													//	READ
@@ -704,7 +707,7 @@ void STACK_RTS() {
 	switch (SUB_CYC)
 	{
 	case 2:	getByte(PC); break;																								//	READ
-	case 3:	SP_++; break;																									//	READ
+	case 3:	getByte(PC); SP_++; break;																						//	READ
 	case 4:	PC_L = getByte(SP_ + 0x100); SP_++;	break;																		//	READ
 	case 5:	PC_H = getByte(SP_ + 0x100); break;																				//	READ
 	case 6: PC = getAdr() + 1; SUB_CYC = 0; break;																			//	READ
@@ -716,7 +719,7 @@ void STACK_PHA() {
 	switch (SUB_CYC)
 	{
 	case 2:	getByte(PC); break;																								//	READ
-	case 3: writeByte(SP_ + 0x100, registers.A); SP_--; SUB_CYC = 0; break;													//	READ
+	case 3: writeByte(SP_ + 0x100, registers.A); SP_--; SUB_CYC = 0; break;													//	WRITE
 	default: break;
 	}
 }
@@ -725,7 +728,7 @@ void STACK_PHP() {
 	switch (SUB_CYC)
 	{
 	case 2:	getByte(PC); break;																								//	READ
-	case 3: writeByte(SP_ + 0x100, status.status | 0x30); SP_--; SUB_CYC = 0; break;										//	READ
+	case 3: writeByte(SP_ + 0x100, status.status | 0x30); SP_--; SUB_CYC = 0; break;										//	WRITE
 	default: break;
 	}
 }
@@ -734,7 +737,7 @@ void STACK_PLA() {
 	switch (SUB_CYC)
 	{
 	case 2:	getByte(PC); break;																								//	READ
-	case 3:	SP_++; break;																									//	READ
+	case 3:	getByte(PC); SP_++; break;																						//	READ
 	case 4:																													//	READ
 		registers.A = getByte(SP_ + 0x100);
 		status.setNegative(registers.A >> 7);
@@ -749,7 +752,7 @@ void STACK_PLP() {
 	switch (SUB_CYC)
 	{
 	case 2:	getByte(PC); break;																								//	READ
-	case 3:	SP_++; break;																									//	READ
+	case 3:	getByte(PC); SP_++; break;																						//	READ
 	case 4:																													//	READ
 		status.setStatus(getByte(SP_ + 0x100) & 0xef);
 		SUB_CYC = 0;
@@ -761,7 +764,7 @@ void STACK_PLP() {
 void STACK_NOP() {
 	switch (SUB_CYC)
 	{
-	case 2: SUB_CYC = 0; break;																								//	READ
+	case 2: getByte(PC); SUB_CYC = 0; break;																				//	READ
 	default:
 		break;
 	}
@@ -771,7 +774,7 @@ void STACK_JSR() {
 	switch (SUB_CYC)
 	{
 	case 2: PC_L = getByte(PC++); break;																					//	READ
-	case 3: break;																											//	READ
+	case 3: getByte(PC); break;																								//	READ
 	case 4:	writeByte(SP_ + 0x100, PC >> 8); SP_--; break;																	//	WRITE
 	case 5: writeByte(SP_ + 0x100, PC & 0xff); SP_--; break;												   				//	WRITE
 	case 6: PC_H = getByte(PC); PC = getAdr(); SUB_CYC = 0; break;															//	READ
@@ -795,7 +798,7 @@ void STACK_JMP() {
 */
 
 
-void resetCPU() {
+void CPU_reset() {
 	resetMMU();
 	PC = readFromMem(0xfffd) << 8 | readFromMem(0xfffc);
 	printf("Reset CPU, starting at PC: %x\n", PC);
@@ -864,12 +867,12 @@ void IRQorBRK(uint8_t state) {
 	}
 }
 
-Registers getCPURegs() {
+Registers CPU_getRegs() {
 	return registers;
 }
 
 void printLog() {
-	printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x \n", PC, readFromMem(PC), readFromMem(PC + 1), readFromMem(PC + 2), registers.A, registers.X, registers.Y, status.status, SP_);
+	printf("%04x $%02x $%02x $%02x A:%02x X:%02x Y:%02x P:%02x SP:%02x Cycle:%d \n", PC, readFromMem(PC), readFromMem(PC + 1), readFromMem(PC + 2), registers.A, registers.X, registers.Y, status.status, SP_, BUS_currentCycle());
 }
 
 bool logNow = false;
@@ -877,10 +880,14 @@ void setLog(bool v) {
 	logNow = v;
 }
 
-bool pendingIRQ() {
+bool CPU_pendingIRQ() {
 	return irq;
 }
 
+//	CPU was frozen on read instruction, roll back sub-instruction counter
+void CPU_haltedFreezeInstruction() {
+	SUB_CYC--;
+}
 
 uint8_t CPU_executeInstruction() {
 
@@ -904,13 +911,14 @@ uint8_t CPU_executeInstruction() {
 
 	//	Fetch new opcode, if necessary
 	if (SUB_CYC == 1) {
+		CURRENT_PC = PC;
 		CURRENT_OPCODE = getByte(PC++);
 	}
 
-	if (CURRENT_OPCODE == 0xc90000)
+	if (PC == 0x0c61)
 		tmpgo = true;
 	if (tmpgo && 1)
-		printf("%04x A:%02x X:%02x Y:%02x - P:%02x SP:%02x \n", PC, registers.A, registers.X, registers.Y, status.status, SP_);
+		printf("%04x A:%02x X:%02x Y:%02x - P:%02x SP:%02x Scanline: %02d Cycle: %02d\n", CURRENT_PC, registers.A, registers.X, registers.Y, status.status, SP_, currentScanline(), BUS_currentCycle());
 
 	switch (CURRENT_OPCODE) {
 

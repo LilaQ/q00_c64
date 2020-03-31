@@ -287,9 +287,9 @@ uint8_t readFromMem(uint16_t adr) {
 			//	SETNAM hook
 			if (adr == 0xffbd) {
 				LOAD_FILE = "";
-				printf("SETTING NAME y: %x x: %x\n", getCPURegs().Y, getCPURegs().X);
+				printf("SETTING NAME y: %x x: %x\n", CPU_getRegs().Y, CPU_getRegs().X);
 				for (int i = 0; i < 16; i++) {
-					LOAD_FILE += memory[((getCPURegs().Y << 8) | getCPURegs().X) + i];
+					LOAD_FILE += memory[((CPU_getRegs().Y << 8) | CPU_getRegs().X) + i];
 					cout << LOAD_FILE << "<-- FILENAME";
 				}
 			}
