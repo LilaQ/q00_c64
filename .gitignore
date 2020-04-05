@@ -146,3 +146,7 @@ Release/With.log
 BCDTest/BCDTest.c64
 BCDTest/BCDTest.s64
 .vs/C64Emulator/v16/Preview/ipch/AutoPCH/32d75e9cfd8565b4/BUS.ipch
+Release/bus.obj
+enc_temp_folder/f1535b7fb0f51222e56e98e327ed9c5/main.cpp
+.vs/C64Emulator/v16/Preview/ipch/AutoPCH/f3c5d0a5b993e134/BUS.ipch
+Debug/bus.obj

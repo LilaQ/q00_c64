@@ -83,12 +83,12 @@ void ORA(u8 val) {
 void ADD(u8 val) {
 	//	hex mode
 	if (status.decimal == 0) {
-	uint16_t sum = registers.A + val + status.carry;
-	status.setOverflow((~(registers.A ^ val) & (registers.A ^ sum) & 0x80) > 0);
-	status.setCarry(sum > 0xff);
-	registers.A = sum & 0xff;
-	status.setZero(registers.A == 0);
-	status.setNegative(registers.A >> 7);
+		uint16_t sum = registers.A + val + status.carry;
+		status.setOverflow((~(registers.A ^ val) & (registers.A ^ sum) & 0x80) > 0);
+		status.setCarry(sum > 0xff);
+		registers.A = sum & 0xff;
+		status.setZero(registers.A == 0);
+		status.setNegative(registers.A >> 7);
 	}
 	//	BCD mode
 	else {
@@ -400,8 +400,8 @@ void ZP_IND_READ(void (*instruction)(u8), u8 index) {
 	switch (SUB_CYC)
 	{
 	case 2: PC_L = getByte(PC++); break;																					//	READ
-	case 3: VAL = getByte((PC_L + index) % 0x100); break;																	//	READ
-	case 4: instruction(VAL); SUB_CYC = 0; break;																			//	READ
+	case 3: VAL = getByte(PC_L); break;																						//	READ
+	case 4: instruction(getByte((PC_L + index) % 0x100)); SUB_CYC = 0; break;												//	READ
 	default:
 		break;
 	}
@@ -417,7 +417,7 @@ void ZP_IND_RMW(u8(*instruction)(u8), u8 index) {
 	switch (SUB_CYC)
 	{
 	case 2: PC_L = getByte(PC++); break;																					//	READ
-	case 3: PC_L = (PC_L + index) % 0x100; break;																			//	READ
+	case 3: getByte(PC_L); PC_L = (PC_L + index) % 0x100; break;															//	READ
 	case 4: VAL = getByte(PC_L); break;																						//	READ
 	case 5: writeByte(PC_L, VAL); VAL = instruction(VAL); break;															//	WRITE
 	case 6: writeByte(PC_L, VAL); SUB_CYC = 0; break;																		//	WRITE
@@ -436,7 +436,7 @@ void ZP_IND_WRITE(u8(*instruction)(), u8 index) {
 	switch (SUB_CYC)
 	{
 	case 2: PC_L = getByte(PC++); break;																					//	READ
-	case 3: PC_L = (PC_L + index) % 0x100; break;																			//	READ
+	case 3: getByte(PC_L); PC_L = (PC_L + index) % 0x100; break;															//	READ
 	case 4: writeByte(PC_L, instruction()); SUB_CYC = 0; break;																//	WRITE
 	default:
 		break;
@@ -516,7 +516,6 @@ void REL_READ(bool (*instruction)()) {
 	{
 	case 2:							 																						//	READ		
 		VAL = getByte(PC++);
-		getByte(PC);
 		if (instruction()) {
 			PC_L = PC + (i8)VAL;
 			PC_H = (PC + (i8)VAL) >> 8;
@@ -549,7 +548,7 @@ void IND_X_READ(void (*instruction)(u8)) {
 	switch (SUB_CYC)
 	{
 	case 2: VAL = getByte(PC++); break;																						//	READ
-	case 3: VAL = VAL + registers.X; getByte(PC); break;																	//	READ
+	case 3: getByte(VAL); VAL = VAL + registers.X; break;																	//	READ
 	case 4: PC_L = getByte(VAL % 0x100); break;																				//	READ
 	case 5: PC_H = getByte((VAL + 1) % 0x100); break;																		//	READ
 	case 6: instruction(getByte(getAdr())); SUB_CYC = 0; break;																//	READ
@@ -562,7 +561,7 @@ void IND_X_RMW(u8(*instruction)(u8)) {
 	switch (SUB_CYC)
 	{
 	case 2: VAL = getByte(PC++); break;																						//	READ
-	case 3: VAL = VAL + registers.X; getByte(PC); break;																	//	READ
+	case 3: getByte(VAL); VAL = VAL + registers.X; break;																	//	READ
 	case 4: PC_L = getByte(VAL % 0x100); break;																				//	READ
 	case 5: PC_H = getByte((VAL + 1) % 0x100); break;																		//	READ
 	case 6: VAL = getByte(getAdr()); break;								 													//	READ
@@ -577,7 +576,7 @@ void IND_X_WRITE(u8(*instruction)()) {
 	switch (SUB_CYC)
 	{
 	case 2: VAL = getByte(PC++); break;																						//	READ
-	case 3: VAL = VAL + registers.X; getByte(PC); break;																	//	READ
+	case 3: getByte(VAL); VAL = VAL + registers.X; break;																	//	READ
 	case 4: PC_L = getByte(VAL % 0x100); break;																				//	READ
 	case 5: PC_H = getByte((VAL + 1) % 0x100); break;																		//	READ
 	case 6: writeByte(getAdr(), instruction());	SUB_CYC = 0; break;															//	WRITE
@@ -650,8 +649,8 @@ void ABS_IND_JMP() {
 	{
 	case 2: PC_L = getByte(PC++); break;																					//	READ
 	case 3: PC_H = getByte(PC++); break;																					//	READ
-	case 4: getByte(getAdr()); break;																						//	READ
-	case 5: PC = (getByte((PC_H << 8) | ((PC_L + 1) & 0xff)) << 8) | getByte(getAdr()); SUB_CYC = 0; break;					//	READ
+	case 4: VAL = getByte(getAdr()); break;																					//	READ
+	case 5: PC = (getByte((PC_H << 8) | ((PC_L + 1) & 0xff)) << 8) | VAL; SUB_CYC = 0; break;								//	READ
 	default:
 		break;
 	}
@@ -695,7 +694,7 @@ void STACK_RTI() {
 	switch (SUB_CYC)
 	{
 	case 2:	getByte(PC); break;																								//	READ
-	case 3:	getByte(PC); SP_++; break;																						//	READ
+	case 3:	getByte(SP_ + 0x100); SP_++; break;																				//	READ
 	case 4:	status.setStatus(getByte(SP_ + 0x100));	SP_++; break;															//	READ
 	case 5:	PC_L = getByte(SP_ + 0x100); SP_++;	break;																		//	READ
 	case 6:	PC_H = getByte(SP_ + 0x100); PC = getAdr(); SUB_CYC = 0; break;													//	READ
@@ -707,10 +706,10 @@ void STACK_RTS() {
 	switch (SUB_CYC)
 	{
 	case 2:	getByte(PC); break;																								//	READ
-	case 3:	getByte(PC); SP_++; break;																						//	READ
+	case 3:	getByte(SP_ + 0x100); SP_++; break;																				//	READ
 	case 4:	PC_L = getByte(SP_ + 0x100); SP_++;	break;																		//	READ
 	case 5:	PC_H = getByte(SP_ + 0x100); break;																				//	READ
-	case 6: PC = getAdr() + 1; SUB_CYC = 0; break;																			//	READ
+	case 6: PC = getAdr() + 1; getByte(getAdr()); SUB_CYC = 0; break;														//	READ
 	default: break;
 	}
 }
@@ -737,7 +736,7 @@ void STACK_PLA() {
 	switch (SUB_CYC)
 	{
 	case 2:	getByte(PC); break;																								//	READ
-	case 3:	getByte(PC); SP_++; break;																						//	READ
+	case 3:	getByte(SP_ + 0x100); SP_++; break;																				//	READ
 	case 4:																													//	READ
 		registers.A = getByte(SP_ + 0x100);
 		status.setNegative(registers.A >> 7);
@@ -752,7 +751,7 @@ void STACK_PLP() {
 	switch (SUB_CYC)
 	{
 	case 2:	getByte(PC); break;																								//	READ
-	case 3:	getByte(PC); SP_++; break;																						//	READ
+	case 3:	getByte(SP_ + 0x100); SP_++; break;																				//	READ
 	case 4:																													//	READ
 		status.setStatus(getByte(SP_ + 0x100) & 0xef);
 		SUB_CYC = 0;
@@ -774,7 +773,7 @@ void STACK_JSR() {
 	switch (SUB_CYC)
 	{
 	case 2: PC_L = getByte(PC++); break;																					//	READ
-	case 3: getByte(PC); break;																								//	READ
+	case 3: getByte(SP_ + 0x100); break;																					//	READ
 	case 4:	writeByte(SP_ + 0x100, PC >> 8); SP_--; break;																	//	WRITE
 	case 5: writeByte(SP_ + 0x100, PC & 0xff); SP_--; break;												   				//	WRITE
 	case 6: PC_H = getByte(PC); PC = getAdr(); SUB_CYC = 0; break;															//	READ
@@ -884,11 +883,6 @@ bool CPU_pendingIRQ() {
 	return irq;
 }
 
-//	CPU was frozen on read instruction, roll back sub-instruction counter
-void CPU_haltedFreezeInstruction() {
-	SUB_CYC--;
-}
-
 uint8_t CPU_executeInstruction() {
 
 	//	Check interrupt hijacking (NMI hijacking IRQ)
@@ -917,8 +911,8 @@ uint8_t CPU_executeInstruction() {
 
 	if (PC == 0x0c61)
 		tmpgo = true;
-	if (tmpgo && 1)
-		printf("%04x A:%02x X:%02x Y:%02x - P:%02x SP:%02x Scanline: %02d Cycle: %02d\n", CURRENT_PC, registers.A, registers.X, registers.Y, status.status, SP_, currentScanline(), BUS_currentCycle());
+	if ((CURRENT_PC == 0x098f || CURRENT_PC == 0x0992 || CURRENT_PC == 0x0994) && 1)
+		printf("%04x A:%02x X:%02x Y:%02x - P:%02x SP:%02x Scanline: %02d(%2x) Cycle: %02d(%2x) SubInstr: %d\n", CURRENT_PC, registers.A, registers.X, registers.Y, status.status, SP_, currentScanline(), currentScanline(), BUS_currentCycle(), BUS_currentCycle(), SUB_CYC);
 
 	switch (CURRENT_OPCODE) {
 

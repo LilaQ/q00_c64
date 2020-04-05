@@ -15,6 +15,7 @@
 #include "mmu.h"
 #include "cia.h"
 #include "bus.h"
+#include "wmu.h"
 #undef main
 
 using namespace::std;
@@ -207,3 +208,11 @@ void setTitle(string filename) {
 	SDL_GetWindowWMInfo(mainWindow, &wmInfo);
 }
 
+void printMsg(string mType, string mLevel, string msg, bool lineBreak) {
+	string lb = (lineBreak) ? "\n" : "";
+	printf("\x1b[47m\x1b\[30m[%s]\x1b[0m [\x1b[33m%s\x1b[0m] - %s %s", mType.c_str(), mLevel.c_str(), msg.c_str(), lb.c_str());
+}
+
+void printMsg(string mType, string mLevel, string msg) {
+	printMsg(mType, mLevel, msg, true);
+}

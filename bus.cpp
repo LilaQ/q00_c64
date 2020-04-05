@@ -130,14 +130,15 @@ int main()
 
 			if (c == 1) {
 				isBadline = VIC_isBadline();
+				if (isBadline)
+					printf("BADLINE at %x\n", currentScanline());
 				VIC_fetchSpritePointer(3);
 				if (_s[3]) {
 					VIC_fetchSpriteDataBytes(3);
 				}
 			}
 			else if (c == 3) {
-				VIC_fetchSpritePointer(4);
-					
+				VIC_fetchSpritePointer(4);	
 				if (_s[4]) {
 					VIC_fetchSpriteDataBytes(4);
 				}
@@ -160,7 +161,7 @@ int main()
 					VIC_fetchSpriteDataBytes(7);
 				}
 			}
-			else if (c == 10 && SHOW_BUS) {
+			else if ((c == 10 || c == 54) && SHOW_BUS) {
 				printf("Scanline %d (BL? %d) \t", currentScanline(), VIC_isBadline());
 				for (int i = 0; i <= 62; i++) {
 					printf("%d",_c[i]);
@@ -392,6 +393,7 @@ int main()
 				}
 				else {
 					//	Skipping cycle
+					//printf("Skipping Cycle %d (because it is %d)\n", c, _c[c]);
 				}
 				if (c == 0) {
 					if (VIC_checkRasterIRQ()) {
@@ -438,8 +440,9 @@ uint8_t BUS_currentCycle() {
 }
 
 void BUS_haltCPU() {
-	printf("Halt on cycle %d \n", c);
-	//CPU_haltedFreezeInstruction();
+	/*char output[32];
+	snprintf(output, sizeof(output), "Halt on cycle %d", c);
+	printMsg("BUS", "LOG", string(output));*/
 	cpuHalted = true;
 }
 
