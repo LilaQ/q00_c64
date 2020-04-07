@@ -130,8 +130,8 @@ int main()
 
 			if (c == 1) {
 				isBadline = VIC_isBadline();
-				if (isBadline)
-					printf("BADLINE at %x\n", currentScanline());
+				//if (isBadline)
+					//printf("BADLINE at %x\n", currentScanline());
 				VIC_fetchSpritePointer(3);
 				if (_s[3]) {
 					VIC_fetchSpriteDataBytes(3);
@@ -222,7 +222,12 @@ int main()
 
 			//	Sprite #0
 			if (c >= 54 && c <= 56 && _s[0] && VIC_isSpriteInNextLine(0)) {		//	Bus-Takeover cycles Sprite #0 (1,2,3)
-				_c[c] = 2;
+				if (!isBadline) {
+					_c[c] = 2;
+				}
+				else {
+					_c[c] = 1;
+				}
 			}
 			if (c >= 57 && c <= 58 && _s[0] && VIC_isSpriteInNextLine(0)) {		//	Sprite pointer / data Sprite #0
 				_c[c] = 1;
@@ -383,9 +388,9 @@ int main()
 						//	Resume CPU
 						cpuHalted = false;
 					}
-					else {
+					//else {
 						CPU_executeInstruction();
-					}
+					//}
 				}
 				else if (_c[c] == 2 && !cpuHalted) {
 					//	Execution on Takeover cycle
@@ -393,11 +398,14 @@ int main()
 				}
 				else {
 					//	Skipping cycle
-					//printf("Skipping Cycle %d (because it is %d)\n", c, _c[c]);
+					char output[200];
+					snprintf(output, sizeof(output), "Cycle: %d(%02x) - CPU Stalled!", c, c);
+					//printMsg("CPU", "BUS-TAKEOVER", string(output));
 				}
 				if (c == 0) {
 					if (VIC_checkRasterIRQ()) {
-						flaggedAfterNextInstr = true;
+						//flaggedAfterNextInstr = true;
+						setIRQ(true);
 					}
 				}
 			}

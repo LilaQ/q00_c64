@@ -469,10 +469,6 @@ void dumpMem() {
 }
 
 uint8_t getByte(uint16_t adr) {
-	//	READ occured in bus-takeover, stall CPU
-	if (BUS_takeoverActive()) {
-		BUS_haltCPU();
-	}
 	return readFromMem(adr);
 }
 

@@ -3,7 +3,10 @@
 #include "mmu.h"
 #include "bus.h"
 #include "ppu.h"
+#include "wmu.h"
 #include <map>
+#include <stdio.h>
+#include <iostream>
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -796,6 +799,8 @@ void STACK_JMP() {
 	CYCLE ACCURATE REWRITE - END
 */
 
+u8 irq_cycle_count = 0;
+u8 nmi_cycle_count = 0;
 
 void CPU_reset() {
 	resetMMU();
@@ -805,6 +810,7 @@ void CPU_reset() {
 
 void setNMI(bool v) {
 	nmi = v;
+	nmi_cycle_count = 0;
 }
 
 void NMI(uint8_t state) {
@@ -828,6 +834,7 @@ void NMI(uint8_t state) {
 		nmi_running = false;
 		nmi = false;
 		SUB_CYC = 0;
+		nmi_cycle_count = 0;
 	} break;
 	default: break;
 	}
@@ -835,11 +842,10 @@ void NMI(uint8_t state) {
 
 void setIRQ(bool v) {
 	irq = v;
+	irq_cycle_count = 0;
 }
 bool tmpgo = false;
 void IRQorBRK(uint8_t state) {
-	if (tmpgo && 0)
-		printf("IRQ Cycle %d\n", state);
 	switch (state) {
 	case 1: break;
 	case 2: break;
@@ -848,8 +854,6 @@ void IRQorBRK(uint8_t state) {
 	case 5: break;
 	case 6: break;
 	case 7: {
-		if (tmpgo && 0)
-			printf("IRQ Last Cycle\n");
 		writeToMem(SP_ + 0x100, PC >> 8);
 		SP_--;
 		writeToMem(SP_ + 0x100, PC & 0xff);
@@ -861,6 +865,7 @@ void IRQorBRK(uint8_t state) {
 		irq_running = false;
 		irq = false;
 		SUB_CYC = 0;
+		irq_cycle_count = 0;
 	} break;
 	default: break;
 	}
@@ -886,10 +891,10 @@ bool CPU_pendingIRQ() {
 uint8_t CPU_executeInstruction() {
 
 	//	Check interrupt hijacking (NMI hijacking IRQ)
-	if (SUB_CYC == 1 && nmi == true && nmi_running == false) {
+	if (SUB_CYC == 1 && nmi == true && nmi_running == false && nmi_cycle_count >= 1) {
 		nmi_running = true;
 	}
-	if (SUB_CYC == 1 && irq == true && irq_running == false && status.interruptDisable == 0) {
+	if (SUB_CYC == 1 && irq == true && irq_running == false && irq_cycle_count >= 1 && status.interruptDisable == 0) {
 		irq_running = true;
 	}
 	if (nmi == true && nmi_running == true) {
@@ -906,13 +911,46 @@ uint8_t CPU_executeInstruction() {
 	//	Fetch new opcode, if necessary
 	if (SUB_CYC == 1) {
 		CURRENT_PC = PC;
-		CURRENT_OPCODE = getByte(PC++);
+		CURRENT_OPCODE = getByte(PC);
 	}
 
-	if (PC == 0x0c61)
+	//	READ occured in bus-takeover, stall CPU
+	if (BUS_takeoverActive() && RW_LOOKUP_TABLE[CURRENT_OPCODE][SUB_CYC-1] == RW::READ) {
+		char output[200];
+		snprintf(output, sizeof(output), "PC: 0x%04x Cycle: %d(%02x) Opcode: %02x SubInst: %d is a READ, skipping!", CURRENT_PC, BUS_currentCycle(), BUS_currentCycle(), CURRENT_OPCODE, SUB_CYC);
+		//printMsg("CPU", "BUS-TAKEOVER", string(output));
+		BUS_haltCPU();
+		return 1;
+	}
+
+	//	CPU not stalled, execution of opcode will happen
+	if (SUB_CYC == 1) {
+		PC++;
+	}
+	//if (nmi) {
+		nmi_cycle_count++;
+	//}
+	//if (irq) {
+		irq_cycle_count++;
+	//}
+
+	//if (((CURRENT_PC >= 0x098f && CURRENT_PC <= 0x099e) || (CURRENT_PC >= 0x0BB2 && CURRENT_PC <= 0x0BBA)) && 1) {
+	if (CURRENT_PC == 0x098f && SUB_CYC == 1 && BUS_currentCycle() == 0x1d) {
+		string po = "XXXX";
+		if (RW_LOOKUP_TABLE[CURRENT_OPCODE][SUB_CYC - 1] == RW::READ)
+			po = "READ";
+		else if (RW_LOOKUP_TABLE[CURRENT_OPCODE][SUB_CYC - 1] == RW::WRITE)
+			po = "WRITE";
+		printf("%04x A:%02x X:%02x Y:%02x - P:%02x SP:%02x Scanline: %02d(%2x) Cycle: %02d(%2x) SubInstr: %d - RW: ", CURRENT_PC, registers.A, registers.X, registers.Y, status.status, SP_, currentScanline(), currentScanline(), BUS_currentCycle(), BUS_currentCycle(), SUB_CYC);
+		std::cout << po << "\n";
+	}
+	/*
+	if (CURRENT_PC == 0x0c40)
 		tmpgo = true;
-	if ((CURRENT_PC == 0x098f || CURRENT_PC == 0x0992 || CURRENT_PC == 0x0994) && 1)
-		printf("%04x A:%02x X:%02x Y:%02x - P:%02x SP:%02x Scanline: %02d(%2x) Cycle: %02d(%2x) SubInstr: %d\n", CURRENT_PC, registers.A, registers.X, registers.Y, status.status, SP_, currentScanline(), currentScanline(), BUS_currentCycle(), BUS_currentCycle(), SUB_CYC);
+	if (tmpgo && CURRENT_PC >= 0x0c00 && CURRENT_PC <= 0x0CFF) {
+		printf("%04x A:%02x X:%02x Y:%02x - P:%02x SP:%02x Scanline: %02d(%2x) Cycle: %02d(%2x) SubInstr: %d - RW: ", CURRENT_PC, registers.A, registers.X, registers.Y, status.status, SP_, currentScanline(), currentScanline(), BUS_currentCycle(), BUS_currentCycle(), SUB_CYC);
+		
+	}*/
 
 	switch (CURRENT_OPCODE) {
 
