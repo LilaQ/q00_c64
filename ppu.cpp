@@ -18,8 +18,6 @@ bool DRAW_TOP_BOTTOM_BORDER = true;
 int32_t ADR = 0;
 vector<SPRITE> SPRITES_VEC(8);
 array<uint8_t, 0x31> VIC_REGISTERS;
-uint16_t VIC_scanline = 0;
-SCREEN_POS VIC_scr_pos = SCREEN_POS::NO_RENDER;
 
 IRQ_STATUS irq_status;
 IRQ_MASK irq_mask;
@@ -90,12 +88,14 @@ void setScreenSize(UI_SCREEN_SIZE scr_s) {
 void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR) {
 
 	//	adjust x and y to accomodate to the sprite-raster that sprites can be drawn to
+	uint8_t sprite_fix = 0;
 	int16_t x = pixel_on_scanline - 112;
-	int16_t y = scanline + 16;
+	int16_t y = scanline + 15;
 	uint16_t screen_start = 0x40 * (VIC_REGISTERS[0x18] & 0b11110000);
 
 	//	iterate through all 8 available sprites
 	for (int8_t i = 7; i >= 0; i--) {
+
 		if (VIC_isSpriteEnabled(i) && VIC_isSpriteInLine(i, y) &&
 			(SPRITES_VEC[i].pos_x <= x && (SPRITES_VEC[i].pos_x + SPRITES_VEC[i].width) > x)) {
 
@@ -157,11 +157,11 @@ void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR) 
 				}
 			}
 			//	DEBUG green dot upper left corner
-			/*if (spr_x == 0 && (y - SPRITES_VEC[i].pos_y) == 0) {
+			if (spr_x == 0 && (y - SPRITES_VEC[i].pos_y) == 0) {
 				VRAM[ADR] = 0xff;
 				VRAM[ADR + 1] = 0x00;
 				VRAM[ADR + 2] = 0x00;
-			}*/
+			}
 		}
 	}
 }
@@ -343,7 +343,7 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 
 			//	TODO : We need a proper timing in which Sprites / BG are being drawn (especially when borders are disabled)
 			//	sprites
-			renderSprites(x, scanline, (scanline * 504 * 3) + (x * 3));
+			renderSprites(x, scanline, ADR);
 		}
 	}
 }
@@ -356,7 +356,8 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 */
 
 /*	REWRITE FROM HERE ON		*/
-
+uint16_t VIC_scanline = 0;
+SCREEN_POS VIC_scr_pos = SCREEN_POS::NO_RENDER;
 
 //	DEBUG
 uint16_t currentScanline() {
@@ -498,6 +499,7 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 			renderByPixels(VIC_scanline - 16, x_pos, VIC_scr_pos);
 			if (x_pos == 503 && VIC_scanline == 0) {
 				drawFrame();
+				//drawDebug();
 			}
 		}
 	}
@@ -517,17 +519,17 @@ bool VIC_isSpriteInLine(uint8_t sprite_no, uint16_t y) {
 }
 
 bool VIC_isSpriteInCurrentLine(uint8_t sprite_no) {
-	return VIC_isSpriteInLine(sprite_no, VIC_scanline);
+	return VIC_isSpriteInLine(sprite_no, VIC_scanline - 16 + 15);
 }
 
 bool VIC_isSpriteInNextLine(uint8_t sprite_no) {
-	return VIC_isSpriteInLine(sprite_no, VIC_scanline + 1);
+	return VIC_isSpriteInLine(sprite_no, VIC_scanline - 16 + 15 + 1);
 }
 
 void VIC_fetchSpriteDataBytes(uint8_t sprite_no) {
 	uint8_t sprite_fix = (sprite_no >= 0 && sprite_no <= 2) ? 1 : 0;
-	if (VIC_isSpriteInLine(sprite_no, VIC_scanline + sprite_fix)) {
-		SPRITES_VEC[sprite_no].fetchSpriteDataBytes(sprite_no, VIC_scanline + sprite_fix);
+	if (VIC_isSpriteInLine(sprite_no, VIC_scanline - 16 + 15 + sprite_fix)) {
+		SPRITES_VEC[sprite_no].fetchSpriteDataBytes(sprite_no, VIC_scanline - 16 + 15 + sprite_fix);
 	}
 }
 
