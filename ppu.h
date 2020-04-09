@@ -152,7 +152,7 @@ struct SPRITE {
 	uint8_t width;
 	uint8_t height;
 	uint16_t pos_x;
-	uint16_t pos_y = 0x400;
+	int16_t pos_y = -1;
 
 	void reinit(uint8_t i, array<uint8_t, 0x31> &VIC_REGISTERS, uint16_t scanline) {
 #if DEBUG_SPRITES
@@ -167,8 +167,9 @@ struct SPRITE {
 		width			= 24 * (1 + width_doubled);
 		height			= 21 * (1 + height_doubled);
 		pos_x			= (VIC_REGISTERS[0x00 + (i * 2)]) | (((VIC_REGISTERS[0x10] & (1 << i)) > 0) << 8);
-		if(scanline == (VIC_REGISTERS[0x01 + (i * 2)] + 1))
-			pos_y			= VIC_REGISTERS[0x01 + (i * 2)];
+		if ((scanline == (VIC_REGISTERS[0x01 + (i * 2)] + 1)) || (i < 0)) {
+			pos_y = VIC_REGISTERS[0x01 + (i * 2)];
+		}
 	}
 
 	//	Fetch Sprite Pointer
