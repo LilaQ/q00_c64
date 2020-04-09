@@ -4,6 +4,8 @@
 #include <vector>
 #include "mmu.h"
 
+#define DEBUG_SPRITES false
+
 struct IRQ_STATUS {
 	/*
 		Interrupt Request, Bit (1 = an)
@@ -142,6 +144,7 @@ struct SPRITE {
 	uint8_t data[3];
 
 	//	24x21 is the normal size of a sprite
+	bool buffer_filled = false;
 	bool width_doubled;
 	bool height_doubled;
 	bool prio_background;
@@ -149,9 +152,13 @@ struct SPRITE {
 	uint8_t width;
 	uint8_t height;
 	uint16_t pos_x;
-	uint16_t pos_y;
+	uint16_t pos_y = 0x400;
 
-	void reinit(uint8_t i, array<uint8_t, 0x31> &VIC_REGISTERS) {
+	void reinit(uint8_t i, array<uint8_t, 0x31> &VIC_REGISTERS, uint16_t scanline) {
+#if DEBUG_SPRITES
+		if (i == 0 && VIC_isSpriteEnabled(0))
+			printf("Sprite 0 reinitalized!\n");
+#endif
 		//	24x21 is the normal size of a sprite
 		width_doubled	= (VIC_REGISTERS[0x1d] & (1 << i)) > 0;
 		height_doubled	= (VIC_REGISTERS[0x17] & (1 << i)) > 0;
@@ -160,7 +167,8 @@ struct SPRITE {
 		width			= 24 * (1 + width_doubled);
 		height			= 21 * (1 + height_doubled);
 		pos_x			= (VIC_REGISTERS[0x00 + (i * 2)]) | (((VIC_REGISTERS[0x10] & (1 << i)) > 0) << 8);
-		pos_y			= VIC_REGISTERS[0x01 + (i * 2)];
+		if(scanline == (VIC_REGISTERS[0x01 + (i * 2)] + 1))
+			pos_y			= VIC_REGISTERS[0x01 + (i * 2)];
 	}
 
 	//	Fetch Sprite Pointer
@@ -175,7 +183,11 @@ struct SPRITE {
 		data[0] = readFromMemByVIC(sprite_pointer + ((y - pos_y) * 3));
 		data[1] = readFromMemByVIC(sprite_pointer + ((y - pos_y) * 3) + 1);
 		data[2] = readFromMemByVIC(sprite_pointer + ((y - pos_y) * 3) + 2);
-		//printf("ID: %d y: %d - %d %d %d\n", id, y, data[0], data[1], data[2]);
+		
+#if DEBUG_SPRITES
+		if(id == 0)
+			printf("ID: %d y: %d - %d %d %d\n", id, y, data[0], data[1], data[2]);
+#endif
 	}
 };
 

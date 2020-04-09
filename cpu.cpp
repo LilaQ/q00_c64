@@ -927,30 +927,8 @@ uint8_t CPU_executeInstruction() {
 	if (SUB_CYC == 1) {
 		PC++;
 	}
-	//if (nmi) {
-		nmi_cycle_count++;
-	//}
-	//if (irq) {
-		irq_cycle_count++;
-	//}
-
-	//if (((CURRENT_PC >= 0x098f && CURRENT_PC <= 0x099e) || (CURRENT_PC >= 0x0BB2 && CURRENT_PC <= 0x0BBA)) && 1) {
-	if (CURRENT_PC == 0x098f && SUB_CYC == 1 && BUS_currentCycle() == 0x1d) {
-		string po = "XXXX";
-		if (RW_LOOKUP_TABLE[CURRENT_OPCODE][SUB_CYC - 1] == RW::READ)
-			po = "READ";
-		else if (RW_LOOKUP_TABLE[CURRENT_OPCODE][SUB_CYC - 1] == RW::WRITE)
-			po = "WRITE";
-		printf("%04x A:%02x X:%02x Y:%02x - P:%02x SP:%02x Scanline: %02d(%2x) Cycle: %02d(%2x) SubInstr: %d - RW: ", CURRENT_PC, registers.A, registers.X, registers.Y, status.status, SP_, currentScanline(), currentScanline(), BUS_currentCycle(), BUS_currentCycle(), SUB_CYC);
-		std::cout << po << "\n";
-	}
-	/*
-	if (CURRENT_PC == 0x0c40)
-		tmpgo = true;
-	if (tmpgo && CURRENT_PC >= 0x0c00 && CURRENT_PC <= 0x0CFF) {
-		printf("%04x A:%02x X:%02x Y:%02x - P:%02x SP:%02x Scanline: %02d(%2x) Cycle: %02d(%2x) SubInstr: %d - RW: ", CURRENT_PC, registers.A, registers.X, registers.Y, status.status, SP_, currentScanline(), currentScanline(), BUS_currentCycle(), BUS_currentCycle(), SUB_CYC);
-		
-	}*/
+	nmi_cycle_count++;
+	irq_cycle_count++;
 
 	switch (CURRENT_OPCODE) {
 

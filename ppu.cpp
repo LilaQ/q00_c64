@@ -90,13 +90,13 @@ void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR) 
 	//	adjust x and y to accomodate to the sprite-raster that sprites can be drawn to
 	uint8_t sprite_fix = 0;
 	int16_t x = pixel_on_scanline - 112;
-	int16_t y = scanline + 15;
+	int16_t y = scanline + 16;
 	uint16_t screen_start = 0x40 * (VIC_REGISTERS[0x18] & 0b11110000);
 
 	//	iterate through all 8 available sprites
 	for (int8_t i = 7; i >= 0; i--) {
 
-		if (VIC_isSpriteEnabled(i) && VIC_isSpriteInLine(i, y) &&
+		if (VIC_isSpriteEnabled(i) && (VIC_isSpriteInCurrentLine(i)) &&
 			(SPRITES_VEC[i].pos_x <= x && (SPRITES_VEC[i].pos_x + SPRITES_VEC[i].width) > x)) {
 
 			//	3 byte per line, 21 lines
@@ -506,7 +506,7 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 }
 
 void VIC_fetchSpriteAttributes(uint8_t sprite_no) {
-	SPRITES_VEC.at(sprite_no).reinit(sprite_no, VIC_REGISTERS);
+	SPRITES_VEC.at(sprite_no).reinit(sprite_no, VIC_REGISTERS, VIC_scanline);
 }
 
 void VIC_fetchSpritePointer(uint8_t sprite_no) {
@@ -515,20 +515,20 @@ void VIC_fetchSpritePointer(uint8_t sprite_no) {
 
 bool VIC_isSpriteInLine(uint8_t sprite_no, uint16_t y) {
 	//	check if this sprite is part of the current line
-	return (y >= SPRITES_VEC[sprite_no].pos_y && y < (SPRITES_VEC[sprite_no].pos_y + SPRITES_VEC[sprite_no].height));
+	return (y >= (SPRITES_VEC[sprite_no].pos_y + 1) && y < (SPRITES_VEC[sprite_no].pos_y + 1 + SPRITES_VEC[sprite_no].height));
 }
 
 bool VIC_isSpriteInCurrentLine(uint8_t sprite_no) {
-	return VIC_isSpriteInLine(sprite_no, VIC_scanline - 16 + 15);
+	return VIC_isSpriteInLine(sprite_no, VIC_scanline);
 }
 
 bool VIC_isSpriteInNextLine(uint8_t sprite_no) {
-	return VIC_isSpriteInLine(sprite_no, VIC_scanline - 16 + 15 + 1);
+	return VIC_isSpriteInLine(sprite_no, VIC_scanline - 1);
 }
 
 void VIC_fetchSpriteDataBytes(uint8_t sprite_no) {
 	uint8_t sprite_fix = (sprite_no >= 0 && sprite_no <= 2) ? 1 : 0;
-	if (VIC_isSpriteInLine(sprite_no, VIC_scanline - 16 + 15 + sprite_fix)) {
+	if (VIC_isSpriteInLine(sprite_no, VIC_scanline + sprite_fix)) {
 		SPRITES_VEC[sprite_no].fetchSpriteDataBytes(sprite_no, VIC_scanline - 16 + 15 + sprite_fix);
 	}
 }
