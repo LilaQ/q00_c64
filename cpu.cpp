@@ -95,6 +95,7 @@ void ADD(u8 val) {
 	}
 	//	BCD mode
 	else {
+		printf("BCD happening\n");
 		uint16_t v1 = (registers.A / 16) * 10 + (registers.A % 16);
 		int16_t v2 = ((int8_t)val / 16) * 10 + ((int8_t)val % 16);
 		uint16_t sum = (v1 + v2 + status.carry);
@@ -460,7 +461,7 @@ void ABS_IND_READ(void (*instruction)(u8), u8 index) {
 	{
 	case 2: PC_L = getByte(PC++); break;																					//	READ
 	case 3: PC_H = getByte(PC++); PC_L += index; break;																		//	READ
-	case 4: instruction(getByte(getAdr())); SUB_CYC *= PC_L > 0xff; PC_H += (PC_L >> 8); break;								//	READ
+	case 4: VAL = getByte(getAdr());  SUB_CYC *= PC_L > 0xff; PC_H += (PC_L >> 8); if (!SUB_CYC) instruction(VAL); break;	//	READ
 	case 5: instruction(getByte(getAdr())); SUB_CYC = 0; break;																//	READ | PAGEBREACH CYCLE
 	default:
 		break;
@@ -597,7 +598,7 @@ void IND_Y_READ(void (*instruction)(u8)) {
 	case 2: VAL = getByte(PC++); break;																						//	READ
 	case 3: PC_L = getByte(VAL % 0x100); break;																				//	READ
 	case 4: PC_H = getByte((VAL + 1) % 0x100); PC_L += registers.Y; break;													//	READ
-	case 5: instruction(getByte(getAdr())); PC_H = ((PC_H << 8) + PC_L) >> 8; SUB_CYC *= PC_L > 0xff; break;				//	READ
+	case 5: VAL = getByte(getAdr()); PC_H = ((PC_H << 8) + PC_L) >> 8; SUB_CYC *= PC_L > 0xff; if (!SUB_CYC) instruction(VAL); break;	//	READ
 	case 6: instruction(getByte(getAdr())); SUB_CYC = 0; break;																//	READ | PAGEBREACH CYCLE
 	default:
 		break;
@@ -929,6 +930,11 @@ uint8_t CPU_executeInstruction() {
 	}
 	nmi_cycle_count++;
 	irq_cycle_count++;
+
+	/*if (CURRENT_PC == 0xa5fa && registers.Y == 0x6f)
+		tmpgo = true;
+	if (tmpgo && SUB_CYC == 1)
+		printf("PC %X - P: %X - A: %x - Y: %X - 0x0200: %x\n", CURRENT_PC, status.status, registers.A, registers.Y, getByte(0x200));*/
 
 	switch (CURRENT_OPCODE) {
 
