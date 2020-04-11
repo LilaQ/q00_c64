@@ -187,8 +187,8 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 
 		if (SCREENPOS != SCREEN_POS::NO_RENDER) {
 			//	Basic VRAM start address and OFFSET of the pixel we want to write to in this iteration
-			ADR = (scanline * 504 * 3) + ((x + offset_x) * 3);
-			uint16_t OFFSET = (uint16_t)(((scanline - 35) / 8) * 40 + (x - 24 - 112) / 8);
+			ADR = (scanline * 504 * 3) + (x * 3);
+			uint16_t OFFSET = (uint16_t)(((scanline - 35) / 8) * 40 + (x - offset_x - 24 - 112) / 8);
 
 			//	TEXTMODE
 			if (((SCREENPOS == SCREEN_POS::SCREEN) ||
@@ -213,9 +213,9 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 
 				//	NORMAL MODE
 				if ((VIC_REGISTERS[0x16] & 0b10000) == 0) {
-					VRAM[ADR] = ((chr & (1 << (7 - (x - 112) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
-					VRAM[ADR + 1] = ((chr & (1 << (7 - (x - 112) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
-					VRAM[ADR + 2] = ((chr & (1 << (7 - (x - 112) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
+					VRAM[ADR] = ((chr & (1 << (7 - (x - offset_x - 112) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
+					VRAM[ADR + 1] = ((chr & (1 << (7 - (x - offset_x - 112) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
+					VRAM[ADR + 2] = ((chr & (1 << (7 - (x - offset_x - 112) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
 				}
 
 				//	MULTICOLOR MODE
@@ -226,7 +226,7 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 						%10 = $d023
 						%11 = Farbe laut Farb-RAM (ab $d800)
 					*/
-					uint8_t index = (7 - (x % 8));
+					uint8_t index = (7 - ((x - offset_x) % 8));
 					uint8_t current_byte = chr;
 					//	If we are at bit 0 of the 2 bits...
 					uint8_t high_bit = ((current_byte & (1 << (index + 1))) > 0) ? 1 : 0;
@@ -266,17 +266,14 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 					//	...else it's still going to be hires single color mode
 					else {
 						color &= 0xf;
-						VRAM[ADR]		= ((chr & (1 << (7 - (x - 112) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
-						VRAM[ADR + 1]	= ((chr & (1 << (7 - (x - 112) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
-						VRAM[ADR + 2]	= ((chr & (1 << (7 - (x - 112) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
+						VRAM[ADR]		= ((chr & (1 << (7 - (x - offset_x - 112) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
+						VRAM[ADR + 1]	= ((chr & (1 << (7 - (x - offset_x - 112) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
+						VRAM[ADR + 2]	= ((chr & (1 << (7 - (x - offset_x - 112) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
 					}
 				}
 			}
 			//	BITMAP MODE
-			else if ((SCREENPOS == SCREEN_POS::SCREEN) ||
-				(SCREENPOS == SCREEN_POS::COL_38_AREA) ||
-				(SCREENPOS == SCREEN_POS::ROW_25_AREA)
-				) {
+			else if ((SCREENPOS == SCREEN_POS::SCREEN) || (SCREENPOS == SCREEN_POS::COL_38_AREA) ||	(SCREENPOS == SCREEN_POS::ROW_25_AREA)) {
 				uint16_t BMP_OFFSET = (OFFSET / 40) * 320 + (OFFSET % 40) * 8 + ((scanline - 35) % 8);
 				uint8_t bit = readFromMemByVIC(bmp_start_address + BMP_OFFSET) & (0b10000000 >> ((x - 112) % 8));
 				uint8_t color_index = (bit) ? (readFromMemByVIC(bmp_color_address + OFFSET) & 0b11110000) >> 4 : readFromMemByVIC(bmp_color_address + OFFSET) & 0b1111;
