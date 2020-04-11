@@ -116,11 +116,11 @@ void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR) 
 			uint8_t color_bits = 0x00;
 			if (SPRITES_VEC[i].multicolor) {
 				//	looking at high bit
-				if (spr_x % 2 == 0) {
+				if ((spr_x / width_factor) % 2 == 0) {
 					color_bit_h = color_byte & (1 << (7 - ((spr_x / width_factor) % 8)));
 					color_bit_l = color_byte & (1 << (7 - (((spr_x / width_factor) + 1) % 8)));
 				}
-				else if (spr_x % 2 == 1) {
+				else if ((spr_x / width_factor) % 2 == 1) {
 					color_bit_l = color_byte & (1 << (7 - ((spr_x / width_factor) % 8))) ;
 					color_bit_h = color_byte & (1 << (7 - (((spr_x / width_factor) - 1) % 8)));
 				}

@@ -108,7 +108,7 @@ main
  stx SPRITE1DATA                    ;und dem VIC II mitteilen
 
 ;*** Weitere Sourcezeilen ab hier einfügen...
- lda #%00000001                     ;Verdoppelt für X und Y
+ lda #%00000010                     ;Verdoppelt für X und Y
  sta SPRITEDOUBLEWIDTH              ;doppelte Höhe zurücksetzen
  sta SPRITEDOUBLEWIDTH              ;doppelte Breite zurücksetzen
  lda #%00000010                     ;nur Sprite-1 ist Mulicolor, der Rest Hi-Res
