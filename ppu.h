@@ -181,9 +181,9 @@ struct SPRITE {
 
 	//	Fetch the 3 bytes for this sprite, for this row
 	void fetchSpriteDataBytes(uint8_t id, uint16_t y) {
-		data[0] = readFromMemByVIC(sprite_pointer + ((y - pos_y) * 3));
-		data[1] = readFromMemByVIC(sprite_pointer + ((y - pos_y) * 3) + 1);
-		data[2] = readFromMemByVIC(sprite_pointer + ((y - pos_y) * 3) + 2);
+		data[0] = readFromMemByVIC(sprite_pointer + (((y - pos_y) / (1 + height_doubled)) * 3));
+		data[1] = readFromMemByVIC(sprite_pointer + (((y - pos_y) / (1 + height_doubled)) * 3) + 1);
+		data[2] = readFromMemByVIC(sprite_pointer + (((y - pos_y) / (1 + height_doubled)) * 3) + 2);
 		
 #if DEBUG_SPRITES
 		if(id == 0)

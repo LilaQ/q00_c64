@@ -101,23 +101,28 @@ void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR) 
 
 			//	3 byte per line, 21 lines
 			uint8_t spr_x = x - SPRITES_VEC[i].pos_x;
+			uint8_t width_factor = 1 + SPRITES_VEC[i].width_doubled;
 
-			uint8_t color_byte	= SPRITES_VEC[i].data[spr_x / 8];
-			uint8_t color_bit_h = color_byte & (1 << (7 - (spr_x % 8)));
+			/*
+			void fetchSpriteDataBytes(uint8_t id, uint16_t y) {
+			data[0] = readFromMemByVIC(sprite_pointer + ((y - pos_y) * 3));
+			data[1] = readFromMemByVIC(sprite_pointer + ((y - pos_y) * 3) + 1);
+			data[2] = readFromMemByVIC(sprite_pointer + ((y - pos_y) * 3) + 2);
+			*/
+
+			uint8_t color_byte	= SPRITES_VEC[i].data[(spr_x / width_factor) / 8];
+			uint8_t color_bit_h = color_byte & (1 << (7 - ((spr_x / width_factor) % 8)));
 			uint8_t color_bit_l = 0x00;
 			uint8_t color_bits = 0x00;
 			if (SPRITES_VEC[i].multicolor) {
 				//	looking at high bit
 				if (spr_x % 2 == 0) {
-					color_bit_h = color_byte & (1 << (7 - (spr_x % 8)));
-					color_bit_l = color_byte & (1 << (7 - ((spr_x + 1) % 8)));
-					//color_bit_l = readFromMemByVIC(SPRITES_VEC[i].sprite_pointer + (spr_y * 3) + (spr_x / 8)) & (1 << (7 - ((spr_x + 1) % 8)));
+					color_bit_h = color_byte & (1 << (7 - ((spr_x / width_factor) % 8)));
+					color_bit_l = color_byte & (1 << (7 - (((spr_x / width_factor) + 1) % 8)));
 				}
 				else if (spr_x % 2 == 1) {
-					color_bit_l = color_byte & (1 << (7 - (spr_x % 8))) ;
-					color_bit_h = color_byte & (1 << (7 - ((spr_x - 1) % 8)));
-					//color_bit_l = readFromMemByVIC(SPRITES_VEC[i].sprite_pointer + (spr_y * 3) + (spr_x / 8)) & (1 << (7 - (spr_x % 8)));
-					//color_bit_h = readFromMemByVIC(SPRITES_VEC[i].sprite_pointer + (spr_y * 3) + ((spr_x - 1) / 8)) & (1 << (7 - ((spr_x - 1) % 8)));
+					color_bit_l = color_byte & (1 << (7 - ((spr_x / width_factor) % 8))) ;
+					color_bit_h = color_byte & (1 << (7 - (((spr_x / width_factor) - 1) % 8)));
 				}
 			}
 			color_bit_h = color_bit_h > 0;
