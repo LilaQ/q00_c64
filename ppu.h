@@ -134,6 +134,7 @@ void VIC_fetchSpriteDataBytes(uint8_t sprite_no);
 bool VIC_isSpriteEnabled(uint8_t sprite_no);
 bool VIC_isSpriteInCurrentLine(uint8_t sprite_no);
 bool VIC_isSpriteInNextLine(uint8_t sprite_no);
+bool VIC_isSpriteInPrevLine(uint8_t sprite_no);
 bool VIC_isSpriteInLine(uint8_t sprite_no, uint16_t y);
 bool VIC_checkRasterIRQ();
 
@@ -167,9 +168,7 @@ struct SPRITE {
 		width			= 24 * (1 + width_doubled);
 		height			= 21 * (1 + height_doubled);
 		pos_x			= (VIC_REGISTERS[0x00 + (i * 2)]) | (((VIC_REGISTERS[0x10] & (1 << i)) > 0) << 8);
-		if ((scanline == (VIC_REGISTERS[0x01 + (i * 2)] + 1)) || (i < 0)) {
-			pos_y = VIC_REGISTERS[0x01 + (i * 2)];
-		}
+		pos_y			= VIC_REGISTERS[0x01 + (i * 2)] + 1;
 	}
 
 	//	Fetch Sprite Pointer
