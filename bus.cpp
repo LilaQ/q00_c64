@@ -12,7 +12,7 @@
 #undef main
 //	[q00.c64]
 
-SDL_Event event;					
+SDL_Event event;
 bool unpaused = true;
 bool isBadline = false;
 bool rasterIRQ = false;
@@ -58,7 +58,7 @@ int main()
 			/*
 
 				normale Zeile (aktive Sprites: keine)
-						 111111111122222222223333333333444444444455555555556666 
+						 111111111122222222223333333333444444444455555555556666
 				123456789012345678901234567890123456789012345678901234567890123 Zyklen
 				p p p p p rrrrrgggggggggggggggggggggggggggggggggggggggg  p p p  P-1 VIC
 																				P-2 VIC
@@ -72,7 +72,7 @@ int main()
 				xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxXXX  xxxx P-2 CPU
 
 				Bad Line (aktive Sprites: keine)
-						 111111111122222222223333333333444444444455555555556666 
+						 111111111122222222223333333333444444444455555555556666
 				123456789012345678901234567890123456789012345678901234567890123 Zyklen
 				p p p p p rrrrrgggggggggggggggggggggggggggggggggggggggg  p p p  P-1 VIC
 							  cccccccccccccccccccccccccccccccccccccccc          P-2 VIC
@@ -80,7 +80,7 @@ int main()
 				23 cycles available
 
 				Bad Line (aktive Sprites: ALLE)
-						 111111111122222222223333333333444444444455555555556666 
+						 111111111122222222223333333333444444444455555555556666
 				123456789012345678901234567890123456789012345678901234567890123 Zyklen
 				pspspspspsrrrrrgggggggggggggggggggggggggggggggggggggggg  pspsps P-1 VIC
 				ssssssssss    cccccccccccccccccccccccccccccccccccccccc   ssssss P-2 VIC
@@ -118,7 +118,7 @@ int main()
 				6510
 				------------------------------------------------
 				Cycle 11 - Cycle 15 : 6510 compute instruction
-				Cycle 16 - Cycle 55 : 6510 compute instruction (only if not a badline) 				
+				Cycle 16 - Cycle 55 : 6510 compute instruction (only if not a badline)
 				Cycle 47 - Cycle 62	: 6510 compute instruction (only if there are at least 3 free cycles between sprite data fetches)
 			*/
 
@@ -132,44 +132,63 @@ int main()
 				isBadline = VIC_isBadline();
 				//if (isBadline)
 					//printf("BADLINE at %x\n", currentScanline());
-				VIC_fetchSpriteAttributes(3);
 				VIC_fetchSpritePointer(3);
-				if (VIC_isSpriteEnabled(3)) {
+				if (_s[3]) {
 					VIC_fetchSpriteDataBytes(3);
 				}
 			}
 			else if (c == 3) {
-				VIC_fetchSpriteAttributes(4);
-				VIC_fetchSpritePointer(4);	
-				if (VIC_isSpriteEnabled(4)) {
+				VIC_fetchSpritePointer(4);
+				if (_s[4]) {
 					VIC_fetchSpriteDataBytes(4);
 				}
 			}
 			else if (c == 5) {
-				VIC_fetchSpriteAttributes(5);
 				VIC_fetchSpritePointer(5);
-				if (VIC_isSpriteEnabled(5)) {
+				if (_s[5]) {
 					VIC_fetchSpriteDataBytes(5);
 				}
 			}
 			else if (c == 7) {
-				VIC_fetchSpriteAttributes(6);
 				VIC_fetchSpritePointer(6);
-				if (VIC_isSpriteEnabled(6)) {
+				if (_s[6]) {
 					VIC_fetchSpriteDataBytes(6);
 				}
 			}
 			else if (c == 9) {
-				VIC_fetchSpriteAttributes(7);
 				VIC_fetchSpritePointer(7);
-				if (VIC_isSpriteEnabled(7)) {
+				if (_s[7]) {
 					VIC_fetchSpriteDataBytes(7);
 				}
 			}
+			else if ((c == 10 || c == 54) && SHOW_BUS) {
+				printf("Scanline %d (BL? %d) \t", currentScanline(), VIC_isBadline());
+				for (int i = 0; i <= 62; i++) {
+					printf("%d", _c[i]);
+				}
+				printf("\n");
+			}
 			else if (c >= 11 && c <= 15) {
+				//	TODO: Das hier wird 5 mal ausgeführt, in jedem Cycle -> unnötig und kostet performance
+				//	Fetch attributes for Sprites (height, width, position etc.)
+				_s[0] = VIC_isSpriteEnabled(0);
+				_s[1] = VIC_isSpriteEnabled(1);
+				_s[2] = VIC_isSpriteEnabled(2);
+				_s[3] = VIC_isSpriteEnabled(3);
+				_s[4] = VIC_isSpriteEnabled(4);
+				_s[5] = VIC_isSpriteEnabled(5);
+				_s[6] = VIC_isSpriteEnabled(6);
+				_s[7] = VIC_isSpriteEnabled(7);
+				VIC_fetchSpriteAttributes(0);
+				VIC_fetchSpriteAttributes(1);
+				VIC_fetchSpriteAttributes(2);
+				VIC_fetchSpriteAttributes(3);
+				VIC_fetchSpriteAttributes(4);
+				VIC_fetchSpriteAttributes(5);
+				VIC_fetchSpriteAttributes(6);
+				VIC_fetchSpriteAttributes(7);
 				//	Reset Cycle-Array, that stores VIC-busy cycles
 				memset(_c, 0x00, sizeof(_c));
-				memset(_s, 0x00, sizeof(_s));
 				if (isBadline) {
 					_c[11] = 2;			//	Badline, bus-takeover cycles
 					_c[12] = 2;			//	Badline, bus-takeover cycles
@@ -180,43 +199,29 @@ int main()
 				}
 			}
 			else if (c == 58) {
-				VIC_fetchSpriteAttributes(0);
 				VIC_fetchSpritePointer(0);
-				if (VIC_isSpriteEnabled(0)) {
+				if (_s[0]) {
 					VIC_fetchSpriteDataBytes(0);
 				}
 			}
 			else if (c == 60) {
-				VIC_fetchSpriteAttributes(1);
 				VIC_fetchSpritePointer(1);
-				if (VIC_isSpriteEnabled(1)) {
+				if (_s[1]) {
 					VIC_fetchSpriteDataBytes(1);
 				}
 			}
 			else if (c == 62) {
-				VIC_fetchSpriteAttributes(2);
 				VIC_fetchSpritePointer(2);
-				if (VIC_isSpriteEnabled(2)) {
+				if (_s[2]) {
 					VIC_fetchSpriteDataBytes(2);
 				}
 			}
-
-			switch (c)
-			{
-			case 0:break;
-			case 1:
-				break;
-			default:
-				break;
-			}
-
-
 			/*
 				Sprite loading, cycle stealing from 6510
 			*/
 
 			//	Sprite #0
-			if (c >= 54 && c <= 56 && VIC_isSpriteEnabled(0) && VIC_isSpriteInNextLine(0)) {		//	Bus-Takeover cycles Sprite #0 (1,2,3)
+			if (c >= 54 && c <= 56 && _s[0] && VIC_isSpriteInNextLine(0)) {		//	Bus-Takeover cycles Sprite #0 (1,2,3)
 				if (!isBadline) {
 					_c[c] = 2;
 				}
@@ -224,34 +229,32 @@ int main()
 					_c[c] = 1;
 				}
 			}
-			if (c >= 57 && c <= 58 && VIC_isSpriteEnabled(0) && VIC_isSpriteInNextLine(0)) {		//	Sprite pointer / data Sprite #0
+			if (c >= 57 && c <= 58 && _s[0] && VIC_isSpriteInNextLine(0)) {		//	Sprite pointer / data Sprite #0
 				_c[c] = 1;
-				_s[0] = 1;
 			}
 
 			//	Sprite #1
-			if (c == 56 && VIC_isSpriteEnabled(1) && !VIC_isSpriteEnabled(0) && VIC_isSpriteInNextLine(1)) {		//	Bus-Takeover cycles Sprite #1 (1)
+			if (c == 56 && _s[1] && !_s[0] && VIC_isSpriteInNextLine(1)) {		//	Bus-Takeover cycles Sprite #1 (1)
 				_c[c] = 2;
 			}
-			if (c >= 57 && c <= 58 && VIC_isSpriteEnabled(1) && VIC_isSpriteInNextLine(1)) {
-				if (!VIC_isSpriteEnabled(0)) {													//	Bus-Takeover cycles Sprite #1 (2,3)
+			if (c >= 57 && c <= 58 && _s[1] && VIC_isSpriteInNextLine(1)) {
+				if (!_s[0]) {													//	Bus-Takeover cycles Sprite #1 (2,3)
 					_c[c] = 2;
 				}
 			}
-			if (c >= 59 && c <= 60 && VIC_isSpriteEnabled(1) && VIC_isSpriteInNextLine(1)) {		//	Sprite pointer / data Sprite #1
+			if (c >= 59 && c <= 60 && _s[1] && VIC_isSpriteInNextLine(1)) {		//	Sprite pointer / data Sprite #1
 				_c[c] = 1;
-				_s[1] = 1;
 			}
 
 			//	Sprite #2
-			if (c == 58 && VIC_isSpriteEnabled(2) && !VIC_isSpriteEnabled(1) && VIC_isSpriteInNextLine(2)) {
-				if (!VIC_isSpriteEnabled(0)) {
+			if (c == 58 && _s[2] && !_s[1] && VIC_isSpriteInNextLine(2)) {
+				if (!_s[0]) {
 					_c[c] = 2;													//	Bus-Takeover cycles Sprite #2 (1)
 				}
 			}
-			if (c >= 59 && c <= 60 && VIC_isSpriteEnabled(2) && VIC_isSpriteInNextLine(2)) {
-				if (!VIC_isSpriteEnabled(1)) {
-					if (!VIC_isSpriteEnabled(0)) {
+			if (c >= 59 && c <= 60 && _s[2] && VIC_isSpriteInNextLine(2)) {
+				if (!_s[1]) {
+					if (!_s[0]) {
 						_c[c] = 2;												//	Bus-Takeover cycles Sprite #2 (2,3)
 					}
 					else {
@@ -259,20 +262,19 @@ int main()
 					}
 				}
 			}
-			if (c >= 61 && c <= 62 && VIC_isSpriteEnabled(2) && VIC_isSpriteInNextLine(2)) {		//	Sprite pointer / data Sprite #2
+			if (c >= 61 && c <= 62 && _s[2] && VIC_isSpriteInNextLine(2)) {		//	Sprite pointer / data Sprite #2
 				_c[c] = 1;
-				_s[2] = 1;
 			}
 
 			//	Sprite #3
-			if (c == 60 && VIC_isSpriteEnabled(3) && !VIC_isSpriteEnabled(2) && VIC_isSpriteInNextLine(3)) {
-				if (!VIC_isSpriteEnabled(1)) {
+			if (c == 60 && _s[3] && !_s[2] && VIC_isSpriteInNextLine(3)) {
+				if (!_s[1]) {
 					_c[c] = 2;													//	Bus-Takeover cycles Sprite #3 (1)
 				}
 			}
-			if (c >= 61 && c <= 62 && VIC_isSpriteEnabled(3) && VIC_isSpriteInNextLine(3)) {
-				if (!VIC_isSpriteEnabled(2)) {
-					if (!VIC_isSpriteEnabled(1)) {
+			if (c >= 61 && c <= 62 && _s[3] && VIC_isSpriteInNextLine(3)) {
+				if (!_s[2]) {
+					if (!_s[1]) {
 						_c[c] = 2;												//	Bus-Takeover cycles Sprite #3 (2,3)
 					}
 					else {
@@ -280,20 +282,19 @@ int main()
 					}
 				}
 			}
-			if (c >= 0 && c <= 1 && VIC_isSpriteEnabled(3) && VIC_isSpriteInCurrentLine(3)) {
+			if (c >= 0 && c <= 1 && _s[3] && VIC_isSpriteInCurrentLine(3)) {
 				_c[c] = 1;														//	Sprite pointer / data Sprite #3
-				_s[3] = 1;
 			}
 
 			//	Sprite #4
-			if (c == 62 && VIC_isSpriteEnabled(4) && !VIC_isSpriteEnabled(3) && VIC_isSpriteInNextLine(4)) {
-				if (!VIC_isSpriteEnabled(2)) {
+			if (c == 62 && _s[4] && !_s[3] && VIC_isSpriteInNextLine(4)) {
+				if (!_s[2]) {
 					_c[c] = 2;													//	Bus-Takeover cycles Sprite #4 (1)
 				}
 			}
-			if (c >= 0 && c <= 1 && VIC_isSpriteEnabled(4) && VIC_isSpriteInCurrentLine(4)) {
-				if (!VIC_isSpriteEnabled(3)) {
-					if (!VIC_isSpriteEnabled(2)) {
+			if (c >= 0 && c <= 1 && _s[4] && VIC_isSpriteInCurrentLine(4)) {
+				if (!_s[3]) {
+					if (!_s[2]) {
 						_c[c] = 2;												//	Bus-Takeover cycles Sprite #4 (2,3)
 					}
 					else {
@@ -301,20 +302,19 @@ int main()
 					}
 				}
 			}
-			if (c >= 2 && c <= 3 && VIC_isSpriteEnabled(4) && VIC_isSpriteInCurrentLine(4)) {
+			if (c >= 2 && c <= 3 && _s[4] && VIC_isSpriteInCurrentLine(4)) {
 				_c[c] = 1;														//	Sprite pointer / data Sprite #4
-				_s[4] = 1;
 			}
 
 			//	Sprite #5
-			if (c == 1 && VIC_isSpriteEnabled(5) && !VIC_isSpriteEnabled(4) && VIC_isSpriteInCurrentLine(5)) {
-				if (!VIC_isSpriteEnabled(3)) {
+			if (c == 1 && _s[5] && !_s[4] && VIC_isSpriteInCurrentLine(5)) {
+				if (!_s[3]) {
 					_c[c] = 2;													//	Bus-Takeover cycles Sprite #5 (1)
 				}
 			}
-			if (c >= 2 && c <= 3 && VIC_isSpriteEnabled(5) && VIC_isSpriteInCurrentLine(5)) {
-				if (!VIC_isSpriteEnabled(4)) {
-					if (!VIC_isSpriteEnabled(3)) {
+			if (c >= 2 && c <= 3 && _s[5] && VIC_isSpriteInCurrentLine(5)) {
+				if (!_s[4]) {
+					if (!_s[3]) {
 						_c[c] = 2;												//	Bus-Takeover cycles Sprite #5 (2,3)
 					}
 					else {
@@ -322,20 +322,19 @@ int main()
 					}
 				}
 			}
-			if (c >= 4 && c <= 5 && VIC_isSpriteEnabled(5) && VIC_isSpriteInCurrentLine(5)) {
+			if (c >= 4 && c <= 5 && _s[5] && VIC_isSpriteInCurrentLine(5)) {
 				_c[c] = 1;														//	Sprite pointer / data Sprite #5
-				_s[5] = 1;
 			}
 
 			//	Sprite #6
-			if (c == 3 && VIC_isSpriteEnabled(6) && !VIC_isSpriteEnabled(5) && VIC_isSpriteInCurrentLine(6)) {
-				if (!VIC_isSpriteEnabled(4)) {
+			if (c == 3 && _s[6] && !_s[5] && VIC_isSpriteInCurrentLine(6)) {
+				if (!_s[4]) {
 					_c[c] = 2;													//	Bus-Takeover cycles Sprite #6 (1)
 				}
 			}
-			if (c >= 4 && c <= 5 && VIC_isSpriteEnabled(6) && VIC_isSpriteInCurrentLine(6)) {
-				if (!VIC_isSpriteEnabled(5)) {
-					if (!VIC_isSpriteEnabled(4)) {
+			if (c >= 4 && c <= 5 && _s[6] && VIC_isSpriteInCurrentLine(6)) {
+				if (!_s[5]) {
+					if (!_s[4]) {
 						_c[c] = 2;												//	Bus-Takeover cycles Sprite #6 (2,3)
 					}
 					else {
@@ -343,20 +342,19 @@ int main()
 					}
 				}
 			}
-			if (c >= 6 && c <= 7 && VIC_isSpriteEnabled(6) && VIC_isSpriteInCurrentLine(6)) {
+			if (c >= 6 && c <= 7 && _s[6] && VIC_isSpriteInCurrentLine(6)) {
 				_c[c] = 1;														//	Sprite pointer / data Sprite #6
-				_s[6] = 1;
 			}
 
 			//	Sprite #7 - cont here
-			if (c == 5 && VIC_isSpriteEnabled(7) && !VIC_isSpriteEnabled(6) && VIC_isSpriteInCurrentLine(7)) {
-				if (!VIC_isSpriteEnabled(5)) {
+			if (c == 5 && _s[7] && !_s[6] && VIC_isSpriteInCurrentLine(7)) {
+				if (!_s[5]) {
 					_c[c] = 2;													//	Bus-Takeover cycles Sprite #7 (1)
 				}
 			}
-			if (c >= 6 && c <= 7 && VIC_isSpriteEnabled(7) && VIC_isSpriteInCurrentLine(7)) {
-				if (!VIC_isSpriteEnabled(6)) {
-					if (!VIC_isSpriteEnabled(5)) {
+			if (c >= 6 && c <= 7 && _s[7] && VIC_isSpriteInCurrentLine(7)) {
+				if (!_s[6]) {
+					if (!_s[5]) {
 						_c[c] = 2;												//	Bus-Takeover cycles Sprite #7 (2,3)
 					}
 					else {
@@ -364,28 +362,28 @@ int main()
 					}
 				}
 			}
-			if (c >= 8 && c <= 9 && VIC_isSpriteEnabled(7) && VIC_isSpriteInCurrentLine(7)) {
+			if (c >= 8 && c <= 9 && _s[7] && VIC_isSpriteInCurrentLine(7)) {
 				_c[c] = 1;														//	Sprite pointer / data Sprite #7
-				_s[7] = 1;
 			}
 
 			VIC_fetchGraphicsData(1);
- 
+
 			/*
 				Low-Phi Phase / 6510 [VIC on steals]
 				- only execute CPU instruction, if the VIC didn't block the cycle in _c-array
 			*/
 
 			//	Regular CPU cycle
-			if (_c[c] == 0 || _c[c] == 2) {
+			if (_c[c] == 0) {
+				if (cpuHalted) {
+					//	Resume CPU
+					cpuHalted = false;
+				}
 				CPU_executeInstruction();
 			}
-			//	Skipped / Stolen CPU cycle
-			else {
-				//	Skipping cycle
-				char output[200];
-				snprintf(output, sizeof(output), "Cycle: %d(%02x) - CPU Stalled!", c, c);
-				//printMsg("CPU", "BUS-TAKEOVER", string(output));
+			else if (_c[c] == 2 && !cpuHalted) {
+				//	Execution on Takeover cycle
+				CPU_executeInstruction();
 			}
 			if (c == 0) {
 				if (VIC_checkRasterIRQ()) {
