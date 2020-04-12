@@ -21,6 +21,8 @@
 using namespace::std;
 
 SDL_Window* mainWindow;				//	Main Window
+SDL_GameController* controller;
+uint8_t joypad = 0x00;
 
 void initWindow(SDL_Window* win, string filename) {
 	mainWindow = win;
@@ -52,6 +54,10 @@ void initWindow(SDL_Window* win, string filename) {
 
 	//	Enable WM events for SDL Window
 	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
+
+	//	init SDL Gamecontroller
+	SDL_Init(SDL_INIT_GAMECONTROLLER);
+	controller = SDL_NumJoysticks() ? SDL_GameControllerOpen(0) : NULL;
 }
 
 void showMemoryMap() {
@@ -190,6 +196,42 @@ void handleWindowEvents(SDL_Event event) {
 
 	//	handle keyboard to KERNAL
 	setKeyboardInput(keys);
+
+	//	use gamepad as input
+	joypad = 0x00;
+	if (controller != NULL) {
+		bool Up = SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_UP);
+		bool Down = SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_DOWN);
+		bool Left = SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_LEFT);
+		bool Right = SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
+		bool Back = SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_START);
+		bool Start = SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_BACK);
+		bool LeftShoulder = SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
+		bool RightShoulder = SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
+		bool AButton = SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_A);
+		bool BButton = SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_B);
+
+		int16_t StickX = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTX);
+		int16_t StickY = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTY);
+
+		//	Joypad
+		joypad |= ((Right || (StickX > 10000)) ? 1 : 0) << 3;
+		joypad |= ((Left  || (StickX < -10000)) ? 1 : 0) << 2;
+		joypad |= ((Up  || (StickY < -10000)) ? 1 : 0) << 0;
+		joypad |= ((Down  || (StickY > 10000)) ? 1 : 0) << 1;
+		joypad |= ((AButton || BButton ) ? 1 : 0) << 4;
+	}
+	//	use keyboard only
+	else {
+		joypad |= (keys[SDL_SCANCODE_A] ? 0 : 1) << 2;
+		joypad |= (keys[SDL_SCANCODE_S] ? 0 : 1) << 1;
+		joypad |= (keys[SDL_SCANCODE_W] ? 0 : 1) << 0;
+		joypad |= (keys[SDL_SCANCODE_D] ? 0 : 1) << 3;
+		joypad |= (keys[SDL_SCANCODE_SPACE] ? 0 : 1) << 4;
+	}
+
+	//setJoystick1Input(&joypad);
+	setJoystick2Input(&joypad);
 }
 
 void setTitle(string filename) {

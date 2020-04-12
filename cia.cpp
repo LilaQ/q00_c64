@@ -16,9 +16,20 @@ uint8_t cia2_data_port_B = 0xff;
 bool cia1_port_A_RW = false;
 bool cia1_port_B_RW = false;
 uint8_t* KEYS;
+uint8_t JOY1;
+uint8_t JOY2;
 
 void setKeyboardInput(uint8_t* _KEYS) {
 	KEYS = _KEYS;
+}
+
+void setJoystick1Input(uint8_t* _KEYS) {
+	JOY1 = *_KEYS;
+	//printf("Key1: %x\n", ((~JOY1) & 0b11111));
+}
+
+void setJoystick2Input(uint8_t* _KEYS) {
+	JOY2 = *_KEYS;
 }
 
 //	CIA 1
@@ -48,7 +59,7 @@ void setCIA1PortBRW(uint8_t val) {
 }
 
 uint8_t readCIA1DataPortA() {
-	return cia1_data_port_A;
+	return cia1_data_port_A & (~JOY2);
 }
 
 uint8_t readCIA1DataPortB() {

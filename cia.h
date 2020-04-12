@@ -47,6 +47,8 @@ void setCIA2TimerBControl(uint8_t val);
 void setCIA2NMIcontrol(uint8_t val);
 
 void setKeyboardInput(uint8_t* KEYS);
+void setJoystick1Input(uint8_t* _KEYS);
+void setJoystick2Input(uint8_t* _KEYS);
 void tickAllTimers(uint8_t cycles);
 
 const SDL_Scancode KEYMAP[8][8] = {
