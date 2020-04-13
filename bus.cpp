@@ -375,10 +375,7 @@ int main()
 
 			//	Regular CPU cycle
 			if (_c[c] == 0) {
-				if (cpuHalted) {
-					//	Resume CPU
-					cpuHalted = false;
-				}
+				cpuHalted = false;
 				CPU_executeInstruction();
 			}
 			else if (_c[c] == 2 && !cpuHalted) {

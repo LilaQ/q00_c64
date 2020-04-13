@@ -87,26 +87,28 @@ void setScreenSize(UI_SCREEN_SIZE scr_s) {
 	}
 }
 
-void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR, uint8_t i) {
+inline void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR, uint8_t i) {
 
 	//	adjust x and y to accomodate to the sprite-raster that sprites can be drawn to
-	uint8_t sprite_fix = 0;
-	int16_t x = pixel_on_scanline - 112;
-	int16_t y = scanline + 16;
-	uint16_t screen_start = 0x40 * (VIC_REGISTERS[0x18] & 0b11110000);
+	const uint8_t sprite_fix = 0;
+	const int16_t x = pixel_on_scanline - 112;
+	const int16_t y = scanline + 16;
+	const uint16_t screen_start = 0x40 * (VIC_REGISTERS[0x18] & 0b11110000);
+
+	const SPRITE S = SPRITES_VEC[i];
 
 
-	if (VIC_isSpriteInCurrentLine(i) &&	(SPRITES_VEC[i].pos_x <= x && (SPRITES_VEC[i].pos_x + SPRITES_VEC[i].width) > x)) {
+	if (VIC_isSpriteInCurrentLine(i) &&	(S.pos_x <= x && (S.pos_x + S.width) > x)) {
 
 		//	3 byte per line, 21 lines
-		uint8_t spr_x = x - SPRITES_VEC[i].pos_x;
-		uint8_t width_factor = 1 + SPRITES_VEC[i].width_doubled;
+		uint8_t spr_x = x - S.pos_x;
+		uint8_t width_factor = 1 + S.width_doubled;
 
-		uint8_t color_byte	= SPRITES_VEC[i].data[(spr_x / width_factor) / 8];
+		uint8_t color_byte	= S.data[(spr_x / width_factor) / 8];
 		uint8_t color_bit_h = color_byte & (1 << (7 - ((spr_x / width_factor) % 8)));
 		uint8_t color_bit_l = 0x00;
 		uint8_t color_bits = 0x00;
-		if (SPRITES_VEC[i].multicolor) {
+		if (S.multicolor) {
 			//	looking at high bit
 			if ((spr_x / width_factor) % 2 == 0) {
 				color_bit_h = color_byte & (1 << (7 - ((spr_x / width_factor) % 8)));
@@ -122,7 +124,7 @@ void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR, 
 		color_bits = (color_bit_h << 1) | color_bit_l;
 		uint8_t color = 0x00;
 		//	single color (hires)
-		if (!SPRITES_VEC[i].multicolor) {
+		if (!S.multicolor) {
 			if (color_bit_h) {
 				color = VIC_REGISTERS[0x27 + i];
 				VRAM[ADR]		= COLORS[color][0];
@@ -132,33 +134,34 @@ void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_t ADR, 
 		}
 		//	multicolor
 		else {
-			if (color_bits) {
-				switch (color_bits)
-				{
-				case 0b00:
-					printf("This shouldn't be happening\n");
-					break;
-				case 0b01:
-					color = VIC_REGISTERS[0x25];
-					break;
-				case 0b10:
-					color = VIC_REGISTERS[0x27 + i];
-					break;
-				case 0b11:
-					color = VIC_REGISTERS[0x26];
-					break;
-				}
-				VRAM[ADR]		= COLORS[color][0];
-				VRAM[ADR + 1]	= COLORS[color][1];
-				VRAM[ADR + 2]	= COLORS[color][2];
+			switch (color_bits)
+			{
+			case 0b00:
+				return;
+				printf("This shouldn't be happening\n");
+				break;
+			case 0b01:
+				color = VIC_REGISTERS[0x25];
+				break;
+			case 0b10:
+				color = VIC_REGISTERS[0x27 + i];
+				break;
+			case 0b11:
+				color = VIC_REGISTERS[0x26];
+				break;
+			default:
+				break;
 			}
+			VRAM[ADR]		= COLORS[color][0];
+			VRAM[ADR + 1]	= COLORS[color][1];
+			VRAM[ADR + 2]	= COLORS[color][2];
 		}
 		//	DEBUG green dot upper left corner
-		if (spr_x == 0 && (y - SPRITES_VEC[i].pos_y) == 0) {
+		/*if (spr_x == 0 && (y - SPRITES_VEC[i].pos_y) == 0) {
 			VRAM[ADR] = 0xff;
 			VRAM[ADR + 1] = 0x00;
 			VRAM[ADR + 2] = 0x00;
-		}
+		}*/
 	}
 }
 
@@ -179,182 +182,179 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 
 	//	DEBUG WARP
 	//if ((VIC_REGISTERS[0x11] & 0b10000) == 1) {
-	if(1) {
+	if (SCREENPOS != SCREEN_POS::NO_RENDER) {
+		uint8_t color_choice = 0x00;
 
-		if (SCREENPOS != SCREEN_POS::NO_RENDER) {
-			uint8_t color_choice = 0x00;
+		//	Basic VRAM start address and OFFSET of the pixel we want to write to in this iteration
+		ADR = (scanline * 504 * 3) + (x * 3);
+		uint16_t OFFSET = (uint16_t)(((scanline - 35) / 8) * 40 + (x - offset_x - 24 - 112) / 8);
 
-			//	Basic VRAM start address and OFFSET of the pixel we want to write to in this iteration
-			ADR = (scanline * 504 * 3) + (x * 3);
-			uint16_t OFFSET = (uint16_t)(((scanline - 35) / 8) * 40 + (x - offset_x - 24 - 112) / 8);
+		//	TEXTMODE
+		if (((SCREENPOS == SCREEN_POS::SCREEN) ||
+			(SCREENPOS == SCREEN_POS::ROW_25_AREA) ||
+			(SCREENPOS == SCREEN_POS::COL_38_AREA)) &&
+			((VIC_REGISTERS[0x11] & 0b100000) == 0)
+			) {
 
-			//	TEXTMODE
-			if (((SCREENPOS == SCREEN_POS::SCREEN) ||
-				(SCREENPOS == SCREEN_POS::ROW_25_AREA) ||
-				(SCREENPOS == SCREEN_POS::COL_38_AREA)) &&
-				((VIC_REGISTERS[0x11] & 0b100000) == 0)
-				) {
+			//	inside
 
-				//	inside
+			uint8_t char_id = readFromMemByVIC(screen + OFFSET);
+			uint8_t bg_color = VIC_REGISTERS[0x21] & 0xf;
 
-				uint8_t char_id = readFromMemByVIC(screen + OFFSET);
-				uint8_t bg_color = VIC_REGISTERS[0x21] & 0xf;
-
-				//	EXTENDED BG COLOR MODE
-				if (VIC_REGISTERS[0x11] & 0b1000000) {
-					bg_color = VIC_REGISTERS[0x21 + ((char_id >> 6) & 0b11)] & 0xf;
-					char_id &= 0b111111;
-				}
-				uint16_t char_address = chrrom + (char_id * 8) + ((scanline - 35) % 8);
-				uint8_t color = readFromMemByVIC(colorram + OFFSET) & 0xf;
-				uint8_t chr = readFromMemByVIC(char_address);
-
-				//	NORMAL MODE
-				if ((VIC_REGISTERS[0x16] & 0b10000) == 0) {
-					color_choice = ((chr & (1 << (7 - (x - offset_x - 112) % 8))) > 0) ? 1 : 0;
-					VRAM[ADR]		= (color_choice) ? COLORS[color][0] : COLORS[bg_color][0];
-					VRAM[ADR + 1]	= (color_choice) ? COLORS[color][1] : COLORS[bg_color][1];
-					VRAM[ADR + 2]	= (color_choice) ? COLORS[color][2] : COLORS[bg_color][2];
-				}
-
-				//	MULTICOLOR MODE
-				else {
-					/*
-						%00 = $d021 (Hintergrundfarbe)
-						%01 = $d022
-						%10 = $d023
-						%11 = Farbe laut Farb-RAM (ab $d800)
-					*/
-					uint8_t index = (7 - ((x - offset_x) % 8));
-					uint8_t current_byte = chr;
-					//	If we are at bit 0 of the 2 bits...
-					uint8_t high_bit = ((current_byte & (1 << (index + 1))) > 0) ? 1 : 0;
-					uint8_t low_bit = ((current_byte & (1 << index)) > 0) ? 1 : 0;
-					//	Else, we are at bit 1 of the 2 bits
-					if (index % 2) {
-						high_bit = ((current_byte & (1 << index)) > 0) ? 1 : 0;
-						low_bit = ((current_byte & (1 << (index - 1))) > 0) ? 1 : 0;
-						//	edge case, index is at the end, we jump to the next byte
-						if (index == 0) {
-							low_bit = (((readFromMemByVIC(chrrom + (char_id * 8) + ((scanline - 35) % 8)) + 1) & (1 << (index + 1))) > 0) ? 1 : 0;
-						}
-					}
-					color_choice = (high_bit << 1) | low_bit;
-					//	4 bits for color; highest bit enables low-res multicolor mode...
-					if (color & 0b1000) {
-						switch (color_choice)
-						{
-						case 0x00:	//	BG Color
-							color = VIC_REGISTERS[0x21];
-							break;
-						case 0x01:
-							color = VIC_REGISTERS[0x22];
-							break;
-						case 0x02:
-							color = VIC_REGISTERS[0x23];
-							break;
-						case 0x03:
-							color = readFromMemByVIC(OFFSET + colorram) % 8;
-							break;
-						}
-						color &= 0xf;
-						VRAM[ADR] = COLORS[color][0];
-						VRAM[ADR + 1] = COLORS[color][1];
-						VRAM[ADR + 2] = COLORS[color][2];
-					}
-					//	...else it's still going to be hires single color mode
-					else {
-						color &= 0xf;
-						VRAM[ADR]		= ((chr & (1 << (7 - (x - offset_x - 112) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
-						VRAM[ADR + 1]	= ((chr & (1 << (7 - (x - offset_x - 112) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
-						VRAM[ADR + 2]	= ((chr & (1 << (7 - (x - offset_x - 112) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
-					}
-				}
+			//	EXTENDED BG COLOR MODE
+			if (VIC_REGISTERS[0x11] & 0b1000000) {
+				bg_color = VIC_REGISTERS[0x21 + ((char_id >> 6) & 0b11)] & 0xf;
+				char_id &= 0b111111;
 			}
-			//	BITMAP MODE
-			else if ((SCREENPOS == SCREEN_POS::SCREEN) || (SCREENPOS == SCREEN_POS::COL_38_AREA) ||	(SCREENPOS == SCREEN_POS::ROW_25_AREA)) {
-				uint16_t BMP_OFFSET = (OFFSET / 40) * 320 + (OFFSET % 40) * 8 + ((scanline - 35) % 8);
-				color_choice = readFromMemByVIC(bmp_start_address + BMP_OFFSET) & (0b10000000 >> ((x - 112) % 8));
-				uint8_t color_index = (color_choice) ? (readFromMemByVIC(bmp_color_address + OFFSET) & 0b11110000) >> 4 : readFromMemByVIC(bmp_color_address + OFFSET) & 0b1111;
+			uint16_t char_address = chrrom + (char_id * 8) + ((scanline - 35) % 8);
+			uint8_t color = readFromMemByVIC(colorram + OFFSET) & 0xf;
+			uint8_t chr = readFromMemByVIC(char_address);
 
-				//	MULTICOLOR MODE
-				if ((VIC_REGISTERS[0x16] & 0b10000)) {
-					uint8_t index = (7 - ((x - 112) % 8));
-					uint8_t current_byte = readFromMemByVIC(bmp_start_address + BMP_OFFSET);
-					//	If we are at bit 0 of the 2 bits...
-					uint8_t high_bit = ((current_byte & (1 << (index + 1))) > 0) ? 1 : 0;
-					uint8_t low_bit = ((current_byte & (1 << index)) > 0) ? 1 : 0;
-					//	Else, we are at bit 1 of the 2 bits
-					if (index % 2) {
-						high_bit = ((current_byte & (1 << index)) > 0) ? 1 : 0;
-						low_bit = ((current_byte & (1 << (index - 1))) > 0) ? 1 : 0;
-						//	edge case, index is at the end, we jump to the next byte
-						if (index == 0) {
-							low_bit = (((readFromMemByVIC(bmp_start_address + BMP_OFFSET + 1)) & (1 << (index + 1))) > 0) ? 1 : 0;
-						}
+			//	NORMAL MODE
+			if ((VIC_REGISTERS[0x16] & 0b10000) == 0) {
+				color_choice = ((chr & (1 << (7 - (x - offset_x - 112) % 8))) > 0) ? 1 : 0;
+				VRAM[ADR]		= (color_choice) ? COLORS[color][0] : COLORS[bg_color][0];
+				VRAM[ADR + 1]	= (color_choice) ? COLORS[color][1] : COLORS[bg_color][1];
+				VRAM[ADR + 2]	= (color_choice) ? COLORS[color][2] : COLORS[bg_color][2];
+			}
+
+			//	MULTICOLOR MODE
+			else {
+				/*
+					%00 = $d021 (Hintergrundfarbe)
+					%01 = $d022
+					%10 = $d023
+					%11 = Farbe laut Farb-RAM (ab $d800)
+				*/
+				uint8_t index = (7 - ((x - offset_x) % 8));
+				uint8_t current_byte = chr;
+				//	If we are at bit 0 of the 2 bits...
+				uint8_t high_bit = ((current_byte & (1 << (index + 1))) > 0) ? 1 : 0;
+				uint8_t low_bit = ((current_byte & (1 << index)) > 0) ? 1 : 0;
+				//	Else, we are at bit 1 of the 2 bits
+				if (index % 2) {
+					high_bit = ((current_byte & (1 << index)) > 0) ? 1 : 0;
+					low_bit = ((current_byte & (1 << (index - 1))) > 0) ? 1 : 0;
+					//	edge case, index is at the end, we jump to the next byte
+					if (index == 0) {
+						low_bit = (((readFromMemByVIC(chrrom + (char_id * 8) + ((scanline - 35) % 8)) + 1) & (1 << (index + 1))) > 0) ? 1 : 0;
 					}
-					color_choice = (high_bit << 1) | low_bit;
+				}
+				color_choice = (high_bit << 1) | low_bit;
+				//	4 bits for color; highest bit enables low-res multicolor mode...
+				if (color & 0b1000) {
 					switch (color_choice)
 					{
 					case 0x00:	//	BG Color
-						color_index = VIC_REGISTERS[0x21];
+						color = VIC_REGISTERS[0x21];
 						break;
 					case 0x01:
-						color_index = (readFromMemByVIC(bmp_color_address + OFFSET) & 0b11110000) >> 4;
+						color = VIC_REGISTERS[0x22];
 						break;
 					case 0x02:
-						color_index = readFromMemByVIC(bmp_color_address + OFFSET) & 0b1111;
+						color = VIC_REGISTERS[0x23];
 						break;
 					case 0x03:
-						color_index = readFromMemByVIC(0xd800 + OFFSET) & 0b1111;
+						color = readFromMemByVIC(OFFSET + colorram) % 8;
 						break;
 					}
+					color &= 0xf;
+					VRAM[ADR] = COLORS[color][0];
+					VRAM[ADR + 1] = COLORS[color][1];
+					VRAM[ADR + 2] = COLORS[color][2];
 				}
-				color_index &= 0xf;
-
-				VRAM[ADR] = COLORS[color_index][0];
-				VRAM[ADR + 1] = COLORS[color_index][1];
-				VRAM[ADR + 2] = COLORS[color_index][2];
-			}
-
-			//	border
-			uint8_t border_color = VIC_REGISTERS[0x20] & 0xf;
-			if ((SCREENPOS == SCREEN_POS::BORDER_LR ) || ((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {
-				VRAM[(scanline * 504 * 3) + (x * 3)] = COLORS[border_color][0];
-				VRAM[(scanline * 504 * 3) + (x * 3) + 1] = COLORS[border_color][1];
-				VRAM[(scanline * 504 * 3) + (x * 3) + 2] = COLORS[border_color][2];
-			}
-			//	Top / Bottom border - account border opening
-			if (SCREENPOS == SCREEN_POS::BORDER_TB) {
-				uint8_t border_color	= VIC_REGISTERS[0x20] & 0xf;
-				uint8_t bg_color		= VIC_REGISTERS[0x21] & 0xf;
-				uint8_t col				= border_color;
-				if (!DRAW_TOP_BOTTOM_BORDER) {
-					col	= (readFromMem(0x3fff)& (1 << (x % 8))) ? border_color : bg_color;
+				//	...else it's still going to be hires single color mode
+				else {
+					color &= 0xf;
+					VRAM[ADR]		= ((chr & (1 << (7 - (x - offset_x - 112) % 8))) > 0) ? COLORS[color][0] : COLORS[bg_color][0];
+					VRAM[ADR + 1]	= ((chr & (1 << (7 - (x - offset_x - 112) % 8))) > 0) ? COLORS[color][1] : COLORS[bg_color][1];
+					VRAM[ADR + 2]	= ((chr & (1 << (7 - (x - offset_x - 112) % 8))) > 0) ? COLORS[color][2] : COLORS[bg_color][2];
 				}
-				VRAM[(scanline * 504 * 3) + (x * 3)]		= COLORS[col][0];
-				VRAM[(scanline * 504 * 3) + (x * 3) + 1]	= COLORS[col][1];
-				VRAM[(scanline * 504 * 3) + (x * 3) + 2]	= COLORS[col][2];
 			}
+		}
+		//	BITMAP MODE
+		else if ((SCREENPOS == SCREEN_POS::SCREEN) || (SCREENPOS == SCREEN_POS::COL_38_AREA) ||	(SCREENPOS == SCREEN_POS::ROW_25_AREA)) {
+			uint16_t BMP_OFFSET = (OFFSET / 40) * 320 + (OFFSET % 40) * 8 + ((scanline - 35) % 8);
+			color_choice = readFromMemByVIC(bmp_start_address + BMP_OFFSET) & (0b10000000 >> ((x - 112) % 8));
+			uint8_t color_index = (color_choice) ? (readFromMemByVIC(bmp_color_address + OFFSET) & 0b11110000) >> 4 : readFromMemByVIC(bmp_color_address + OFFSET) & 0b1111;
 
-			//	TODO : We need a proper timing in which Sprites / BG are being drawn (especially when borders are disabled)
-			//	sprites
-			for (int8_t i = 7; i >= 0; i--) {
-				//	draw Sprite behind Foreground? No? Then continue drawing the sprite, else skip
-				if (VIC_isSpriteEnabled(i)) {
-					if ((VIC_REGISTERS[0x1b] & (1 << i)) == 1) {
-						//	is this pixel Foreground? Yes? Then draw the Sprite over it, if not, skip
-						if (
-							(((VIC_REGISTERS[0x16] & 0b10000) > 0) && ((color_choice == 0b11) || (color_choice == 0b10))) ||						//	Multicolor mode - 0b10 and 0b11 are foreground
-							(((VIC_REGISTERS[0x16] & 0b10000) == 0) && (color_choice != 0b1))														//	Normal color mode - 0b1 is foreground
-							)
-						{
-							renderSprites(x, scanline, ADR, i);
-						}
+			//	MULTICOLOR MODE
+			if ((VIC_REGISTERS[0x16] & 0b10000)) {
+				uint8_t index = (7 - ((x - 112) % 8));
+				uint8_t current_byte = readFromMemByVIC(bmp_start_address + BMP_OFFSET);
+				//	If we are at bit 0 of the 2 bits...
+				uint8_t high_bit = ((current_byte & (1 << (index + 1))) > 0) ? 1 : 0;
+				uint8_t low_bit = ((current_byte & (1 << index)) > 0) ? 1 : 0;
+				//	Else, we are at bit 1 of the 2 bits
+				if (index % 2) {
+					high_bit = ((current_byte & (1 << index)) > 0) ? 1 : 0;
+					low_bit = ((current_byte & (1 << (index - 1))) > 0) ? 1 : 0;
+					//	edge case, index is at the end, we jump to the next byte
+					if (index == 0) {
+						low_bit = (((readFromMemByVIC(bmp_start_address + BMP_OFFSET + 1)) & (1 << (index + 1))) > 0) ? 1 : 0;
 					}
-					else {
+				}
+				color_choice = (high_bit << 1) | low_bit;
+				switch (color_choice)
+				{
+				case 0x00:	//	BG Color
+					color_index = VIC_REGISTERS[0x21];
+					break;
+				case 0x01:
+					color_index = (readFromMemByVIC(bmp_color_address + OFFSET) & 0b11110000) >> 4;
+					break;
+				case 0x02:
+					color_index = readFromMemByVIC(bmp_color_address + OFFSET) & 0b1111;
+					break;
+				case 0x03:
+					color_index = readFromMemByVIC(0xd800 + OFFSET) & 0b1111;
+					break;
+				}
+			}
+			color_index &= 0xf;
+
+			VRAM[ADR] = COLORS[color_index][0];
+			VRAM[ADR + 1] = COLORS[color_index][1];
+			VRAM[ADR + 2] = COLORS[color_index][2];
+		}
+
+		//	border
+		uint8_t border_color = VIC_REGISTERS[0x20] & 0xf;
+		if ((SCREENPOS == SCREEN_POS::BORDER_LR ) || ((SCREENPOS == SCREEN_POS::SCREEN) && ((VIC_REGISTERS[0x11] & 0b10000) == 0))) {
+			VRAM[(scanline * 504 * 3) + (x * 3)] = COLORS[border_color][0];
+			VRAM[(scanline * 504 * 3) + (x * 3) + 1] = COLORS[border_color][1];
+			VRAM[(scanline * 504 * 3) + (x * 3) + 2] = COLORS[border_color][2];
+		}
+		//	Top / Bottom border - account border opening
+		if (SCREENPOS == SCREEN_POS::BORDER_TB) {
+			uint8_t border_color	= VIC_REGISTERS[0x20] & 0xf;
+			uint8_t bg_color		= VIC_REGISTERS[0x21] & 0xf;
+			uint8_t col				= border_color;
+			if (!DRAW_TOP_BOTTOM_BORDER) {
+				col	= (readFromMem(0x3fff)& (1 << (x % 8))) ? border_color : bg_color;
+			}
+			VRAM[(scanline * 504 * 3) + (x * 3)]		= COLORS[col][0];
+			VRAM[(scanline * 504 * 3) + (x * 3) + 1]	= COLORS[col][1];
+			VRAM[(scanline * 504 * 3) + (x * 3) + 2]	= COLORS[col][2];
+		}
+
+		//	TODO : We need a proper timing in which Sprites / BG are being drawn (especially when borders are disabled)
+		//	sprites
+		for (int8_t i = 7; i >= 0; i--) {
+			//	draw Sprite behind Foreground? No? Then continue drawing the sprite, else skip
+			if (VIC_isSpriteEnabled(i)) {
+				if ((VIC_REGISTERS[0x1b] & (1 << i)) == 1) {
+					//	is this pixel Foreground? Yes? Then draw the Sprite over it, if not, skip
+					if (
+						(((VIC_REGISTERS[0x16] & 0b10000) > 0) && ((color_choice == 0b11) || (color_choice == 0b10))) ||						//	Multicolor mode - 0b10 and 0b11 are foreground
+						(((VIC_REGISTERS[0x16] & 0b10000) == 0) && (color_choice != 0b1))														//	Normal color mode - 0b1 is foreground
+						)
+					{
 						renderSprites(x, scanline, ADR, i);
 					}
+				}
+				else {
+					renderSprites(x, scanline, ADR, i);
 				}
 			}
 		}
@@ -548,7 +548,7 @@ void VIC_fetchSpriteDataBytes(uint8_t sprite_no) {
 	}
 }
 
-inline bool VIC_isSpriteEnabled(uint8_t sprite_no) {
+bool VIC_isSpriteEnabled(uint8_t sprite_no) {
 	//	check if sprite is enabled first
 	return (VIC_REGISTERS[0x15] & (1 << sprite_no));
 }
