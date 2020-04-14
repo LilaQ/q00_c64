@@ -231,6 +231,7 @@ int main()
 			}
 			if (c >= 57 && c <= 58 && _s[0] && VIC_isSpriteInNextLine(0)) {		//	Sprite pointer / data Sprite #0
 				_c[c] = 1;
+				VIC_enableDrawingOfSprite(0);
 			}
 
 			//	Sprite #1
@@ -244,6 +245,7 @@ int main()
 			}
 			if (c >= 59 && c <= 60 && _s[1] && VIC_isSpriteInNextLine(1)) {		//	Sprite pointer / data Sprite #1
 				_c[c] = 1;
+				VIC_enableDrawingOfSprite(1);
 			}
 
 			//	Sprite #2
@@ -264,6 +266,7 @@ int main()
 			}
 			if (c >= 61 && c <= 62 && _s[2] && VIC_isSpriteInNextLine(2)) {		//	Sprite pointer / data Sprite #2
 				_c[c] = 1;
+				VIC_enableDrawingOfSprite(2);
 			}
 
 			//	Sprite #3
@@ -284,6 +287,7 @@ int main()
 			}
 			if (c >= 0 && c <= 1 && _s[3] && VIC_isSpriteInCurrentLine(3)) {
 				_c[c] = 1;														//	Sprite pointer / data Sprite #3
+				VIC_enableDrawingOfSprite(3);
 			}
 
 			//	Sprite #4
@@ -304,6 +308,7 @@ int main()
 			}
 			if (c >= 2 && c <= 3 && _s[4] && VIC_isSpriteInCurrentLine(4)) {
 				_c[c] = 1;														//	Sprite pointer / data Sprite #4
+				VIC_enableDrawingOfSprite(4);
 			}
 
 			//	Sprite #5
@@ -324,6 +329,7 @@ int main()
 			}
 			if (c >= 4 && c <= 5 && _s[5] && VIC_isSpriteInCurrentLine(5)) {
 				_c[c] = 1;														//	Sprite pointer / data Sprite #5
+				VIC_enableDrawingOfSprite(5);
 			}
 
 			//	Sprite #6
@@ -344,6 +350,7 @@ int main()
 			}
 			if (c >= 6 && c <= 7 && _s[6] && VIC_isSpriteInCurrentLine(6)) {
 				_c[c] = 1;														//	Sprite pointer / data Sprite #6
+				VIC_enableDrawingOfSprite(6);
 			}
 
 			//	Sprite #7 - cont here
@@ -364,6 +371,7 @@ int main()
 			}
 			if (c >= 8 && c <= 9 && _s[7] && VIC_isSpriteInCurrentLine(7)) {
 				_c[c] = 1;														//	Sprite pointer / data Sprite #7
+				VIC_enableDrawingOfSprite(7);
 			}
 
 			VIC_fetchGraphicsData(1);

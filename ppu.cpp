@@ -97,72 +97,74 @@ inline void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_
 
 	const SPRITE S = SPRITES_VEC[i];
 
+	//	3 byte per line, 21 lines
+	uint8_t spr_x = x - S.pos_x;
+	uint8_t width_factor = 1 + S.width_doubled;
 
-	if (VIC_isSpriteInCurrentLine(i) &&	(S.pos_x <= x && (S.pos_x + S.width) > x)) {
-
-		//	3 byte per line, 21 lines
-		uint8_t spr_x = x - S.pos_x;
-		uint8_t width_factor = 1 + S.width_doubled;
-
-		uint8_t color_byte	= S.data[(spr_x / width_factor) / 8];
-		uint8_t color_bit_h = color_byte & (1 << (7 - ((spr_x / width_factor) % 8)));
-		uint8_t color_bit_l = 0x00;
-		uint8_t color_bits = 0x00;
-		if (S.multicolor) {
-			//	looking at high bit
-			if ((spr_x / width_factor) % 2 == 0) {
-				color_bit_h = color_byte & (1 << (7 - ((spr_x / width_factor) % 8)));
-				color_bit_l = color_byte & (1 << (7 - (((spr_x / width_factor) + 1) % 8)));
-			}
-			else if ((spr_x / width_factor) % 2 == 1) {
-				color_bit_l = color_byte & (1 << (7 - ((spr_x / width_factor) % 8))) ;
-				color_bit_h = color_byte & (1 << (7 - (((spr_x / width_factor) - 1) % 8)));
-			}
+	uint8_t color_byte	= S.data[(spr_x / width_factor) / 8];
+	uint8_t color_bit_h = color_byte & (1 << (7 - ((spr_x / width_factor) % 8)));
+	uint8_t color_bit_l = 0x00;
+	uint8_t color_bits = 0x00;
+	if (S.multicolor) {
+		//	looking at high bit
+		if ((spr_x / width_factor) % 2 == 0) {
+			color_bit_h = color_byte & (1 << (7 - ((spr_x / width_factor) % 8)));
+			color_bit_l = color_byte & (1 << (7 - (((spr_x / width_factor) + 1) % 8)));
 		}
-		color_bit_h = color_bit_h > 0;
-		color_bit_l = color_bit_l > 0;
-		color_bits = (color_bit_h << 1) | color_bit_l;
-		uint8_t color = 0x00;
-		//	single color (hires)
-		if (!S.multicolor) {
-			if (color_bit_h) {
-				color = VIC_REGISTERS[0x27 + i];
-				VRAM[ADR]		= COLORS[color][0];
-				VRAM[ADR + 1]	= COLORS[color][1];
-				VRAM[ADR + 2]	= COLORS[color][2];
-			}
+		else if ((spr_x / width_factor) % 2 == 1) {
+			color_bit_l = color_byte & (1 << (7 - ((spr_x / width_factor) % 8))) ;
+			color_bit_h = color_byte & (1 << (7 - (((spr_x / width_factor) - 1) % 8)));
 		}
-		//	multicolor
-		else {
-			switch (color_bits)
-			{
-			case 0b00:
-				return;
-				printf("This shouldn't be happening\n");
-				break;
-			case 0b01:
-				color = VIC_REGISTERS[0x25];
-				break;
-			case 0b10:
-				color = VIC_REGISTERS[0x27 + i];
-				break;
-			case 0b11:
-				color = VIC_REGISTERS[0x26];
-				break;
-			default:
-				break;
-			}
+	}
+	color_bit_h = color_bit_h > 0;
+	color_bit_l = color_bit_l > 0;
+	color_bits = (color_bit_h << 1) | color_bit_l;
+	uint8_t color = 0x00;
+	//	single color (hires)
+	if (!S.multicolor) {
+		if (color_bit_h) {
+			color = VIC_REGISTERS[0x27 + i];
 			VRAM[ADR]		= COLORS[color][0];
 			VRAM[ADR + 1]	= COLORS[color][1];
 			VRAM[ADR + 2]	= COLORS[color][2];
 		}
-		//	DEBUG green dot upper left corner
-		/*if (spr_x == 0 && (y - SPRITES_VEC[i].pos_y) == 0) {
-			VRAM[ADR] = 0xff;
-			VRAM[ADR + 1] = 0x00;
-			VRAM[ADR + 2] = 0x00;
-		}*/
 	}
+	//	multicolor
+	else {
+		switch (color_bits)
+		{
+		case 0b00:
+			return;
+			printf("This shouldn't be happening\n");
+			break;
+		case 0b01:
+			color = VIC_REGISTERS[0x25];
+			break;
+		case 0b10:
+			color = VIC_REGISTERS[0x27 + i];
+			break;
+		case 0b11:
+			color = VIC_REGISTERS[0x26];
+			break;
+		default:
+			break;
+		}
+		VRAM[ADR]		= COLORS[color][0];
+		VRAM[ADR + 1]	= COLORS[color][1];
+		VRAM[ADR + 2]	= COLORS[color][2];
+	}
+
+	//	check if this is the last data that had to be drawn, to disable drawing of the sprite and make it availabel to be reset on Y-axis again
+	if (((y + 1) >= (S.pos_y + S.height) ) && ((x + 1) >= (S.pos_x + S.width))) {
+		SPRITES_VEC[i].setDrawing(false);
+	}
+
+	//	DEBUG green dot upper left corner
+	/*if (spr_x == 0 && (y - SPRITES_VEC[i].pos_y) == 0) {
+		VRAM[ADR] = 0xff;
+		VRAM[ADR + 1] = 0x00;
+		VRAM[ADR + 2] = 0x00;
+	}*/
 }
 
 void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
@@ -342,8 +344,9 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 		//	sprites
 		for (int8_t i = 7; i >= 0; i--) {
 			//	draw Sprite behind Foreground? No? Then continue drawing the sprite, else skip
-			if (VIC_isSpriteEnabled(i)) {
-				if ((VIC_REGISTERS[0x1b] & (1 << i)) == 1) {
+			SPRITE S = SPRITES_VEC[i];
+			if (VIC_isSpriteEnabled(i) && S.isDrawing() && (S.pos_x <= (x - 112) && (S.pos_x + S.width) > (x - 112))) {
+				if (S.prio_background) {
 					//	is this pixel Foreground? Yes? Then draw the Sprite over it, if not, skip
 					if (
 						(((VIC_REGISTERS[0x16] & 0b10000) > 0) && ((color_choice == 0b11) || (color_choice == 0b10))) ||						//	Multicolor mode - 0b10 and 0b11 are foreground
@@ -548,13 +551,13 @@ void VIC_fetchSpriteDataBytes(uint8_t sprite_no) {
 	}
 }
 
+void VIC_enableDrawingOfSprite(uint8_t id) {
+	SPRITES_VEC[id].setDrawing(true);
+}
+
 bool VIC_isSpriteEnabled(uint8_t sprite_no) {
 	//	check if sprite is enabled first
 	return (VIC_REGISTERS[0x15] & (1 << sprite_no));
-}
-
-void VIC_dataRefresh() {
-	//	NOP
 }
 
 void VIC_nextScanline() {

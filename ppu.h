@@ -125,7 +125,6 @@ uint16_t currentPixel();
 
 //	REWRITE
 bool VIC_isBadline();
-void VIC_dataRefresh();
 void VIC_nextScanline();
 void VIC_fetchGraphicsData(uint8_t amount);
 void VIC_fetchSpritePointer(uint8_t sprite_nr);
@@ -137,6 +136,7 @@ bool VIC_isSpriteInNextLine(uint8_t sprite_no);
 bool VIC_isSpriteInPrevLine(uint8_t sprite_no);
 bool VIC_isSpriteInLine(uint8_t sprite_no, uint16_t y);
 bool VIC_checkRasterIRQ();
+void VIC_enableDrawingOfSprite(uint8_t id);
 
 struct SPRITE {
 	//	actual sprite data
@@ -146,14 +146,15 @@ struct SPRITE {
 
 	//	24x21 is the normal size of a sprite
 	bool buffer_filled = false;
-	bool width_doubled;
-	bool height_doubled;
-	bool prio_background;
-	bool multicolor;
-	uint8_t width;
-	uint8_t height;
-	uint16_t pos_x;
-	int16_t pos_y = -1;
+	bool width_doubled = false;
+	bool height_doubled = false;
+	bool prio_background = false;
+	bool multicolor = false;
+	bool is_drawing = false;
+	uint8_t width = 24;
+	uint8_t height = 21;
+	uint16_t pos_x = 0;
+	int16_t pos_y = -100;
 
 	void reinit(uint8_t i, array<uint8_t, 0x31> &VIC_REGISTERS, uint16_t scanline) {
 #if DEBUG_SPRITES
@@ -180,14 +181,24 @@ struct SPRITE {
 
 	//	Fetch the 3 bytes for this sprite, for this row
 	void fetchSpriteDataBytes(uint8_t id, uint16_t y) {
-		data[0] = readFromMemByVIC(sprite_pointer + (((y - pos_y) / (1 + height_doubled)) * 3));
-		data[1] = readFromMemByVIC(sprite_pointer + (((y - pos_y) / (1 + height_doubled)) * 3) + 1);
-		data[2] = readFromMemByVIC(sprite_pointer + (((y - pos_y) / (1 + height_doubled)) * 3) + 2);
-		
+		uint8_t index = ((y - pos_y) / (1 + height_doubled));
+		data[0] = readFromMemByVIC(sprite_pointer + (index * 3));
+		data[1] = readFromMemByVIC(sprite_pointer + (index * 3) + 1);
+		data[2] = readFromMemByVIC(sprite_pointer + (index * 3) + 2);
+
 #if DEBUG_SPRITES
-		if(id == 0)
+		if (id == 0) {
 			printf("ID: %d y: %d - %d %d %d\n", id, y, data[0], data[1], data[2]);
+		}
 #endif
+	}
+
+	void setDrawing(bool b) {
+		is_drawing = b;
+	}
+
+	bool isDrawing() {
+		return is_drawing;
 	}
 };
 
