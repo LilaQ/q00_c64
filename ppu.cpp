@@ -154,17 +154,7 @@ inline void renderSprites(uint16_t pixel_on_scanline, uint16_t scanline, uint32_
 		VRAM[ADR + 2]	= COLORS[color][2];
 	}
 
-	//	check if this is the last data that had to be drawn, to disable drawing of the sprite and make it availabel to be reset on Y-axis again
-	if (((y + 1) >= (S.pos_y + S.height) ) && ((x + 1) >= (S.pos_x + S.width))) {
-		SPRITES_VEC[i].setDrawing(false);
-	}
-
-	//	DEBUG green dot upper left corner
-	/*if (spr_x == 0 && (y - SPRITES_VEC[i].pos_y) == 0) {
-		VRAM[ADR] = 0xff;
-		VRAM[ADR + 1] = 0x00;
-		VRAM[ADR + 2] = 0x00;
-	}*/
+	
 }
 
 void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
@@ -358,6 +348,10 @@ void renderByPixels(uint16_t scanline, int16_t x, SCREEN_POS SCREENPOS) {
 				}
 				else {
 					renderSprites(x, scanline, ADR, i);
+				}
+				//	check if this is the last data that had to be drawn, to disable drawing of the sprite and make it availabel to be reset on Y-axis again
+				if (((scanline + 16 + 1) >= (S.pos_y + S.height)) && ((x - 112 + 1) >= (S.pos_x + S.width))) {
+					SPRITES_VEC[i].setDrawing(false);
 				}
 			}
 		}
