@@ -7,6 +7,7 @@
 #include "mmu.h"
 #include "wmu.h"
 #include "cia.h"
+#include "sid.h"
 #include "SDL2/include/SDL_syswm.h"
 #include "SDL2/include/SDL.h"
 #undef main
@@ -48,6 +49,7 @@ int main()
 	resetMMU();
 	CPU_reset();
 	initPPU("n/a");
+	SID_init();
 
 	while (1) {
 		if (unpaused) {

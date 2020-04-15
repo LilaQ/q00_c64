@@ -154,3 +154,5 @@ opening_test.prg
 opening_test.asm
 sprites_test_05_extendedYX_behind_FG.asm
 sprites_test_05_extendedYX_behind_FG.prg
+Release/sid.obj
+.vs/C64Emulator/v16/Preview/ipch/AutoPCH/8d38cbcd033e6b8e/SID.ipch

@@ -10,6 +10,7 @@
 #include "mmu.h"
 #include "bus.h"
 #include "cia.h"
+#include "sid.h"
 #include <fstream>
 
 
@@ -351,6 +352,35 @@ void writeToMem(uint16_t adr, uint8_t val) {
 			//	COLOR RAM
 			else if (adr >= 0xd800 && adr < 0xdc00) {
 				colorram[(adr % 0xd800) % 0x0fff] = val;
+			}
+			else if (adr >= 0xd400 && adr <= 0xd41c) {
+				switch (adr)
+				{
+				case 0xd400:
+					SID_setChannelFreqLo(0, val);
+					break;
+				case 0xd401:
+					SID_setChannelFreqHi(0, val);
+					break;
+				case 0xd402:
+					todo
+					break;
+				case 0xd403:
+					todo
+					break;
+				case 0xd404:
+					SID_setChannelNPST(0, val);
+					break;
+				case 0xd405:
+					SID_setChannelAttackDecay(0, val);
+					break;
+				case 0xd406:
+					SID_setChannelSustainRelease(0, val);
+					break;
+				default:
+					break;
+				}
+				memory[adr] = val;
 			}
 			//	CIA REGISTERS & DEFAULT
 			else {
