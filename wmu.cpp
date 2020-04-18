@@ -130,6 +130,8 @@ void handleWindowEvents(SDL_Event event) {
 			}
 			//	Enable logging
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 3) {
+				setLog(true);
+				printf("LOGGING START\n");
 			}
 			//	Print BUS
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 4) {
@@ -223,11 +225,11 @@ void handleWindowEvents(SDL_Event event) {
 	}
 	//	use keyboard only
 	else {
-		joypad |= (keys[SDL_SCANCODE_A] ? 0 : 1) << 2;
-		joypad |= (keys[SDL_SCANCODE_S] ? 0 : 1) << 1;
-		joypad |= (keys[SDL_SCANCODE_W] ? 0 : 1) << 0;
-		joypad |= (keys[SDL_SCANCODE_D] ? 0 : 1) << 3;
-		joypad |= (keys[SDL_SCANCODE_SPACE] ? 0 : 1) << 4;
+		joypad |= (keys[SDL_SCANCODE_A] ? 1 : 0) << 2;
+		joypad |= (keys[SDL_SCANCODE_S] ? 1 : 0) << 1;
+		joypad |= (keys[SDL_SCANCODE_W] ? 1 : 0) << 0;
+		joypad |= (keys[SDL_SCANCODE_D] ? 1 : 0) << 3;
+		joypad |= (keys[SDL_SCANCODE_SPACE] ? 1 : 0) << 4;
 	}
 
 	//setJoystick1Input(&joypad);
