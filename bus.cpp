@@ -46,10 +46,10 @@ bool checkSpriteGap(uint8_t i) {
 
 int main()
 {
+	SID_init();
 	resetMMU();
 	CPU_reset();
 	initPPU("n/a");
-	SID_init();
 
 	while (1) {
 		if (unpaused) {

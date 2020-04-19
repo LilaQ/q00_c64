@@ -197,6 +197,11 @@ uint8_t readFromMem(uint16_t adr) {
 			else if (adr >= 0xd800 && adr < 0xdc00) {
 				return colorram[(adr % 0xd800) % 0x0fff];
 			}
+			//	SID
+			else if (adr >= 0xd400 && adr <= 0xd7ff) {
+				//	TODO
+				return 0x00;
+			}
 			//	CIA REGISTERS & DEFAULT
 			else {
 				switch (adr) {
@@ -353,7 +358,8 @@ void writeToMem(uint16_t adr, uint8_t val) {
 			else if (adr >= 0xd800 && adr < 0xdc00) {
 				colorram[(adr % 0xd800) % 0x0fff] = val;
 			}
-			else if (adr >= 0xd400 && adr <= 0xd41c) {
+			//	SID
+			else if (adr >= 0xd400 && adr <= 0xd7ff) {
 				switch (adr)
 				{
 				case 0xd400:
@@ -363,10 +369,8 @@ void writeToMem(uint16_t adr, uint8_t val) {
 					SID_setChannelFreqHi(0, val);
 					break;
 				case 0xd402:
-					todo
 					break;
 				case 0xd403:
-					todo
 					break;
 				case 0xd404:
 					SID_setChannelNPST(0, val);
@@ -378,9 +382,11 @@ void writeToMem(uint16_t adr, uint8_t val) {
 					SID_setChannelSustainRelease(0, val);
 					break;
 				default:
+					printf("FATAL ERROR! Writing to unimplemented register %X with val %X\n", adr, val);
+					//exit(1);
+					//throw new exception;
 					break;
 				}
-				memory[adr] = val;
 			}
 			//	CIA REGISTERS & DEFAULT
 			else {
@@ -461,6 +467,7 @@ void writeToMem(uint16_t adr, uint8_t val) {
 					break;
 
 				default:
+					//	TODO - Sollte das hier nicht raus?? 
 					memory[adr] = val;
 					break;
 				}
@@ -503,5 +510,8 @@ uint8_t getByte(uint16_t adr) {
 }
 
 void writeByte(uint16_t adr, uint8_t val) {
+	if (adr == 0xd400)
+		printf("Someone wants to write\n");
+	//printf("Write to 0x%04x with value 0x%02x\n", adr, val);
 	writeToMem(adr, val);
 }

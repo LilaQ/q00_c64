@@ -918,7 +918,7 @@ uint8_t CPU_executeInstruction() {
 	//	READ occured in bus-takeover, stall CPU
 	if (BUS_takeoverActive() && RW_LOOKUP_TABLE[CURRENT_OPCODE][SUB_CYC-1] == RW::READ) {
 		char output[200];
-		snprintf(output, sizeof(output), "PC: 0x%04x Cycle: %d(%02x) Opcode: %02x SubInst: %d is a READ, skipping!", CURRENT_PC, BUS_currentCycle(), BUS_currentCycle(), CURRENT_OPCODE, SUB_CYC);
+		snprintf(output, sizeof(output), "PC: 0x%04x Opcode: %02X Cycle: %d(%02x) Opcode: %02x SubInst: %d is a READ, skipping!", CURRENT_PC, CURRENT_OPCODE, BUS_currentCycle(), BUS_currentCycle(), CURRENT_OPCODE, SUB_CYC);
 		//printMsg("CPU", "BUS-TAKEOVER", string(output));
 		BUS_haltCPU();
 		return 1;
@@ -932,9 +932,9 @@ uint8_t CPU_executeInstruction() {
 	irq_cycle_count++;
 
 	/*if (CURRENT_PC == 0xa5fa && registers.Y == 0x6f)
-		tmpgo = true;
-	if (tmpgo && SUB_CYC == 1)
-		printf("PC %X - P: %X - A: %x - Y: %X - 0x0200: %x\n", CURRENT_PC, status.status, registers.A, registers.Y, getByte(0x200));*/
+		tmpgo = true;*/
+	if (logNow && SUB_CYC == 1)
+		printf("PC 0x%04X Opcode: %02X %02X %02X  P: %X    A: %X    Y: %X   X: %X\n", CURRENT_PC, CURRENT_OPCODE, readFromMem(CURRENT_PC + 1), readFromMem(CURRENT_PC + 2), status.status, registers.A, registers.Y, registers.X);
 
 	switch (CURRENT_OPCODE) {
 

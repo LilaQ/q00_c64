@@ -11,9 +11,15 @@ void SID_init();
 void SID_step();
 void SID_setChannelFreqLo(u8 channel, u8 val);
 void SID_setChannelFreqHi(u8 channel, u8 val);
+void SID_setChannelPulseWidthLo(u8 channel, u8 val);
+void SID_setChannelPulseWidthHi(u8 channel, u8 val);
 void SID_setChannelAttackDecay(u8 channel, u8 val);
 void SID_setChannelSustainRelease(u8 channel, u8 val);
 void SID_setChannelNPST(u8 channel, u8 val);
+void SID_setFilterCutoffLo(u8 val);
+void SID_setFilterCutoffHi(u8 val);
+void SID_setPotentiometerX(u8 val);
+void SID_setPotentiometerY(u8 val);
 
 //	6502 PAL runs at 0,985249 MHz
 //	We sample at 44100 Hz
@@ -39,7 +45,7 @@ class Channel {
 
 	public: 
 		//	config
-		bool enabled;
+		bool enabled = false;
 		u16 freq = 0x0000;						//	Frequency
 		u16 pulse_width = 0x0000;				//	Pulse width for Rectangle
 		u8 attack = 0x00;
@@ -96,5 +102,13 @@ class Channel {
 
 		void setFreqHi(u8 val) {
 			freq = (freq & 0b0000000011111111) | (val << 8);
+		}
+
+		void setPulseWidthLo(u8 val) {
+			pulse_width = (pulse_width & 0b1111111100000000) | val;
+		}
+
+		void setPulseWidthHi(u8 val) {
+			pulse_width = (pulse_width & 0b0000000011111111) | ((val & 0b1111) << 8);
 		}
 };

@@ -8,6 +8,9 @@ int SamplesPerSecond = 44100;			//	resolution
 bool SoundIsPlaying = false;
 std::vector<Channel> channels;
 std::vector<float> Mixbuf;
+u16 filter_cutoff = 0;
+u8 pot_x = 0;
+u8 pot_y = 0;
 int cycle_count = 0;
 float volume = 0.5;
 
@@ -38,6 +41,10 @@ void SID_init() {
 		SDL_PauseAudio(0);
 		SoundIsPlaying = true;
 	}
+
+	channels.push_back(Channel());
+	channels.push_back(Channel());
+	channels.push_back(Channel());
 
 	channels[0].setNPST(0b00010001);
 	channels[0].tick();
@@ -89,14 +96,38 @@ void SID_setChannelFreqHi(u8 id, u8 val) {
 	channels[id].setFreqHi(val);
 }
 
-void SID_setAttackDecay(u8 id, u8 val) {
+void SID_setChannelAttackDecay(u8 id, u8 val) {
 	channels[id].setAttackDecay(val);
 }
 
-void SID_setSustainRelease(u8 id, u8 val) {
+void SID_setChannelSustainRelease(u8 id, u8 val) {
 	channels[id].setSustainRelease(val);
 }
 
-void SID_setNPST(u8 id, u8 val) {
+void SID_setChannelNPST(u8 id, u8 val) {
 	channels[id].setNPST(val);
+}
+
+void SID_setChannelPulseWidthLo(u8 id, u8 val) {
+	channels[id].setPulseWidthLo(val);
+}
+
+void SID_setChannelPulseWidthHi(u8 id, u8 val) {
+	channels[id].setPulseWidthHi(val);
+}
+
+void SID_setFilterCutoffLo(u8 val) {
+	filter_cutoff = (filter_cutoff & 0b1111111100000000) | val;
+}
+
+void SID_setFilterCutoffHi(u8 val) {
+	filter_cutoff = (filter_cutoff & 0b11111111) | (val << 8);
+}
+
+void SID_setPotentiometerX(u8 val) {
+	pot_x = val;
+}
+
+void SID_setPotentiometerY(u8 val) {
+	pot_y = val;
 }

@@ -16,8 +16,8 @@ uint8_t cia2_data_port_B = 0xff;
 bool cia1_port_A_RW = false;
 bool cia1_port_B_RW = false;
 uint8_t* KEYS;
-uint8_t JOY1;
-uint8_t JOY2;
+uint8_t JOY1 = 0xff;
+uint8_t JOY2 = 0xff;
 
 void setKeyboardInput(uint8_t* _KEYS) {
 	KEYS = _KEYS;
