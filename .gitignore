@@ -156,3 +156,9 @@ sprites_test_05_extendedYX_behind_FG.asm
 sprites_test_05_extendedYX_behind_FG.prg
 Release/sid.obj
 .vs/C64Emulator/v16/Preview/ipch/AutoPCH/8d38cbcd033e6b8e/SID.ipch
+Release/buggy2.log
+Release/buggy.log
+Debug/sid.obj
+Release/buggy3.log
+bcd_test.asm
+bcd_test.prg

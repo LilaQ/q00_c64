@@ -84,30 +84,50 @@ void ORA(u8 val) {
 	status.setNegative(registers.A >> 7);
 }
 void ADD(u8 val) {
-	//	hex mode
-	if (status.decimal == 0) {
-		uint16_t sum = registers.A + val + status.carry;
-		status.setOverflow((~(registers.A ^ val) & (registers.A ^ sum) & 0x80) > 0);
-		status.setCarry(sum > 0xff);
-		registers.A = sum & 0xff;
-		status.setZero(registers.A == 0);
-		status.setNegative(registers.A >> 7);
-	}
-	//	BCD mode
-	else {
-		printf("BCD happening\n");
-		uint16_t v1 = (registers.A / 16) * 10 + (registers.A % 16);
-		int16_t v2 = ((int8_t)val / 16) * 10 + ((int8_t)val % 16);
-		uint16_t sum = (v1 + v2 + status.carry);
-		status.setCarry(sum > 99);
-		registers.A = ((sum / 10) * 16) + (sum % 10);
-	}
+	uint16_t sum = registers.A + val + status.carry;
+	status.setOverflow((~(registers.A ^ val) & (registers.A ^ sum) & 0x80) > 0);
+	status.setCarry(sum > 0xff);
+	registers.A = sum & 0xff;
+	status.setZero(registers.A == 0);
+	status.setNegative(registers.A >> 7);
+}
+void ADD_BCD(u8 val) {
+	uint16_t v1 = (registers.A / 16) * 10 + (registers.A % 16);
+	uint16_t v2 = (val / 16) * 10 + (val % 16);
+	uint16_t sum = (v1 + v2 + status.carry);
+	/*printf("v1 %d %x\n", v1, v1);
+	printf("v2 %d %x\n", v2, v2);
+	printf("sum %d %x\n", sum, sum);*/
+	status.setCarry(sum > 99);
+	sum %= 100;
+	registers.A = ((sum / 10) * 16) + (sum % 10);
+}
+void SUB_BCD(u8 val) {
+	uint16_t v1 = (registers.A / 16) * 10 + (registers.A % 16);
+	uint16_t v2 = (val / 16) * 10 + (val % 16);
+	int16_t sum = (v1 - v2 - (1 - status.carry));
+	/*printf("v1 %d %x\n", v1, v1);
+	printf("v2 %d %x\n", v2, v2);
+	printf("sum %d %x\n", sum, sum);*/
+	status.setCarry(sum >= 0);
+	sum %= 100;
+	registers.A = ((sum / 10) * 16) + (sum % 10);
 }
 void ADC(u8 val) {
-	ADD(val);
+	if (!status.decimal) {
+		ADD(val);
+	}
+	else {
+		ADD_BCD(val);
+	}
 }
 void SBC(u8 val) {
-	ADD(~val);
+	if (!status.decimal) {
+		ADD(~val);
+	}
+	else {
+		SUB_BCD(val);
+	}
 }
 void CMP(u8& tar, u8 val) {
 	status.setCarry(tar >= val);
@@ -931,10 +951,21 @@ uint8_t CPU_executeInstruction() {
 	nmi_cycle_count++;
 	irq_cycle_count++;
 
+	/*if (
+		(CURRENT_PC == 0x0C07) ||
+		(CURRENT_PC == 0x0C0e) ||
+		(CURRENT_PC == 0x0C15) ||
+		(CURRENT_PC == 0x0C1c) ||
+		(CURRENT_PC == 0x0C23) ||
+		(CURRENT_PC == 0x0C2a) ||
+		(CURRENT_PC == 0x0C31) ||
+		(CURRENT_PC == 0x0C38)
+		)
+		printf("break");*/
 	/*if (CURRENT_PC == 0xa5fa && registers.Y == 0x6f)
 		tmpgo = true;*/
 	if (logNow && SUB_CYC == 1)
-		printf("PC 0x%04X Opcode: %02X %02X %02X  P: %X    A: %X    Y: %X   X: %X\n", CURRENT_PC, CURRENT_OPCODE, readFromMem(CURRENT_PC + 1), readFromMem(CURRENT_PC + 2), status.status, registers.A, registers.Y, registers.X);
+		printf("PC 0x%04X Opcode: %02X %02X %02X  P: %X    A: %X    Y: %X   X: %X  | Scanline: %X  Raster: %x\n", CURRENT_PC, CURRENT_OPCODE, readFromMem(CURRENT_PC + 1), readFromMem(CURRENT_PC + 2), status.status, registers.A, registers.Y, registers.X, currentScanline(), DEBUG_raster());
 
 	switch (CURRENT_OPCODE) {
 
