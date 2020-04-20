@@ -51,6 +51,7 @@ void resetMMU() {
 	//	load char ROM
 	loadCHRROM("./char.bin");
 
+	memory[0x0000] = 0x2f;		//	Zeropage for PLA Control register
 	memory[0x0001] = 0x37;		//	Zeropage for PLA
 }
 
@@ -135,22 +136,6 @@ void refreshMemoryMapping() {
 	uint8_t LORAM = (memory[0x0001] & 0b1);
 	uint8_t HIRAM = ((memory[0x0001] & 0b10) >> 1);
 	uint8_t CHAREN = ((memory[0x0001] & 0b100) >> 2);
-	/*if (CHAREN)
-		memtype_d000_dfff = MEMTYPE::IO;
-	else {
-		if (HIRAM)
-			memtype_d000_dfff = MEMTYPE::CHARROM;
-		else
-			memtype_d000_dfff = MEMTYPE::RAM;
-	}
-	if (HIRAM)
-		memtype_e000_ffff = MEMTYPE::KERNAL;
-	else
-		memtype_e000_ffff = MEMTYPE::RAM;
-	if (HIRAM && LORAM)
-		memtype_a000_bfff = MEMTYPE::BASIC;
-	else
-		memtype_a000_bfff = MEMTYPE::RAM;*/
 	if (!LORAM && !HIRAM) {
 		memtype_a000_bfff = MEMTYPE::RAM;
 		memtype_d000_dfff = MEMTYPE::RAM;
@@ -203,68 +188,75 @@ uint8_t readFromMem(uint16_t adr) {
 				return 0x00;
 			}
 			//	CIA REGISTERS & DEFAULT
-			else {
-				switch (adr) {
-					case 0xdc00:			//	read CIA1 Keyboard / Joystick
-						return readCIA1DataPortA();
-						break;
-					case 0xdc01:			//	read CIA1 sKeyboard / Joystick
-						return readCIA1DataPortB();
-						break;
-
-						//	CIA 1
-					case 0xdc04:			//	read CIA1 TimerA Low
-						return readCIA1timerALo();
-						break;
-					case 0xdc05:			//	read CIA1 TimerA High
-						return readCIA1timerAHi();
-						break;
-					case 0xdc06:			//	read CIA1 TimerB Low
-						return readCIA1timerBLo();
-						break;
-					case 0xdc07:			//	read CIA1 TimerB High
-						return readCIA1timerBHi();
-						break;
-
-						//	CIA 2
-					case 0xdd00:			//	read VIC Bank selection
-						return readCIA2DataPortA();
-						break;	
-					case 0xdd01:			//	read Serial Port (Unused for now)
-						return readCIA2DataPortB();
-						break;
-
-					case 0xdd04:			//	read CIA1 TimerA Low
-						return readCIA2timerALo();
-						break;
-					case 0xdd05:			//	read CIA1 TimerA High
-						return readCIA2timerAHi();
-						break;
-					case 0xdd06:			//	read CIA1 TimerB Low
-						return readCIA2timerBLo();
-						break;
-					case 0xdd07:			//	read CIA1 TimerB High
-						return readCIA2timerBHi();
-						break;
-
-					case 0xdc0d:			//	read CIA1 IRQ Control and Status
-						return readCIA1IRQStatus();
-						break;
-					case 0xdd0d:			//	read CIA2 NMI Control and Status
-						return readCIA2NMIStatus();
-						break;
-
-					/*case 0xdc0e:
-						return readCIA1TimerAControl();
-						break;
-					case 0xdc0f:
-						return readCIA1TimerBControl();
-						break;*/
-
-					default:
-						return memory[adr];
-						break;
+			else if (adr >= 0xdc00 && adr <= 0xdcff) {
+				//	CIA 1
+				switch (0xdc00 + ((adr - 0xdc00) % 0x10))
+				{
+				case 0xdc00:			//	read CIA1 Keyboard / Joystick
+					return readCIA1DataPortA();
+					break;
+				case 0xdc01:			//	read CIA1 sKeyboard / Joystick
+					return readCIA1DataPortB();
+					break;
+				case 0xdc04:			//	read CIA1 TimerA Low
+					return readCIA1timerALo();
+					break;
+				case 0xdc05:			//	read CIA1 TimerA High
+					return readCIA1timerAHi();
+					break;
+				case 0xdc06:			//	read CIA1 TimerB Low
+					return readCIA1timerBLo();
+					break;
+				case 0xdc07:			//	read CIA1 TimerB High
+					return readCIA1timerBHi();
+					break;
+				case 0xdc0d:			//	read CIA1 IRQ Control and Status
+					return readCIA1IRQStatus();
+					break;
+				case 0xdc0e:
+					return readCIA1TimerAControl();
+					break;
+				case 0xdc0f:
+					return readCIA1TimerBControl();
+					break;
+				default: printf("Oops! CIA1 read\n"); break;
 				}
+			}
+			else if (adr >= 0xdd00 && adr <= 0xdd0f) {
+				//	CIA 2
+				switch (adr) {
+				case 0xdd00:			//	read VIC Bank selection
+					return readCIA2DataPortA();
+					break;	
+				case 0xdd01:			//	read Serial Port (Unused for now)
+					return readCIA2DataPortB();
+					break;
+				case 0xdd04:			//	read CIA1 TimerA Low
+					return readCIA2timerALo();
+					break;
+				case 0xdd05:			//	read CIA1 TimerA High
+					return readCIA2timerAHi();
+					break;
+				case 0xdd06:			//	read CIA1 TimerB Low
+					return readCIA2timerBLo();
+					break;
+				case 0xdd07:			//	read CIA1 TimerB High
+					return readCIA2timerBHi();
+					break;
+				case 0xdd0d:			//	read CIA2 NMI Control and Status
+					return readCIA2NMIStatus();
+					break;
+				case 0xdd0e:
+					return readCIA2TimerAControl();
+					break;
+				case 0xdd0f:
+					return readCIA2TimerBControl();
+					break;
+				default: printf("Oops! CIA2 read\n"); break;
+				}
+			}
+			else {
+				printf("Oops! IO read\n");
 			}
 		}
 		//	0xd000-0xdfff set to RAM
@@ -389,13 +381,10 @@ void writeToMem(uint16_t adr, uint8_t val) {
 				}
 			}
 			//	CIA REGISTERS & DEFAULT
-			else {
-				switch (adr)
+			else if (adr >= 0xdc00 && adr <= 0xdcff) {
+				switch (0xdc00 + ((adr - 0xdc00) % 0x10))
 				{
-					/*
-						CIAs
-					*/
-					//	CIA 1
+				//	CIA 1
 				case 0xdc00:			//	write CIA1 Keyboard / Joystick
 					writeCIA1DataPortA(val);
 					break;
@@ -408,8 +397,6 @@ void writeToMem(uint16_t adr, uint8_t val) {
 				case 0xdc03:			//	CIA1 Port B RW
 					setCIA1PortBRW(val);
 					break;
-
-					//	CIA 1
 				case 0xdc04:
 					setCIA1timerAlatchLo(val);
 					break;
@@ -422,15 +409,28 @@ void writeToMem(uint16_t adr, uint8_t val) {
 				case 0xdc07:
 					setCIA1timerBlatchHi(val);
 					break;
-
-					//	CIA 2
+				case 0xdc0d:
+					setCIA1IRQcontrol(val);
+					break;
+				case 0xdc0e:
+					setCIA1TimerAControl(val);
+					break;
+				case 0xdc0f:
+					setCIA1TimerBControl(val);
+					break;
+				default: printf("Oops! CIA1 write\n"); break;
+				}
+			}
+			else if (adr >= 0xdd00 && adr <= 0xdd0f) {
+				switch (adr)
+				{
+				//	CIA 2
 				case 0xdd00:			//	write VIC Bank selection
 					writeCIA2DataPortA(val);
 					break;
 				case 0xdd01:			//	write Serial Port (Unused for now)
 					writeCIA1DataPortB(val);
 					break;
-
 				case 0xdd04:
 					setCIA2timerAlatchLo(val);
 					break;
@@ -443,19 +443,6 @@ void writeToMem(uint16_t adr, uint8_t val) {
 				case 0xdd07:
 					setCIA2timerBlatchHi(val);
 					break;
-
-					//	CIA 1
-				case 0xdc0d:
-					setCIA1IRQcontrol(val);
-					break;
-				case 0xdc0e:
-					setCIA1TimerAControl(val);
-					break;
-				case 0xdc0f:
-					setCIA1TimerBControl(val);
-					break;
-
-					//	CIA 2
 				case 0xdd0d:
 					setCIA2NMIcontrol(val);
 					break;
@@ -465,12 +452,11 @@ void writeToMem(uint16_t adr, uint8_t val) {
 				case 0xdd0f:
 					setCIA2TimerBControl(val);
 					break;
-
-				default:
-					//	TODO - Sollte das hier nicht raus?? 
-					memory[adr] = val;
-					break;
+				default: printf("Oops! CIA2 write\n"); break;
 				}
+			}
+			else {
+				printf("Oops! IO write\n");
 			}
 		}
 		else if (memtype_d000_dfff == MEMTYPE::RAM) {
@@ -486,8 +472,14 @@ void writeToMem(uint16_t adr, uint8_t val) {
 			memory[adr] = val;
 		}
 	}
+	//	PLA Control register
+	else if (adr == 0x0000) {
+		memory[0x0000] = val;
+		memory[0x0001] |= (~memory[0x0000]) & 0b111111;
+	}
+	//	PLA ( controlled by PLA control register at 0x0000 )
 	else if (adr == 0x0001) {
-		memory[0x0001] = 0x30 | val;
+		memory[0x0001] = 0x30 | (val | ((~memory[0x0000]) & 0b111111));
 	}
 	else {
 		memory[adr] = val;
@@ -510,8 +502,5 @@ uint8_t getByte(uint16_t adr) {
 }
 
 void writeByte(uint16_t adr, uint8_t val) {
-	if (adr == 0xd400)
-		printf("Someone wants to write\n");
-	//printf("Write to 0x%04x with value 0x%02x\n", adr, val);
 	writeToMem(adr, val);
 }
