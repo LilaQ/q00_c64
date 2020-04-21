@@ -19,6 +19,7 @@ int32_t ADR = 0;
 vector<SPRITE> SPRITES_VEC(8);
 array<uint8_t, 0x31> VIC_REGISTERS;
 uint16_t VIC_scanline = 0;
+uint16_t fps_counter = 0;
 SCREEN_POS VIC_scr_pos = SCREEN_POS::NO_RENDER;
 
 IRQ_STATUS irq_status;
@@ -391,12 +392,21 @@ bool VIC_isBadline() {
 	return false;
 }
 
+uint16_t VIC_getFPS() {
+	uint16_t r = fps_counter;
+	fps_counter = 0;
+	return r;
+}
+
 bool VIC_checkRasterIRQ() {
 	if (VIC_scanline == raster_irq_row && irq_mask.irq_can_be_cause_by_rasterline == true) {
 		irq_status.setFlags(0b10000001);		//	set "IRQ FROM VIC", and as reason set "IRQ FROM RASTERLINE"
-		return true;
 	}
-	return false;
+	return irq_status.get() > 0;
+}
+
+bool VIC_getIRQregister() {
+	return irq_status.get();
 }
 
 void VIC_fetchGraphicsData(uint8_t amount) {
@@ -506,6 +516,7 @@ void VIC_fetchGraphicsData(uint8_t amount) {
 			//	render pixel
 			renderByPixels(VIC_scanline - 16, x_pos, VIC_scr_pos);
 			if (x_pos == 503 && VIC_scanline == 0) {
+				fps_counter++;
 				drawFrame();
 				//drawDebug();
 			}
@@ -561,6 +572,10 @@ void VIC_nextScanline() {
 	}
 }
 
+uint16_t DEBUG_raster() {
+	return raster_irq_row;
+}
+
 void writeVICregister(uint16_t adr, uint8_t val) {
 	switch (adr)
 	{
@@ -594,7 +609,6 @@ uint8_t readVICregister(uint16_t adr) {
 			break;
 		}
 		case 0xd012:			//	Current Scanline
-			//printf(" [Scanline: %d] ", current_scanline);
 			return (uint8_t)(VIC_scanline & 0xff);
 			break;
 		case 0xd019:			//	IRQ flags, (active IRQs)

@@ -121,6 +121,7 @@ void setScreenSize(UI_SCREEN_SIZE scr_s);
 uint8_t readVICregister(uint16_t adr);
 uint16_t currentScanline();
 uint16_t currentPixel();
+uint16_t DEBUG_raster();
 
 
 //	REWRITE
@@ -137,6 +138,8 @@ bool VIC_isSpriteInPrevLine(uint8_t sprite_no);
 bool VIC_isSpriteInLine(uint8_t sprite_no, uint16_t y);
 bool VIC_checkRasterIRQ();
 void VIC_enableDrawingOfSprite(uint8_t id);
+bool VIC_getIRQregister();
+uint16_t VIC_getFPS();
 
 struct SPRITE {
 	//	actual sprite data
