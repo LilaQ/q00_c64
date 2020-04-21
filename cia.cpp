@@ -32,6 +32,14 @@ void setJoystick2Input(uint8_t* _KEYS) {
 	JOY2 = *_KEYS;
 }
 
+bool CIA_getIRQregister() {
+	return cia1_irq_status.get_without_clear();
+}
+
+bool CIA_getNMIregister() {
+	return cia2_nmi_status.get_without_clear();
+}
+
 //	CIA 1
 
 uint8_t readCIA1TimerAControl() {
@@ -267,14 +275,12 @@ void tickAllTimers(uint8_t cycles) {
 		if (cia1_irq_status.IRQ_on_timerA_underflow) {
 			cia1_irq_status.IRQ_occured_general_flag = true;
 			cia1_irq_status.IRQ_occured_by_underflow_timerA = true;
-			setIRQ(true);
 		}
 	}
 	if (cia1_timerB.tick(cycles)) {
 		if (cia1_irq_status.IRQ_on_timerB_underflow) {
 			cia1_irq_status.IRQ_occured_general_flag = true;
 			cia1_irq_status.IRQ_occured_by_underflow_timerB = true;
-			setIRQ(true);
 		}
 	}
 	//	CIA 2 Timers
@@ -282,15 +288,12 @@ void tickAllTimers(uint8_t cycles) {
 		if (cia2_nmi_status.NMI_on_timerA_underflow && !cia2_nmi_status.NMI_occured_general_flag) {
 			cia2_nmi_status.NMI_occured_general_flag = true;
 			cia2_nmi_status.NMI_occured_by_underflow_timerA = true;
-			//setGO();
-			setNMI(true);
 		}
 	}
 	if (cia2_timerB.tick(cycles)) {
 		if (cia2_nmi_status.NMI_on_timerB_underflow && !cia2_nmi_status.NMI_occured_general_flag) {
 			cia2_nmi_status.NMI_occured_general_flag = true;
 			cia2_nmi_status.NMI_occured_by_underflow_timerB = true;
-			setNMI(true);
 		}
 	}
 }

@@ -4,6 +4,7 @@
 #include "bus.h"
 #include "ppu.h"
 #include "wmu.h"
+#include "cia.h"
 #include <map>
 #include <stdio.h>
 #include <iostream>
@@ -22,9 +23,7 @@ u16 CURRENT_PC = 0x0000;
 Registers registers;
 Status status;
 
-bool irq = false;
 bool irq_running = false;
-bool nmi = false;
 bool nmi_running = false;
 
 void setCarry() {				//	Only for hooking C64 LOAD routines for filechecking
@@ -822,6 +821,8 @@ void STACK_JMP() {
 
 u8 irq_cycle_count = 0;
 u8 nmi_cycle_count = 0;
+bool irq_counting = false;
+bool nmi_counting = false;
 
 void CPU_reset() {
 	resetMMU();
@@ -829,9 +830,8 @@ void CPU_reset() {
 	printf("Reset CPU, starting at PC: %x\n", PC);
 }
 
-void setNMI(bool v) {
-	nmi = v;
-	nmi_cycle_count = 0;
+bool nmi() {
+	return (CIA_getNMIregister() > 0);
 }
 
 void NMI(uint8_t state) {
@@ -853,7 +853,7 @@ void NMI(uint8_t state) {
 		PC = (readFromMem(0xfffb) << 8) | readFromMem(0xfffa);
 		//status.setInterruptDisable(1);
 		nmi_running = false;
-		nmi = false;
+		nmi_counting = false;
 		SUB_CYC = 0;
 		nmi_cycle_count = 0;
 	} break;
@@ -861,10 +861,11 @@ void NMI(uint8_t state) {
 	}
 }
 
-void setIRQ(bool v) {
-	irq = v;
-	irq_cycle_count = 0;
+//	Check VIC and CIA for IRQ requests (that haven't been acknowledged)
+bool irq() {
+	return ((VIC_getIRQregister() > 0) || (CIA_getIRQregister() > 0));
 }
+
 bool tmpgo = false;
 void IRQorBRK(uint8_t state) {
 	switch (state) {
@@ -884,7 +885,7 @@ void IRQorBRK(uint8_t state) {
 		PC = (readFromMem(0xffff) << 8) | readFromMem(0xfffe);
 		status.setInterruptDisable(1);
 		irq_running = false;
-		irq = false;
+		irq_counting = false;
 		SUB_CYC = 0;
 		irq_cycle_count = 0;
 	} break;
@@ -905,25 +906,29 @@ void setLog(bool v) {
 	logNow = v;
 }
 
-bool CPU_pendingIRQ() {
-	return irq;
-}
-
 uint8_t CPU_executeInstruction() {
 
 	//	Check interrupt hijacking (NMI hijacking IRQ)
-	if (SUB_CYC == 1 && nmi == true && nmi_running == false && nmi_cycle_count >= 1) {
+	if (nmi() == true && nmi_running == false && nmi_counting == false) {
+		nmi_counting = true;
+		nmi_cycle_count = 0;
+	}
+	if (irq() == true && irq_running == false && irq_counting == false && status.interruptDisable == 0) {
+		irq_counting = true;
+		irq_cycle_count = 0;
+	}
+	if (SUB_CYC == 1 && nmi_cycle_count >= 1) {
 		nmi_running = true;
 	}
-	if (SUB_CYC == 1 && irq == true && irq_running == false && irq_cycle_count >= 1 && status.interruptDisable == 0) {
+	if (SUB_CYC == 1 && irq_cycle_count >= 1 && status.interruptDisable == 0) {
 		irq_running = true;
 	}
-	if (nmi == true && nmi_running == true) {
+	if (nmi_running) {
 		NMI(SUB_CYC);
 		SUB_CYC++;
 		return 1;
 	}
-	if (irq == true && irq_running == true && status.interruptDisable == 0) {
+	if (irq_running) {
 		IRQorBRK(SUB_CYC);
 		SUB_CYC++;
 		return 1;
@@ -948,8 +953,10 @@ uint8_t CPU_executeInstruction() {
 	if (SUB_CYC == 1) {
 		PC++;
 	}
-	nmi_cycle_count++;
-	irq_cycle_count++;
+	if (nmi_counting)
+		nmi_cycle_count++;
+	if (irq_counting)
+		irq_cycle_count++;
 
 	/*if (
 		(CURRENT_PC == 0x0C07) ||
@@ -962,6 +969,8 @@ uint8_t CPU_executeInstruction() {
 		(CURRENT_PC == 0x0C38)
 		)
 		printf("break");*/
+	if (CURRENT_PC == 0x0913)
+		printf("break");
 	/*if (CURRENT_PC == 0xa5fa && registers.Y == 0x6f)
 		tmpgo = true;*/
 	if (logNow && SUB_CYC == 1)
@@ -969,7 +978,7 @@ uint8_t CPU_executeInstruction() {
 
 	switch (CURRENT_OPCODE) {
 
-	case 0x00: { status.setBrk(1); irq = true; printf("BREAK "); return 7; break; }
+	case 0x00: { status.setBrk(1); /*irq = true;*/ printf("BREAK %d ", irq_counting); return 7; break; }
 	case 0x01: IND_X_READ(ORA); break;
 	case 0x03: IND_X_RMW(SLO); break;
 	case 0x04: ZP_READ(NOP); break;

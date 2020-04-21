@@ -4,8 +4,6 @@
 void printLog();
 void setCarry();		//	Only for hooking C64 LOAD routines for filechecking
 void clearCarry();		//	Only for hooking C64 LOAD routines for filechecking
-void setIRQ(bool v);
-void setNMI(bool v);
 
 struct Registers
 {
@@ -91,7 +89,6 @@ uint8_t CPU_executeInstruction();
 void CPU_reset();
 Registers CPU_getRegs();
 void setLog(bool v);
-bool CPU_pendingIRQ();
 
 enum class RW {
 	READ, WRITE, ENDE

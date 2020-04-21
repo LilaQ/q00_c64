@@ -25,6 +25,7 @@ uint8_t readCIA1IRQStatus();
 void setCIA1TimerAControl(uint8_t val);
 void setCIA1TimerBControl(uint8_t val);
 void setCIA1IRQcontrol(uint8_t val);
+bool CIA_getIRQregister();
 
 //	CIA 2
 uint8_t readCIA2TimerAControl();
@@ -45,6 +46,7 @@ uint8_t readCIA2NMIStatus();
 void setCIA2TimerAControl(uint8_t val);
 void setCIA2TimerBControl(uint8_t val);
 void setCIA2NMIcontrol(uint8_t val);
+bool CIA_getNMIregister();
 
 void setKeyboardInput(uint8_t* KEYS);
 void setJoystick1Input(uint8_t* _KEYS);
@@ -103,6 +105,17 @@ struct CIA1_IRQ_STATUS {
 		return res;
 	}
 
+	//	this is only to check if there is an interrupt
+	//	we don't want to clear anything, this is not called
+	//	to acknowledge interrutps
+	uint8_t get_without_clear() {
+		uint8_t res = ((uint8_t)IRQ_occured_general_flag << 7) |
+			((uint8_t)IRQ_occured_by_alarm_equals_clock << 2) |
+			((uint8_t)IRQ_occured_by_underflow_timerB << 1) |
+			((uint8_t)IRQ_occured_by_underflow_timerA);
+		return res;
+	}
+
 	void flagUnderflowTimerB() {
 
 	}
@@ -146,6 +159,14 @@ struct CIA2_NMI_STATUS {
 		NMI_occured_by_alarm_equals_clock = false;
 		NMI_occured_by_underflow_timerA = false;
 		NMI_occured_by_underflow_timerB = false;
+		return res;
+	}
+
+	uint8_t get_without_clear() {
+		uint8_t res = ((uint8_t)NMI_occured_general_flag << 7) |
+			((uint8_t)NMI_occured_by_alarm_equals_clock << 2) |
+			((uint8_t)NMI_occured_by_underflow_timerB << 1) |
+			((uint8_t)NMI_occured_by_underflow_timerA);
 		return res;
 	}
 
