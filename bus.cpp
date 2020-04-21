@@ -10,6 +10,7 @@
 #include "sid.h"
 #include "SDL2/include/SDL_syswm.h"
 #include "SDL2/include/SDL.h"
+#include <chrono>
 #undef main
 //	[q00.c64]
 
@@ -51,7 +52,13 @@ int main()
 	CPU_reset();
 	initPPU("n/a");
 
+	//	FPS Counter
+	std::chrono::time_point<std::chrono::system_clock> start, end;
+	start = std::chrono::system_clock::now();
+	long duration = 0;
+
 	while (1) {
+
 		if (unpaused) {
 
 			/*
@@ -123,7 +130,6 @@ int main()
 				Cycle 16 - Cycle 55 : 6510 compute instruction (only if not a badline)
 				Cycle 47 - Cycle 62	: 6510 compute instruction (only if there are at least 3 free cycles between sprite data fetches)
 			*/
-
 
 			/*
 				High-Phi Phase
@@ -393,9 +399,7 @@ int main()
 				CPU_executeInstruction();
 			}
 			if (c == 0) {
-				if (VIC_checkRasterIRQ()) {
-					setIRQ(true);
-				}
+				VIC_checkRasterIRQ();
 			}
 
 			c++;
@@ -412,6 +416,14 @@ int main()
 		}
 		else {
 			handleWindowEvents(event);
+		}
+
+		//	FPS counter
+		end = std::chrono::system_clock::now();
+		if (std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() >= 1000) {
+			duration = 0;
+			start = std::chrono::system_clock::now();
+			WMU_setFPS(VIC_getFPS());
 		}
 	}
 

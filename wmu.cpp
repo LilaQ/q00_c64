@@ -23,6 +23,7 @@ using namespace::std;
 SDL_Window* mainWindow;				//	Main Window
 SDL_GameController* controller;
 uint8_t joypad = 0x00;
+string current_title;
 
 void initWindow(SDL_Window* win, string filename) {
 	mainWindow = win;
@@ -236,12 +237,17 @@ void handleWindowEvents(SDL_Event event) {
 	setJoystick2Input(&joypad);
 }
 
-void setTitle(string filename) {
-	char title[50];
+void setTitle(string title) {
+	current_title = title;
+	updateTitle(title, 0);
+}
+
+void updateTitle(string filename, uint16_t fps) {
+	char title[250];
 	uint8_t last_slash = (filename.find_last_of("\\") != string::npos) ? (uint8_t)filename.find_last_of("\\") + 1 : 0;
 	uint8_t distance = (uint8_t)filename.size() - last_slash;
 	filename = filename.substr(last_slash, distance);
-	snprintf(title, sizeof title, "[ q00.c64 ][ rom: %s ]", filename.c_str());
+	snprintf(title, sizeof title, "[ q00.c64 ][ rom: %s ][ fps: %d ]", filename.c_str(), fps);
 	for (int i = 0; i < sizeof(title); i++) {
 		if (title[i] < 0x00)
 			title[i] = 0x20;
@@ -250,6 +256,10 @@ void setTitle(string filename) {
 	SDL_SysWMinfo wmInfo;
 	SDL_VERSION(&wmInfo.version);
 	SDL_GetWindowWMInfo(mainWindow, &wmInfo);
+}
+
+void WMU_setFPS(uint16_t fps) {
+	updateTitle(current_title, fps);
 }
 
 void printMsg(string mType, string mLevel, string msg, bool lineBreak) {
