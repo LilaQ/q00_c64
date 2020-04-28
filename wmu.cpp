@@ -57,7 +57,6 @@ void initWindow(SDL_Window* win, string filename) {
 	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 
 	//	init SDL Gamecontroller
-	SDL_Init(SDL_INIT_GAMECONTROLLER);
 	controller = SDL_NumJoysticks() ? SDL_GameControllerOpen(0) : NULL;
 }
 
@@ -67,7 +66,6 @@ void showMemoryMap() {
 	SDL_Window* window;
 
 	//	init and create window and renderer
-	SDL_Init(SDL_INIT_VIDEO);
 	SDL_CreateWindowAndRenderer(550, 470, 0, &window, &renderer);
 	SDL_SetWindowSize(window, 550, 470);
 	SDL_SysWMinfo wmInfo;

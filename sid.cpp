@@ -1,16 +1,22 @@
 #include <vector>
 #include "sid.h"
 #include "mmu.h"
+#include "wmu.h"
 #include "SDL2/include/SDL.h"
 #define internal static
+#pragma once
 
-int SamplesPerSecond = 44100;			//	resolution
+const int SamplesPerSecond = 44770;			//	resolution
+const int resolution = 985249 / SamplesPerSecond;
+int res_count = 0;
 bool SoundIsPlaying = false;
 std::vector<Channel> channels;
 std::vector<float> Mixbuf;
 u16 filter_cutoff = 0;
+u8 filter_resonance = 0;
 u8 pot_x = 0;
 u8 pot_y = 0;
+u8 mode = 0;
 int cycle_count = 0;
 float volume = 0.5;
 
@@ -31,7 +37,6 @@ internal void SDLInitAudio(int32_t SamplesPerSecond, int32_t BufferSize)
 void SID_init() {
 	SDL_setenv("SDL_AUDIODRIVER", "directsound", 1);
 	//SDL_setenv("SDL_AUDIODRIVER", "disk", 1);
-	SDL_Init(SDL_INIT_AUDIO);
 
 	// Open our audio device; Sample Rate will dictate the pace of our synthesizer
 	SDLInitAudio(44100, 1024);
@@ -46,46 +51,60 @@ void SID_init() {
 	channels.push_back(Channel());
 	channels.push_back(Channel());
 
-	channels[0].setNPST(0b00010001);
-	channels[0].tick();
 }
 
-void SID_step() {
+void SID_step(u32 steps) {
 
-	//	set volume
-	volume = readFromMem(0xd418) / 15.;
+	//	get curren position in period
+	float cur_step = (float)steps / 985250.0;
 
-	channels[0].tick();
-	channels[1].tick();
-	channels[2].tick();
-
-	/*if (SID_V1.buffer.size() >= 100 && SID_V2.buffer.size() >= 100 && SID_V3.buffer.size() >= 100 && SID_V4.buffer.size() >= 100) {
-
-		for (int i = 0; i < 100; i++) {
-			float res = 0;
-			if (SID_V1.enabled)
-				res += SID_V1.buffer.at(i) * volume;
-			if (SID_V2.enabled)
-				res += SID_V2.buffer.at(i) * volume;
-			if (SID_V3.enabled)
-				res += SID_V3.buffer.at(i) * volume;
-			if (SID_V4.enabled)
-				res += SID_V4.buffer.at(i) * volume;
-			Mixbuf.push_back(res);
+	/*if (++c >= 23) {
+		c = 0;
+		Mixbuf.push_back(sin(2 * pi * cur_step * 940));
+		Mixbuf.push_back(sin(2 * pi * cur_step * 940));
+		if (Mixbuf.size() >= 100) {
+			SDL_QueueAudio(1, Mixbuf.data(), Mixbuf.size() * sizeof(float));
+			Mixbuf.clear();
+			while (SDL_GetQueuedAudioSize(1) > 4096 * 6) {}
 		}
-		//	send audio data to device; buffer is times 4, because we use floats now, which have 4 bytes per float, and buffer needs to have information of amount of bytes to be used
-		SDL_QueueAudio(1, Mixbuf.data(), Mixbuf.size() * 4);
-
-		SID_V1.buffer.clear();
-		SID_V2.buffer.clear();
-		SID_V3.buffer.clear();
-		SID_V4.buffer.clear();
-		Mixbuf.clear();
-
-		//TODO: we could, instead of just idling everything until music buffer is drained, at least call stepPPU(0), to have a constant draw cycle, and maybe have a smoother drawing?
-		while (SDL_GetQueuedAudioSize(1) > 4096 * 4) {}
 	}*/
 
+	if (++res_count >= 22) {
+		res_count = 0;
+
+		//	tick channels
+		channels[0].tick(cur_step, volume);
+		channels[1].tick(cur_step, volume);
+		channels[2].tick(cur_step, volume);
+
+		//printf("cur_step: %f vak %f freq: %f vol: %f\n", cur_step, channels[0].buffer.back(), channels[0].freq * 0.0596, volume );
+		if (cur_step == 0)
+			printf("BRAP!!\n");
+
+		//	play last 100 samples of all channels
+		if (channels[0].buffer.size() >= 100 && channels[1].buffer.size() >= 100 && channels[2].buffer.size() >= 100) {
+
+			for (int i = 0; i < 100; i++) {
+				float res = 0;
+				res += channels[0].buffer.at(i);
+				res += channels[1].buffer.at(i);
+				res += channels[2].buffer.at(i);
+				Mixbuf.push_back(res);
+			}
+			//	send audio data to device; buffer is times 4, because we use floats now, which have 4 bytes per float, and buffer needs to have information of amount of bytes to be used
+			SDL_QueueAudio(1, Mixbuf.data(), Mixbuf.size() * sizeof(float));
+			//SDL_QueueAudio(1, channels[0].buffer.data(), channels[0].buffer.size() * 4);
+
+			channels[0].buffer.clear();
+			channels[1].buffer.clear();
+			channels[2].buffer.clear();
+			Mixbuf.clear();
+
+			//TODO: we could, instead of just idling everything until music buffer is drained, at least call stepPPU(0), to have a constant draw cycle, and maybe have a smoother drawing?
+			while (SDL_GetQueuedAudioSize(1) > 4096 * 8) {}
+		}
+		//printf("%d\n", SDL_GetQueuedAudioSize(1));
+	}
 }
 
 void SID_setChannelFreqLo(u8 id, u8 val) {
@@ -124,10 +143,28 @@ void SID_setFilterCutoffHi(u8 val) {
 	filter_cutoff = (filter_cutoff & 0b11111111) | (val << 8);
 }
 
-void SID_setPotentiometerX(u8 val) {
-	pot_x = val;
+void SID_setFilterResonance(u8 val) {
+	filter_resonance = val;
 }
 
-void SID_setPotentiometerY(u8 val) {
-	pot_y = val;
+void SID_setModeVolume(u8 val) {
+	volume = (val & 0xf) / 15.;
+	mode = val >> 8;
 }
+
+u8 SID_getPotentiometerX() {
+	return pot_x;
+}
+
+u8 SID_getPotentiometerY() {
+	return pot_y;
+}
+
+u8 SID_getEnvelope() {
+	char output[64];
+	snprintf(output, sizeof(output), "SID_getEnvelope() not implemented yet!");
+	printMsg("SID", "ERROR", string(output));
+	//	TODO
+	return 0x00;
+}
+

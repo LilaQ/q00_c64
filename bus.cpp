@@ -26,6 +26,7 @@ uint8_t c = 0;
 uint8_t _c[63];								//	2 = bus-takeover; 1 = cycle blocked by VIC; 0 = cycle free for 6510
 uint8_t _s[8] = { 0,0,0,0,0,0,0,0 };		//	1 = Sprite enabled; 0 = Sprite disabled;
 uint8_t _t[8] = { 57,59,61,0,2,4,6,8 };		//	cycle no.s for each Sprite
+uint32_t cycles = 0;
 
 void BUS_showBus() {
 	SHOW_BUS = true;
@@ -47,6 +48,9 @@ bool checkSpriteGap(uint8_t i) {
 
 int main()
 {
+	//	Init SDL
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER);
+
 	SID_init();
 	resetMMU();
 	CPU_reset();
@@ -403,6 +407,9 @@ int main()
 			}
 
 			c++;
+			cycles = (cycles + 1) % 985250;
+			SID_step(cycles);
+			//printf("%d\n", cycles);
 			if (c == 63) {
 				c = 0;
 				VIC_nextScanline();

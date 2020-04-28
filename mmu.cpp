@@ -184,8 +184,25 @@ uint8_t readFromMem(uint16_t adr) {
 			}
 			//	SID
 			else if (adr >= 0xd400 && adr <= 0xd7ff) {
-				//	TODO
-				return 0x00;
+				switch (adr) {
+				case 0xd419:
+					return SID_getPotentiometerX();
+					break;
+				case 0xd41a:
+					return SID_getPotentiometerY();
+					break;
+				case 0xd41b:
+					return rand() * 0xff;
+					break;
+				case 0xd41c:
+					return SID_getEnvelope();
+					break;
+				default:
+					char output[64];
+					snprintf(output, sizeof(output), "Reading from non-readable address 0x%04X", adr);
+					//printMsg("SID", "ERROR", string(output));
+					break;
+				}
 			}
 			//	CIA REGISTERS & DEFAULT
 			else if (adr >= 0xdc00 && adr <= 0xdcff) {
@@ -361,8 +378,10 @@ void writeToMem(uint16_t adr, uint8_t val) {
 					SID_setChannelFreqHi(0, val);
 					break;
 				case 0xd402:
+					SID_setChannelPulseWidthLo(0, val);
 					break;
 				case 0xd403:
+					SID_setChannelPulseWidthHi(0, val);
 					break;
 				case 0xd404:
 					SID_setChannelNPST(0, val);
@@ -373,10 +392,64 @@ void writeToMem(uint16_t adr, uint8_t val) {
 				case 0xd406:
 					SID_setChannelSustainRelease(0, val);
 					break;
+				case 0xd407:
+					SID_setChannelFreqLo(1, val);
+					break;
+				case 0xd408:
+					SID_setChannelFreqHi(1, val);
+					break;
+				case 0xd409:
+					SID_setChannelPulseWidthLo(1, val);
+					break;
+				case 0xd40a:
+					SID_setChannelPulseWidthHi(1, val);
+					break;
+				case 0xd40b:
+					SID_setChannelNPST(1, val);
+					break;
+				case 0xd40c:
+					SID_setChannelAttackDecay(1, val);
+					break;
+				case 0xd40d:
+					SID_setChannelSustainRelease(1, val);
+					break;
+				case 0xd40e:
+					SID_setChannelFreqLo(2, val);
+					break;
+				case 0xd40f:
+					SID_setChannelFreqHi(2, val);
+					break;
+				case 0xd410:
+					SID_setChannelPulseWidthLo(2, val);
+					break;
+				case 0xd411:
+					SID_setChannelPulseWidthHi(2, val);
+					break;
+				case 0xd412:
+					SID_setChannelNPST(2, val);
+					break;
+				case 0xd413:
+					SID_setChannelAttackDecay(2, val);
+					break;
+				case 0xd414:
+					SID_setChannelSustainRelease(2, val);
+					break;
+				case 0xd415:
+					SID_setFilterCutoffLo(val);
+					break;
+				case 0xd416:
+					SID_setFilterCutoffHi(val);
+					break;
+				case 0xd417:
+					SID_setFilterResonance(val);
+					break;
+				case 0xd418:
+					SID_setModeVolume(val);
+					break;
 				default:
-					printf("FATAL ERROR! Writing to unimplemented register %X with val %X\n", adr, val);
-					//exit(1);
-					//throw new exception;
+					char output[64];
+					snprintf(output, sizeof(output), "Writing to unimplemented address 0x%04x!", adr);
+					printMsg("SID", "ERROR", string(output));
 					break;
 				}
 			}

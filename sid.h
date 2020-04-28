@@ -1,4 +1,6 @@
 #include <vector>
+#include <cmath>
+#include <math.h>
 #include <assert.h>
 #pragma once
 
@@ -6,9 +8,10 @@ typedef uint8_t u8;
 typedef uint16_t u16;
 typedef int8_t i8;
 typedef int16_t i16;
+typedef uint32_t u32;
 
 void SID_init();
-void SID_step();
+void SID_step(u32 steps);
 void SID_setChannelFreqLo(u8 channel, u8 val);
 void SID_setChannelFreqHi(u8 channel, u8 val);
 void SID_setChannelPulseWidthLo(u8 channel, u8 val);
@@ -18,29 +21,45 @@ void SID_setChannelSustainRelease(u8 channel, u8 val);
 void SID_setChannelNPST(u8 channel, u8 val);
 void SID_setFilterCutoffLo(u8 val);
 void SID_setFilterCutoffHi(u8 val);
-void SID_setPotentiometerX(u8 val);
-void SID_setPotentiometerY(u8 val);
+void SID_setFilterResonance(u8 val);
+void SID_setModeVolume(u8 val);
+u8 SID_getPotentiometerX();
+u8 SID_getPotentiometerY();
+u8 SID_getEnvelope();
 
 //	6502 PAL runs at 0,985249 MHz
 //	We sample at 44100 Hz
 //	985249 / 44100 = 22,34
 //	Alle 22,34 Cycles brauchen nehmen wir ein Sample
 
+const double pi = std::acos(-1);
 
 class Channel {
 
 	private:
-		void tickTriangle() {
-			printf("Tri\n");
+		void tickTriangle(float step, float vol) {
+			const float real_freq = floor( freq * 0.0596 );
+			float value = (std::abs(0.5f - fmod((real_freq * step), 1.f)) * 4.0 - 1.0f) * vol;
+			buffer.push_back(value);
+			buffer.push_back(value);
 		}
-		void tickSawtooth() {
-			printf("Saw\n");
+		void tickSawtooth(float step, float vol) {
+			const float real_freq = floor( freq * 0.0596 );
+			float value = fmod((step * real_freq), 1.0f) * vol;
+			buffer.push_back(value);
+			buffer.push_back(value);
 		}
-		void tickRectangle() {
-			printf("Rec\n");
+		void tickPulse(float step, float vol) {
+			//printf("Pulse (Rectangle)\n");
+			/*const float real_freq = freq * 0.0596;
+			float value = (std::sin(2 * pi * step * real_freq)) * vol;
+			buffer.push_back(value);
+			buffer.push_back(value);*/
+			buffer.push_back(0);
+			buffer.push_back(0);
 		}
-		void tickNoise() {
-			printf("Noise\n");
+		void tickNoise(float step, float vol) {
+			//printf("Noise\n");
 		}
 
 	public: 
@@ -52,14 +71,18 @@ class Channel {
 		u8 decay = 0x00;
 		u8 sustain = 0x00;
 		u8 release = 0x00;
+		u8 pot_x = 0x00;
+		u8 pot_y = 0x00;
 		std::vector<float> buffer;
-		void (Channel::*process)();
+		void (Channel::*process)(float, float);
 
-		void tick() {
+		void tick(float steps, float vol) {
 			if (enabled) {
-				(this->*process)();
+				(this->*process)(steps, vol);
 			}
 			else {
+				//	twice, because stereo
+				buffer.push_back(0);
 				buffer.push_back(0);
 			}
 		}
@@ -69,19 +92,23 @@ class Channel {
 			switch ((val >> 4) & 0b1111)
 			{
 			case 1: 
+				printf("Setting channel to Triangle\n");
 				process = &Channel::tickTriangle;
 				break;
 			case 2:
+				printf("Setting channel to Sawtooth\n");
 				process = &Channel::tickSawtooth;
 				break;
 			case 4:
-				process = &Channel::tickRectangle;
+				printf("Setting channel to Pulse\n");
+				process = &Channel::tickPulse;
 				break;
 			case 8:
+				printf("Setting channel to Noise\n");
 				process = &Channel::tickNoise;
 				break;
 			default:
-				assert(false);
+				//assert(false);
 				break;
 			}
 		}
