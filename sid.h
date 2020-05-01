@@ -3,6 +3,8 @@
 #include <math.h>
 #include <assert.h>
 #pragma once
+#define SAMPLE_STEPS 22
+#define CLOCK_RATE 985250
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -11,7 +13,7 @@ typedef int16_t i16;
 typedef uint32_t u32;
 
 void SID_init();
-void SID_step(u32 steps);
+void SID_step();
 void SID_setChannelFreqLo(u8 channel, u8 val);
 void SID_setChannelFreqHi(u8 channel, u8 val);
 void SID_setChannelPulseWidthLo(u8 channel, u8 val);
@@ -37,35 +39,37 @@ const double pi = std::acos(-1);
 class Channel {
 
 	private:
-		void tickTriangle(float step, float vol) {
-			const float real_freq = floor( freq * 0.0596 );
-			float value = (std::abs(0.5f - fmod((real_freq * step), 1.f)) * 4.0 - 1.0f) * vol;
+		void tickTriangle(float vol) {
+			float step = ticks / (float)CLOCK_RATE;
+			float value = (std::abs(0.5f - fmod((real_freq * step), 1.f)) * 4.0 * (-1.0f) + 1.0f) * vol;
 			buffer.push_back(value);
 			buffer.push_back(value);
 		}
-		void tickSawtooth(float step, float vol) {
-			const float real_freq = floor( freq * 0.0596 );
+		void tickSawtooth(float vol) {
+			float step = ticks / (float)CLOCK_RATE;
 			float value = fmod((step * real_freq), 1.0f) * vol;
 			buffer.push_back(value);
 			buffer.push_back(value);
 		}
-		void tickPulse(float step, float vol) {
-			//printf("Pulse (Rectangle)\n");
-			/*const float real_freq = freq * 0.0596;
-			float value = (std::sin(2 * pi * step * real_freq)) * vol;
+		void tickPulse(float vol) {
+			float step = fmod((ticks / (float)CLOCK_RATE * real_freq), 1.0f);
+			float value = (step <= ((float)pulse_width / 4096.0)) ? -1.0 * vol : 1.0 * vol;
 			buffer.push_back(value);
-			buffer.push_back(value);*/
-			buffer.push_back(0);
-			buffer.push_back(0);
+			buffer.push_back(value);
 		}
-		void tickNoise(float step, float vol) {
+		void tickNoise(float vol) {
 			//printf("Noise\n");
 		}
 
 	public: 
 		//	config
-		bool enabled = false;
-		u16 freq = 0x0000;						//	Frequency
+		u32 ticks = 0;
+		bool GATE = false;
+		bool SYNC = false;
+		bool RING = false;
+		bool TEST = false;
+		float real_freq = 0;					//	Real frequency
+		u16 freq = 0x0000;						//	Frequency value
 		u16 pulse_width = 0x0000;				//	Pulse width for Rectangle
 		u8 attack = 0x00;
 		u8 decay = 0x00;
@@ -74,11 +78,24 @@ class Channel {
 		u8 pot_x = 0x00;
 		u8 pot_y = 0x00;
 		std::vector<float> buffer;
-		void (Channel::*process)(float, float);
+		Channel* syncTo_channel;
+		void (Channel::* process)(float);
+		//	used for SYNC
+		float val = 0.0f;
+		float prev_val = 0.0f;
 
-		void tick(float steps, float vol) {
-			if (enabled) {
-				(this->*process)(steps, vol);
+		void tick(float vol) {
+			//	handle SYNC (if set)
+			val = sin(2 * pi * (ticks / (float)CLOCK_RATE) * real_freq);
+			if (syncTo_channel->SYNC && ((prev_val < 0 && val >= 0) || (prev_val <= 0 && val > 0))) {
+				syncTo_channel->ticks = 0;
+			}
+			prev_val = val;
+
+			//	handle actual soundwave
+			ticks = (ticks + SAMPLE_STEPS) % CLOCK_RATE;
+			if (GATE) {
+				(this->*process)(vol);
 			}
 			else {
 				//	twice, because stereo
@@ -88,7 +105,10 @@ class Channel {
 		}
 		
 		void setNPST(u8 val) {
-			enabled = val & 1;
+			GATE = val & 0b0001;
+			SYNC = val & 0b0010;
+			RING = val & 0b0100;
+			TEST = val & 0b1000;
 			switch ((val >> 4) & 0b1111)
 			{
 			case 1: 
@@ -125,10 +145,12 @@ class Channel {
 
 		void setFreqLo(u8 val) {
 			freq = (freq & 0b1111111100000000) | val;
+			real_freq = floor(freq * 0.0596);				//	set real frequency
 		}
 
 		void setFreqHi(u8 val) {
 			freq = (freq & 0b0000000011111111) | (val << 8);
+			real_freq = floor(freq * 0.0596);				//	set real frequency
 		}
 
 		void setPulseWidthLo(u8 val) {
@@ -137,5 +159,9 @@ class Channel {
 
 		void setPulseWidthHi(u8 val) {
 			pulse_width = (pulse_width & 0b0000000011111111) | ((val & 0b1111) << 8);
+		}
+
+		void setSyncToChannel(Channel* channel) {
+			syncTo_channel = channel;
 		}
 };

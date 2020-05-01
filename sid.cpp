@@ -47,39 +47,27 @@ void SID_init() {
 		SoundIsPlaying = true;
 	}
 
+	//	init channels
 	channels.push_back(Channel());
 	channels.push_back(Channel());
 	channels.push_back(Channel());
+
+	//	set channels to sync to, when SYNC bit is set
+	channels[2].setSyncToChannel(&channels[0]);
+	channels[0].setSyncToChannel(&channels[1]);
+	channels[1].setSyncToChannel(&channels[2]);
 
 }
 
-void SID_step(u32 steps) {
+void SID_step() {
 
-	//	get curren position in period
-	float cur_step = (float)steps / 985250.0;
-
-	/*if (++c >= 23) {
-		c = 0;
-		Mixbuf.push_back(sin(2 * pi * cur_step * 940));
-		Mixbuf.push_back(sin(2 * pi * cur_step * 940));
-		if (Mixbuf.size() >= 100) {
-			SDL_QueueAudio(1, Mixbuf.data(), Mixbuf.size() * sizeof(float));
-			Mixbuf.clear();
-			while (SDL_GetQueuedAudioSize(1) > 4096 * 6) {}
-		}
-	}*/
-
-	if (++res_count >= 22) {
+	if (++res_count >= SAMPLE_STEPS) {
 		res_count = 0;
 
 		//	tick channels
-		channels[0].tick(cur_step, volume);
-		channels[1].tick(cur_step, volume);
-		channels[2].tick(cur_step, volume);
-
-		//printf("cur_step: %f vak %f freq: %f vol: %f\n", cur_step, channels[0].buffer.back(), channels[0].freq * 0.0596, volume );
-		if (cur_step == 0)
-			printf("BRAP!!\n");
+		channels[0].tick(volume);
+		channels[1].tick(volume);
+		channels[2].tick(volume);
 
 		//	play last 100 samples of all channels
 		if (channels[0].buffer.size() >= 100 && channels[1].buffer.size() >= 100 && channels[2].buffer.size() >= 100) {

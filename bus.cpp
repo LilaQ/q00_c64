@@ -407,8 +407,7 @@ int main()
 			}
 
 			c++;
-			cycles = (cycles + 1) % 985250;
-			SID_step(cycles);
+			SID_step();
 			//printf("%d\n", cycles);
 			if (c == 63) {
 				c = 0;
