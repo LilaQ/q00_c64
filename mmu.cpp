@@ -78,6 +78,12 @@ void loadPRG(string f) {
 	for (uint16_t i = 2; i < d.size(); i++) {
 		memory[((d.at(1) << 8) | d.at(0)) - 2 + i] = d.at(i);
 	}
+
+	//	set BASIC-end pointer (BASIC-start [2b | 2c] + size of PRG - 2byte for address)
+	memory[0x2d] = memory[0x2b] + (d.size() - 2) % 0x100;
+	memory[0x2e] = memory[0x2c] + (d.size() - 2) / 0x100;
+
+	//	set window title
 	setTitle(f);
 }
 
