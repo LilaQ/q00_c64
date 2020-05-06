@@ -3,9 +3,13 @@
 #include "mmu.h"
 #include "wmu.h"
 #include "SDL2/include/SDL.h"
+#include <cmath>
 #define internal static
 #pragma once
 
+bool PLAY_CHANNEL1 = true;
+bool PLAY_CHANNEL2 = true;
+bool PLAY_CHANNEL3 = true;
 const int SamplesPerSecond = 44770;			//	resolution
 const int resolution = 985249 / SamplesPerSecond;
 int res_count = 0;
@@ -74,10 +78,13 @@ void SID_step() {
 
 			for (int i = 0; i < 100; i++) {
 				float res = 0;
-				res += channels[0].buffer.at(i);
-				res += channels[1].buffer.at(i);
-				res += channels[2].buffer.at(i);
-				Mixbuf.push_back(res);
+				if (PLAY_CHANNEL1)
+					res += channels[0].buffer.at(i);
+				if (PLAY_CHANNEL2)
+					res += channels[1].buffer.at(i);
+				if (PLAY_CHANNEL3)
+					res += channels[2].buffer.at(i);
+				Mixbuf.push_back(res / (PLAY_CHANNEL1 + PLAY_CHANNEL2 + PLAY_CHANNEL3));
 			}
 			//	send audio data to device; buffer is times 4, because we use floats now, which have 4 bytes per float, and buffer needs to have information of amount of bytes to be used
 			SDL_QueueAudio(1, Mixbuf.data(), Mixbuf.size() * sizeof(float));
@@ -156,3 +163,14 @@ u8 SID_getEnvelope() {
 	return 0x00;
 }
 
+void SID_toggleChannel1() {
+	PLAY_CHANNEL1 = !PLAY_CHANNEL1;
+}
+
+void SID_toggleChannel2() {
+	PLAY_CHANNEL2 = !PLAY_CHANNEL2;
+}
+
+void SID_toggleChannel3() {
+	PLAY_CHANNEL3 = !PLAY_CHANNEL3;
+}

@@ -16,6 +16,7 @@
 #include "cia.h"
 #include "bus.h"
 #include "wmu.h"
+#include "sid.h"
 #undef main
 
 using namespace::std;
@@ -40,9 +41,11 @@ void initWindow(SDL_Window* win, string filename) {
 	HMENU hMenuBar = CreateMenu();
 	HMENU hFile = CreateMenu();
 	HMENU hScreen = CreateMenu();
+	HMENU hSid = CreateMenu();
 	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hFile, "[ main ]");
 	AppendMenu(hMenuBar, MF_STRING, 11, "[ ||> un/pause ]");
 	AppendMenu(hMenuBar, MF_STRING, 2, "[ memory ]");
+	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hSid, "[ sid ]");
 	AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hScreen, "[ screen ]");
 	AppendMenu(hMenuBar, MF_STRING, 3, "[ log now ]");
 	AppendMenu(hMenuBar, MF_STRING, 4, "[ print bus ]");
@@ -51,6 +54,10 @@ void initWindow(SDL_Window* win, string filename) {
 	AppendMenu(hFile, MF_STRING, 1, "» exit");
 	AppendMenu(hScreen, MF_STRING, 12, "» orig size");
 	AppendMenu(hScreen, MF_STRING, 13, "» 2x size");
+	AppendMenu(hSid, MF_STRING, 15, "» toggle voice 1 on/off");
+	AppendMenu(hSid, MF_STRING, 16, "» toggle voice 2 on/off");
+	AppendMenu(hSid, MF_STRING, 17, "» toggle voice 3 on/off");
+	AppendMenu(hSid, MF_STRING, 18, "» disable");
 	SetMenu(hwnd, hMenuBar);
 
 	//	Enable WM events for SDL Window
@@ -176,6 +183,16 @@ void handleWindowEvents(SDL_Event event) {
 			//	screen size : 2x
 			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 13) {
 				setScreenSize(UI_SCREEN_SIZE::X2);
+			}
+			//	toggle SID channels
+			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 15) {
+				SID_toggleChannel1();
+			}
+			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 16) {
+				SID_toggleChannel2();
+			}
+			else if (LOWORD(event.syswm.msg->msg.win.wParam) == 17) {
+				SID_toggleChannel3();
 			}
 		}
 		//	close a window

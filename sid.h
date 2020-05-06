@@ -1,6 +1,7 @@
 #include <vector>
 #include <cmath>
 #include <math.h>
+#include <algorithm>
 #include <assert.h>
 #pragma once
 #define SAMPLE_STEPS 22
@@ -25,9 +26,16 @@ void SID_setFilterCutoffLo(u8 val);
 void SID_setFilterCutoffHi(u8 val);
 void SID_setFilterResonance(u8 val);
 void SID_setModeVolume(u8 val);
+void SID_toggleChannel1();
+void SID_toggleChannel2();
+void SID_toggleChannel3();
 u8 SID_getPotentiometerX();
 u8 SID_getPotentiometerY();
 u8 SID_getEnvelope();
+
+const float ATTACK[16]		= { 2, 8, 16, 24, 38, 56, 68, 80, 100, 250, 500, 800, 1000, 3000, 5000, 8000 };
+const float DECAY[16]		= { 6, 24, 48, 72, 114, 168, 204, 240, 300, 750, 1500, 2400, 3000, 9000, 15000, 24000 };
+const float RELEASE[16]		= { 6, 24, 48, 72, 114, 168, 204, 240, 300, 750, 1500, 2400, 3000, 9000, 15000, 24000 };
 
 //	6502 PAL runs at 0,985249 MHz
 //	We sample at 44100 Hz
@@ -35,6 +43,13 @@ u8 SID_getEnvelope();
 //	Alle 22,34 Cycles brauchen nehmen wir ein Sample
 
 const double pi = std::acos(-1);
+
+enum class ADSR_MODE {
+	ATTACK,
+	DECAY,
+	SUSTAIN,
+	RELEASE
+};
 
 class Channel {
 
@@ -60,6 +75,10 @@ class Channel {
 		void tickNoise(float vol) {
 			//printf("Noise\n");
 		}
+		void tickSilence(float vol) {
+			buffer.push_back(0.f);
+			buffer.push_back(0.f);
+		}
 
 	public: 
 		//	config
@@ -68,7 +87,7 @@ class Channel {
 		bool SYNC = false;
 		bool RING = false;
 		bool TEST = false;
-		float real_freq = 0;					//	Real frequency
+		u16 real_freq = 0;					//	Real frequency
 		u16 freq = 0x0000;						//	Frequency value
 		u16 pulse_width = 0x0000;				//	Pulse width for Rectangle
 		u8 attack = 0x00;
@@ -77,9 +96,11 @@ class Channel {
 		u8 release = 0x00;
 		u8 pot_x = 0x00;
 		u8 pot_y = 0x00;
+		float ADSR_timer = 0.0f;
+		ADSR_MODE ADSR_mode = ADSR_MODE::RELEASE;
 		std::vector<float> buffer;
 		Channel* syncTo_channel;
-		void (Channel::* process)(float);
+		void (Channel::* process)(float) = &Channel::tickSilence;
 		//	used for SYNC
 		float val = 0.0f;
 		float prev_val = 0.0f;
@@ -94,17 +115,49 @@ class Channel {
 
 			//	handle actual soundwave
 			ticks = (ticks + SAMPLE_STEPS) % CLOCK_RATE;
-			if (GATE) {
-				(this->*process)(vol);
+			float adsr_vol = vol;
+			ADSR_timer += ((float)SAMPLE_STEPS / (float)CLOCK_RATE) * 1000.f;
+			switch (ADSR_mode)
+			{
+			case ADSR_MODE::ATTACK:
+				adsr_vol = (ADSR_timer / ATTACK[attack]) * vol;
+				//printf("adsrvol: %f (vol : %f, sustain: %f)\n", adsr_vol, vol, vol / (sustain / 15.f));
+				if (ADSR_timer > ATTACK[attack]) {
+					ADSR_mode = ADSR_MODE::DECAY;
+					ADSR_timer = fmod(ADSR_timer, ATTACK[attack]);
+				}
+				break;
+			case ADSR_MODE::DECAY:
+				adsr_vol = vol - (( vol - ( vol * (sustain / 15.0))) * (ADSR_timer / DECAY[decay]));
+				//printf("adsrvol: %f (vol : %f, sustain: %f)\n", adsr_vol, vol, vol * (sustain / 15.f));
+				if (ADSR_timer > DECAY[decay]) {
+					ADSR_mode = ADSR_MODE::SUSTAIN;
+					ADSR_timer = 0.0f;
+				}
+				break;
+			case ADSR_MODE::SUSTAIN:
+				adsr_vol = vol * (sustain / 15.f);
+				break;
+			case ADSR_MODE::RELEASE:
+ 				adsr_vol = std::fmax((float)sustain - std::fmax((float)sustain * (ADSR_timer / RELEASE[release]), 0.0f), 0.0f) / 15.f;
+				break;
+			default:
+				break;
 			}
-			else {
-				//	twice, because stereo
-				buffer.push_back(0);
-				buffer.push_back(0);
-			}
+			(this->*process)(pow(adsr_vol, 3));		//	pow 3 is a close-ish estimate to logarithim increase/decrease in volume
 		}
 		
 		void setNPST(u8 val) {
+			//	if GATE is set, ATTACK is inited, else RELEASE is inited
+			//	This is EDGE-SENSITIVE!
+			if (!GATE && val & 0b0001) {
+				ADSR_timer = 0.0f;
+				ADSR_mode = ADSR_MODE::ATTACK;
+			}
+			else if(GATE && (val & 0b0001) == 0x0) {
+				ADSR_timer = 0.0f;
+				ADSR_mode = ADSR_MODE::RELEASE;
+			}
 			GATE = val & 0b0001;
 			SYNC = val & 0b0010;
 			RING = val & 0b0100;
@@ -112,24 +165,24 @@ class Channel {
 			switch ((val >> 4) & 0b1111)
 			{
 			case 1: 
-				printf("Setting channel to Triangle\n");
 				process = &Channel::tickTriangle;
 				break;
 			case 2:
-				printf("Setting channel to Sawtooth\n");
 				process = &Channel::tickSawtooth;
 				break;
 			case 4:
-				printf("Setting channel to Pulse\n");
 				process = &Channel::tickPulse;
 				break;
 			case 8:
-				printf("Setting channel to Noise\n");
 				process = &Channel::tickNoise;
 				break;
 			default:
-				//assert(false);
+				process = &Channel::tickSilence;
 				break;
+			}
+			//	if TEST is set, TICKS are reset, so the oscillator starts fresh
+			if (TEST) {
+				ticks = 0;
 			}
 		}
 
